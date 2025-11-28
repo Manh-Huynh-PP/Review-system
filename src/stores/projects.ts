@@ -19,6 +19,8 @@ interface ProjectState {
   projects: Project[]
   selectedProject: Project | null
   loading: boolean
+  isSubscribed: boolean
+  currentAdminEmail: string | null
   unsubscribe: Unsubscribe | null
   
   subscribeToProjects: (adminEmail: string) => void
@@ -32,27 +34,68 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   projects: [],
   selectedProject: null,
   loading: false,
+  isSubscribed: false,
+  currentAdminEmail: null,
   unsubscribe: null,
 
   subscribeToProjects: (adminEmail: string) => {
+    const { isSubscribed, currentAdminEmail } = get()
+    
+    // Avoid duplicate subscriptions for same admin
+    if (isSubscribed && currentAdminEmail === adminEmail) {
+      console.log('🔄 Projects already subscribed for', adminEmail)
+      return
+    }
+    
+    // Cleanup existing subscription if switching users
+    if (isSubscribed && currentAdminEmail !== adminEmail) {
+      console.log('🧹 Cleaning up subscription for', currentAdminEmail, 'switching to', adminEmail)
+      get().cleanup()
+    }
+    
+    console.log('📡 Starting projects subscription for', adminEmail)
+    set({ isSubscribed: true, currentAdminEmail: adminEmail })
+    
+    const baseCol = collection(db, 'projects')
+
+    // Preferred query: filter by adminEmail and order by createdAt desc
     const q = query(
-      collection(db, 'projects'),
+      baseCol,
       where('adminEmail', '==', adminEmail),
       orderBy('createdAt', 'desc')
     )
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const off = onSnapshot(q, (snapshot) => {
       const projects = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Project[]
-      
+      console.log('📊 Projects loaded:', projects.length)
       set({ projects })
-    }, (error) => {
-      toast.error('Lỗi tải dự án: ' + error.message)
+    }, (error: any) => {
+      // Graceful fallback while Firestore builds the index
+      const msg = String(error?.message || '')
+      if (msg.toLowerCase().includes('requires an index') || error?.code === 'failed-precondition') {
+        toast('Đang xây dựng Firestore index. Tạm thời hiển thị không sắp xếp.', { icon: '⏳' })
+        const fallback = query(baseCol, where('adminEmail', '==', adminEmail))
+        const off2 = onSnapshot(fallback, (snapshot2) => {
+          const projects = snapshot2.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[]
+          console.log('📊 Projects loaded (fallback):', projects.length)
+          set({ projects })
+        }, (err2) => {
+          toast.error('Lỗi tải dự án (fallback): ' + (err2?.message || ''))
+          console.error('[projects] fallback error', err2)
+          set({ isSubscribed: false })
+        })
+        set({ unsubscribe: off2 })
+      } else {
+        toast.error('Lỗi tải dự án: ' + (error?.message || ''))
+        console.error('[projects] onSnapshot error', error)
+        set({ isSubscribed: false })
+      }
     })
 
-    set({ unsubscribe })
+    set({ unsubscribe: off })
   },
 
   createProject: async (name: string, adminEmail: string) => {
@@ -96,9 +139,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   cleanup: () => {
     const { unsubscribe } = get()
+    console.log('🧹 Cleaning up projects subscription')
     if (unsubscribe) {
       unsubscribe()
-      set({ unsubscribe: null, projects: [], selectedProject: null })
+      set({ 
+        unsubscribe: null, 
+        projects: [], 
+        selectedProject: null,
+        isSubscribed: false,
+        currentAdminEmail: null
+      })
     }
   },
 }))

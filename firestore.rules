@@ -32,5 +32,10 @@ service cloud.firestore {
         allow update, delete: if isAuthenticated();
       }
     }
+
+    // Test collection for debugging
+    match /test/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
   }
 }

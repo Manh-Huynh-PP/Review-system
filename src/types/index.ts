@@ -18,6 +18,8 @@ export interface FileVersion {
   metadata: {
     size: number
     type: string
+    name: string
+    lastModified?: number
     width?: number
     height?: number
     duration?: number

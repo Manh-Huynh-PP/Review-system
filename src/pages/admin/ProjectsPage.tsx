@@ -5,15 +5,22 @@ import { ProjectCreateDialog } from '@/components/projects/ProjectCreateDialog'
 import { ProjectCard } from '@/components/projects/ProjectCard'
 
 export default function ProjectsPage() {
-  const { projects, subscribeToProjects, cleanup } = useProjectStore()
+  const { projects, subscribeToProjects, isSubscribed } = useProjectStore()
   const user = useAuthStore(s => s.user)
 
+  console.log('📁 ProjectsPage render:', {
+    user: user?.email,
+    projectsCount: projects.length,
+    isSubscribed
+  })
+
   useEffect(() => {
+    // Ensure subscription exists (store will handle duplicates)
     if (user?.email) {
+      console.log('🔄 ProjectsPage: Ensuring subscription for', user.email)
       subscribeToProjects(user.email)
     }
-    return () => cleanup()
-  }, [user?.email, subscribeToProjects, cleanup])
+  }, [user?.email, subscribeToProjects])
 
   return (
     <div className="space-y-6">

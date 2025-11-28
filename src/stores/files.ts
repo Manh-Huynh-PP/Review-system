@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { 
   collection, 
-  addDoc, 
+  setDoc,
   updateDoc, 
   doc, 
   onSnapshot, 
@@ -20,9 +20,11 @@ interface FileState {
   files: FileType[]
   selectedFile: FileType | null
   uploading: boolean
+  error: string | null
   unsubscribe: Unsubscribe | null
   
   subscribeToFiles: (projectId: string) => void
+  loadFiles: (projectId: string) => void
   uploadFile: (projectId: string, file: File, existingFileId?: string) => Promise<void>
   selectFile: (file: FileType | null) => void
   switchVersion: (fileId: string, version: number) => Promise<void>
@@ -33,6 +35,7 @@ export const useFileStore = create<FileState>((set, get) => ({
   files: [],
   selectedFile: null,
   uploading: false,
+  error: null,
   unsubscribe: null,
 
   subscribeToFiles: (projectId: string) => {
@@ -48,23 +51,34 @@ export const useFileStore = create<FileState>((set, get) => ({
         ...doc.data()
       })) as FileType[]
       
-      set({ files })
+      set({ files, error: null })
     }, (error) => {
-      toast.error('Lỗi tải file: ' + error.message)
+      const errorMessage = 'Lỗi tải file: ' + error.message
+      set({ error: errorMessage })
+      toast.error(errorMessage)
     })
 
     set({ unsubscribe })
   },
 
+  // Alias for compatibility with FilesList component
+  loadFiles: (projectId: string) => {
+    get().subscribeToFiles(projectId)
+  },
+
   uploadFile: async (projectId: string, file: File, existingFileId?: string) => {
-    set({ uploading: true })
+    console.log('🚀 Upload started:', { projectId, fileName: file.name, size: file.size, existingFileId })
+    set({ uploading: true, error: null })
+    
     try {
       const fileId = existingFileId || generateId()
+      console.log('📁 Generated fileId:', fileId)
       
       // Determine file type
       let fileType: 'image' | 'video' | 'model' = 'image'
       if (file.type.startsWith('video/')) fileType = 'video'
       if (file.name.endsWith('.glb') || file.name.endsWith('.gltf')) fileType = 'model'
+      console.log('🏷️ File type determined:', fileType)
 
       // Get current version
       let currentVersion = 1
@@ -74,12 +88,18 @@ export const useFileStore = create<FileState>((set, get) => ({
           currentVersion = existingFile.currentVersion + 1
         }
       }
+      console.log('🔢 Version:', currentVersion)
 
       // Upload to Storage
       const storagePath = `projects/${projectId}/${fileId}/v${currentVersion}/${file.name}`
+      console.log('☁️ Storage path:', storagePath)
+      
       const storageRef = ref(storage, storagePath)
-      await uploadBytes(storageRef, file)
-      const url = await getDownloadURL(storageRef)
+      console.log('⬆️ Starting upload to storage...')
+      const snapshot = await uploadBytes(storageRef, file)
+      console.log('✅ Upload completed, getting download URL...')
+      const url = await getDownloadURL(snapshot.ref)
+      console.log('🔗 Download URL obtained:', url)
 
       // Create version metadata
       const newVersion: FileVersion = {
@@ -89,30 +109,51 @@ export const useFileStore = create<FileState>((set, get) => ({
         metadata: {
           size: file.size,
           type: file.type,
+          name: file.name,
+          lastModified: file.lastModified
         }
       }
+      console.log('📝 Version metadata created:', newVersion)
 
       // Update or create Firestore doc
       if (existingFileId) {
+        console.log('🔄 Updating existing file...')
         const fileRef = doc(db, 'projects', projectId, 'files', fileId)
         const existingFile = get().files.find(f => f.id === existingFileId)
         await updateDoc(fileRef, {
           versions: [...(existingFile?.versions || []), newVersion],
           currentVersion
         })
+        console.log('✅ Existing file updated')
+        toast.success(`Đã tải phiên bản ${currentVersion} của ${existingFile?.name}`)
       } else {
-        await addDoc(collection(db, 'projects', projectId, 'files'), {
-          name: file.name,
+        console.log('📄 Creating new file document...')
+        const fileRef = doc(db, 'projects', projectId, 'files', fileId)
+        const newFileData = {
+          name: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
           type: fileType,
           versions: [newVersion],
           currentVersion,
           createdAt: Timestamp.now()
-        })
+        }
+        console.log('📋 New file data:', newFileData)
+        await setDoc(fileRef, newFileData)
+        console.log('✅ New file created')
+        toast.success(`Đã tải lên ${file.name}`)
       }
-
-      toast.success(`Tải lên thành công v${currentVersion}`)
+      
+      console.log('🎉 Upload process completed successfully!')
     } catch (error: any) {
-      toast.error('Lỗi tải lên: ' + error.message)
+      console.error('❌ Upload failed:', error)
+      console.error('Error details:', {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      })
+      
+      const errorMessage = 'Tải file thất bại: ' + (error.message || 'Lỗi không xác định')
+      set({ error: errorMessage })
+      toast.error(errorMessage)
       throw error
     } finally {
       set({ uploading: false })

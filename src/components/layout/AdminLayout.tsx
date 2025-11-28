@@ -3,6 +3,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/projects'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -10,7 +12,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu'
-import { LogOut, FolderOpen, Home, ChevronDown, Plus } from 'lucide-react'
+import { LogOut, FolderOpen, Home, ChevronDown, Plus, Users } from 'lucide-react'
 import { useEffect } from 'react'
 
 export function AdminLayout() {
@@ -101,7 +103,10 @@ export function AdminLayout() {
             )}
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <NotificationBell />
+            <Separator orientation="vertical" className="h-6" />
             <span className="text-sm text-muted-foreground hidden sm:block">
               {user?.email}
             </span>
@@ -114,30 +119,37 @@ export function AdminLayout() {
       </header>
 
       {/* Breadcrumb Navigation */}
-      <nav className="border-b bg-muted/20">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center gap-2 text-sm">
+      <nav className="border-b bg-muted/30">
+        <div className="container mx-auto px-4 py-2">
+          <div className="flex items-center gap-2">
             <Button 
-              variant="ghost" 
+              variant={isProjectsList ? 'default' : 'ghost'}
               size="sm" 
               onClick={() => navigate('/app/projects')}
-              className={`h-8 px-2 ${isProjectsList ? 'bg-accent' : ''}`}
+              className="gap-2"
             >
-              <Home className="w-3 h-3 mr-1" />
+              <FolderOpen className="w-4 h-4" />
               Dự án
+            </Button>
+            
+            <Button 
+              variant={location.pathname === '/app/clients' ? 'default' : 'ghost'}
+              size="sm" 
+              onClick={() => navigate('/app/clients')}
+              className="gap-2"
+            >
+              <Users className="w-4 h-4" />
+              Khách hàng
             </Button>
             
             {isProjectDetail && (
               <>
-                <span className="text-muted-foreground">/</span>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 px-2 bg-accent"
-                >
-                  <FolderOpen className="w-3 h-3 mr-1" />
-                  {currentProject?.name || 'Loading...'}
-                </Button>
+                <span className="text-muted-foreground mx-2">/</span>
+                <div className="bg-card px-3 py-1.5 rounded-md border shadow-sm">
+                  <span className="text-sm font-medium">
+                    {currentProject?.name || 'Loading...'}
+                  </span>
+                </div>
               </>
             )}
           </div>

@@ -1,9 +1,17 @@
 import { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { useProjectStore } from '@/stores/projects'
+import { useClientStore } from '@/stores/clients'
+import { useAuthStore } from '@/stores/auth'
+import type { Project } from '@/types'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
@@ -11,25 +19,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useProjectStore } from '@/stores/projects'
-import { useClientStore } from '@/stores/clients'
-import { useAuthStore } from '@/stores/auth'
-import { Plus, UserPlus } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Pencil, X, UserPlus } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { ClientDialog } from '@/components/clients/ClientDialog'
 
-export function ProjectCreateDialog() {
+interface Props {
+  project: Project
+  triggerAsMenuItem?: boolean
+}
+
+export function ProjectEditDialog({ project, triggerAsMenuItem = false }: Props) {
   const [open, setOpen] = useState(false)
   const [clientDialogOpen, setClientDialogOpen] = useState(false)
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [clientId, setClientId] = useState<string>('none')
-  const [deadline, setDeadline] = useState('')
-  const [tags, setTags] = useState('')
+  const [name, setName] = useState(project.name)
+  const [description, setDescription] = useState(project.description || '')
+  const [clientId, setClientId] = useState(project.clientId || '')
+  const [deadline, setDeadline] = useState(
+    project.deadline ? new Date(project.deadline.toMillis()).toISOString().split('T')[0] : ''
+  )
+  const [tags, setTags] = useState(project.tags?.join(', ') || '')
   
-  const createProject = useProjectStore(s => s.createProject)
-  const user = useAuthStore(s => s.user)
+  const { updateProject, loading } = useProjectStore()
   const { clients, subscribeToClients } = useClientStore()
+  const user = useAuthStore(s => s.user)
 
   useEffect(() => {
     if (user?.email && open) {
@@ -37,61 +52,61 @@ export function ProjectCreateDialog() {
     }
   }, [user?.email, open, subscribeToClients])
 
-  const onCreate = async () => {
-    if (!name.trim() || !user?.email) return
-    
-    const selectedClient = clientId && clientId !== 'none' ? clients.find(c => c.id === clientId) : null
-    
-    const projectData: Partial<any> = {
-      name: name.trim(),
-      adminEmail: user.email,
-      description: description.trim() || undefined,
-      tags: tags.trim() ? tags.split(',').map(t => t.trim()).filter(Boolean) : []
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) return
 
-    if (selectedClient) {
-      projectData.clientId = clientId
-      projectData.clientName = selectedClient.name
-      projectData.clientEmail = selectedClient.email
+    try {
+      const selectedClient = clientId && clientId !== 'none' ? clients.find(c => c.id === clientId) : null
+      
+      const updateData: Partial<Project> = {
+        name: name.trim(),
+        description: description.trim() || undefined,
+        clientId: selectedClient ? clientId : undefined,
+        clientName: selectedClient?.name || undefined,
+        clientEmail: selectedClient?.email || undefined,
+        deadline: deadline ? Timestamp.fromDate(new Date(deadline)) : undefined,
+        tags: tags.trim() ? tags.split(',').map(t => t.trim()).filter(Boolean) : []
+      }
+      
+      await updateProject(project.id, updateData)
+      setOpen(false)
+    } catch (error) {
+      console.error('Update failed:', error)
     }
-
-    if (deadline) {
-      projectData.deadline = Timestamp.fromDate(new Date(deadline))
-    }
-
-    await createProject(projectData)
-    
-    // Reset form
-    setName('')
-    setDescription('')
-    setClientId('none')
-    setDeadline('')
-    setTags('')
-    setOpen(false)
   }
 
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Tạo dự án
-          </Button>
+          {triggerAsMenuItem ? (
+            <DropdownMenuItem onSelect={(e) => {
+              e.preventDefault()
+              setOpen(true)
+            }}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Chỉnh sửa
+            </DropdownMenuItem>
+          ) : (
+            <Button variant="ghost" size="icon">
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
         </DialogTrigger>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Tạo dự án mới</DialogTitle>
+            <DialogTitle>Chỉnh sửa dự án</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="project-name">Tên dự án *</Label>
-              <Input 
-                id="project-name" 
-                value={name} 
-                onChange={(e) => setName(e.target.value)} 
-                placeholder="Ví dụ: TVC - Spring 2026"
-                autoFocus
+              <Label htmlFor="name">Tên dự án *</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Tên dự án"
+                required
               />
             </div>
 
@@ -109,7 +124,7 @@ export function ProjectCreateDialog() {
             <div className="space-y-2">
               <Label htmlFor="client">Khách hàng</Label>
               <div className="flex gap-2">
-                <Select value={clientId} onValueChange={setClientId}>
+                <Select value={clientId || 'none'} onValueChange={setClientId}>
                   <SelectTrigger className="flex-1">
                     <SelectValue placeholder="Chọn khách hàng (tùy chọn)" />
                   </SelectTrigger>
@@ -158,12 +173,21 @@ export function ProjectCreateDialog() {
                 placeholder="animation, 3d, urgent (phân tách bằng dấu phẩy)"
               />
             </div>
-          </div>
-          
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="ghost" onClick={() => setOpen(false)}>Hủy</Button>
-            <Button onClick={onCreate} disabled={!name.trim()}>Tạo dự án</Button>
-          </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setOpen(false)}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Hủy
+              </Button>
+              <Button type="submit" disabled={loading || !name.trim()}>
+                Lưu thay đổi
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 

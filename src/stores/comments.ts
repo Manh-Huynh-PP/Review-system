@@ -8,10 +8,12 @@ import {
   query,
   where,
   orderBy,
-  Timestamp
+  Timestamp,
+  getDoc
 } from 'firebase/firestore'
 import type { Unsubscribe } from 'firebase/firestore'
 import { db } from '../lib/firebase'
+import { createNotification } from '../lib/notifications'
 import type { Comment } from '../types'
 import toast from 'react-hot-toast'
 
@@ -21,7 +23,7 @@ interface CommentState {
   unsubscribe: Unsubscribe | null
   
   subscribeToComments: (projectId: string, fileId?: string) => void
-  addComment: (projectId: string, fileId: string, version: number, userName: string, content: string, timestamp?: number) => Promise<void>
+  addComment: (projectId: string, fileId: string, version: number, userName: string, content: string, timestamp?: number, parentCommentId?: string) => Promise<void>
   toggleResolve: (projectId: string, commentId: string, isResolved: boolean) => Promise<void>
   cleanup: () => void
 }
@@ -60,7 +62,7 @@ export const useCommentStore = create<CommentState>((set, get) => ({
     set({ unsubscribe })
   },
 
-  addComment: async (projectId: string, fileId: string, version: number, userName: string, content: string, timestamp?: number) => {
+  addComment: async (projectId: string, fileId: string, version: number, userName: string, content: string, timestamp?: number, parentCommentId?: string) => {
     set({ loading: true })
     try {
       await addDoc(collection(db, 'projects', projectId, 'comments'), {
@@ -69,10 +71,43 @@ export const useCommentStore = create<CommentState>((set, get) => ({
         userName,
         content,
         timestamp: timestamp ?? null,
+        parentCommentId: parentCommentId ?? null,
         isResolved: false,
         createdAt: Timestamp.now()
       })
+
+      // Get project and file info for notification
+      const projectDoc = await getDoc(doc(db, 'projects', projectId))
+      const fileDoc = await getDoc(doc(db, 'projects', projectId, 'files', fileId))
+      
+      if (projectDoc.exists()) {
+        const projectData = projectDoc.data()
+        const fileName = fileDoc.exists() ? fileDoc.data().name : 'file'
+        
+        console.log('📧 Creating notification for comment:', {
+          projectId,
+          fileId,
+          userName,
+          fileName,
+          adminEmail: projectData.adminEmail
+        })
+        
+        // Create notification for admin
+        await createNotification({
+          type: 'comment',
+          projectId,
+          fileId,
+          userName,
+          message: `${userName} đã bình luận trong "${fileName}"`,
+          adminEmail: projectData.adminEmail
+        })
+        
+        console.log('✅ Notification created successfully')
+      } else {
+        console.warn('⚠️ Project not found, cannot create notification')
+      }
     } catch (error: any) {
+      console.error('❌ Error adding comment:', error)
       toast.error('Lỗi thêm bình luận: ' + error.message)
       throw error
     } finally {

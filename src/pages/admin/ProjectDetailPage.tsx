@@ -2,11 +2,19 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useProjectStore } from '@/stores/projects'
 import { useFileStore } from '@/stores/files'
-import { FileUploader } from '@/components/files/FileUploader'
+import { UploadDialog } from '@/components/files/UploadDialog'
 import { FilesList } from '@/components/files/FilesList'
 import { db } from '@/lib/firebase'
 import { doc, onSnapshot } from 'firebase/firestore'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { ArrowUpDown, Calendar, FileType, Download, Search, X, Share2, Check } from 'lucide-react'
 import type { Project } from '@/types'
+import { toast } from 'react-hot-toast'
+
+type SortOption = 'name' | 'date' | 'type' | 'size'
+type SortDirection = 'asc' | 'desc'
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams()
@@ -15,6 +23,25 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(
     projects.find(p => p.id === projectId) || null
   )
+  const [sortBy, setSortBy] = useState<SortOption>('date')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  const handleCopyReviewLink = async () => {
+    if (!projectId) return
+    
+    const reviewUrl = `${window.location.origin}/review/${projectId}`
+    
+    try {
+      await navigator.clipboard.writeText(reviewUrl)
+      setCopied(true)
+      toast.success('Đã copy link review!')
+      setTimeout(() => setCopied(false), 2000)
+    } catch (error) {
+      toast.error('Không thể copy link')
+    }
+  }
 
   useEffect(() => {
     if (projectId) {
@@ -35,8 +62,17 @@ export default function ProjectDetailPage() {
         setProject(null)
       }
     })
-    return () => off()
+    return off
   }, [projectId])
+
+  const handleSort = (option: SortOption) => {
+    if (sortBy === option) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(option)
+      setSortDirection('desc')
+    }
+  }
 
   if (!project) {
     return <div className="text-muted-foreground">Đang tải dự án...</div>
@@ -44,20 +80,99 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">{project.name}</h1>
-        <p className="text-sm text-muted-foreground">Trạng thái: {project.status}</p>
+      {/* Header với Upload Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{project.name}</h1>
+          <p className="text-sm text-muted-foreground mt-1">Trạng thái: {project.status}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleCopyReviewLink}
+            className="gap-2"
+          >
+            {copied ? (
+              <>
+                <Check className="h-4 w-4" />
+                Đã copy!
+              </>
+            ) : (
+              <>
+                <Share2 className="h-4 w-4" />
+                Share link review
+              </>
+            )}
+          </Button>
+          {projectId && <UploadDialog projectId={projectId} />}
+        </div>
       </div>
 
-      <div className="rounded-lg border p-6 space-y-6">
-        <div>
-          <h2 className="text-lg font-semibold mb-4">📁 Tải file mới</h2>
-          {projectId && <FileUploader projectId={projectId} />}
+      {/* Search and Sort Controls */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 flex-1 max-w-md">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Tìm kiếm file..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-10"
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            )}
+          </div>
         </div>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Sắp xếp theo:</span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <ArrowUpDown className="w-4 h-4" />
+                {sortBy === 'name' && 'Tên file'}
+                {sortBy === 'date' && 'Ngày tải lên'}
+                {sortBy === 'type' && 'Loại file'}
+                {sortBy === 'size' && 'Kích thước'}
+                <span className="text-xs text-muted-foreground ml-1">
+                  ({sortDirection === 'asc' ? '↑' : '↓'})
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleSort('name')}>
+                <FileType className="w-4 h-4 mr-2" />
+                Tên file
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('date')}>
+                <Calendar className="w-4 h-4 mr-2" />
+                Ngày tải lên
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('type')}>
+                <FileType className="w-4 h-4 mr-2" />
+                Loại file
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSort('size')}>
+                <Download className="w-4 h-4 mr-2" />
+                Kích thước
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
 
-        <div>
-          <h2 className="text-lg font-semibold mb-4">📋 Files trong dự án</h2>
-          {projectId && <FilesList projectId={projectId} />}
+      {/* Files List */}
+      <div className="bg-card rounded-xl border shadow-sm">
+        <div className="p-6">
+          {projectId && <FilesList projectId={projectId} sortBy={sortBy} sortDirection={sortDirection} searchTerm={searchTerm} />}
         </div>
       </div>
     </div>

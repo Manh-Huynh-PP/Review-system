@@ -4,6 +4,7 @@ import {
   addDoc, 
   updateDoc, 
   doc, 
+  getDoc,
   onSnapshot, 
   query,
   where,
@@ -17,6 +18,7 @@ import toast from 'react-hot-toast'
 
 interface ProjectState {
   projects: Project[]
+  project: Project | null
   selectedProject: Project | null
   loading: boolean
   isSubscribed: boolean
@@ -24,7 +26,8 @@ interface ProjectState {
   unsubscribe: Unsubscribe | null
   
   subscribeToProjects: (adminEmail: string) => void
-  createProject: (name: string, adminEmail: string) => Promise<string>
+  fetchProject: (projectId: string) => Promise<void>
+  createProject: (data: Partial<Project>) => Promise<string>
   updateProject: (id: string, data: Partial<Project>) => Promise<void>
   selectProject: (project: Project | null) => void
   cleanup: () => void
@@ -32,11 +35,31 @@ interface ProjectState {
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
   projects: [],
+  project: null,
   selectedProject: null,
   loading: false,
   isSubscribed: false,
   currentAdminEmail: null,
   unsubscribe: null,
+
+  fetchProject: async (projectId: string) => {
+    try {
+      const docRef = doc(db, 'projects', projectId)
+      const docSnap = await getDoc(docRef)
+      
+      if (docSnap.exists()) {
+        const project = { id: docSnap.id, ...docSnap.data() } as Project
+        set({ project })
+      } else {
+        set({ project: null })
+        toast.error('Không tìm thấy dự án')
+      }
+    } catch (error) {
+      console.error('Error fetching project:', error)
+      set({ project: null })
+      toast.error('Lỗi khi tải dự án')
+    }
+  },
 
   subscribeToProjects: (adminEmail: string) => {
     const { isSubscribed, currentAdminEmail } = get()
@@ -98,14 +121,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ unsubscribe: off })
   },
 
-  createProject: async (name: string, adminEmail: string) => {
+  createProject: async (data: Partial<Project>) => {
     set({ loading: true })
     try {
+      const now = Timestamp.now()
       const docRef = await addDoc(collection(db, 'projects'), {
-        name,
-        adminEmail,
         status: 'active',
-        createdAt: Timestamp.now()
+        tags: [],
+        createdAt: now,
+        updatedAt: now,
+        ...data,
       })
       toast.success('Tạo dự án thành công')
       return docRef.id
@@ -120,7 +145,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   updateProject: async (id: string, data: Partial<Project>) => {
     set({ loading: true })
     try {
-      await updateDoc(doc(db, 'projects', id), data as any)
+      await updateDoc(doc(db, 'projects', id), {
+        ...data,
+        updatedAt: Timestamp.now()
+      } as any)
       toast.success('Cập nhật thành công')
     } catch (error: any) {
       toast.error('Lỗi cập nhật: ' + error.message)

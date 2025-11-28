@@ -33,6 +33,24 @@ service cloud.firestore {
       }
     }
 
+    // Clients collection
+    match /clients/{clientId} {
+      // Only authenticated admins can read/write their own clients
+      allow read, write: if isAuthenticated() && request.auth.uid != null;
+    }
+
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Anyone can create notifications (for public reviewers creating comments)
+      allow create: if true;
+
+      // Admins can read/update their own notifications
+      allow read, update: if isAuthenticated();
+
+      // Only authenticated admins can delete
+      allow delete: if isAuthenticated();
+    }
+
     // Test collection for debugging
     match /test/{document=**} {
       allow read, write: if isAuthenticated();

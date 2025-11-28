@@ -2,16 +2,21 @@ import { create } from 'zustand'
 import { 
   collection, 
   setDoc,
-  updateDoc, 
+  updateDoc,
+  deleteDoc,
   doc, 
   onSnapshot, 
   query,
   orderBy,
-  Timestamp
+  Timestamp,
+  getDoc,
+  getDocs,
+  where
 } from 'firebase/firestore'
 import type { Unsubscribe } from 'firebase/firestore'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { db, storage } from '../lib/firebase'
+import { createNotification } from '../lib/notifications'
 import type { File as FileType, FileVersion } from '../types'
 import { generateId } from '../lib/utils'
 import toast from 'react-hot-toast'
@@ -20,12 +25,14 @@ interface FileState {
   files: FileType[]
   selectedFile: FileType | null
   uploading: boolean
+  deleting: boolean
   error: string | null
   unsubscribe: Unsubscribe | null
   
   subscribeToFiles: (projectId: string) => void
   loadFiles: (projectId: string) => void
   uploadFile: (projectId: string, file: File, existingFileId?: string) => Promise<void>
+  deleteFile: (projectId: string, fileId: string) => Promise<void>
   selectFile: (file: FileType | null) => void
   switchVersion: (fileId: string, version: number) => Promise<void>
   cleanup: () => void
@@ -35,6 +42,7 @@ export const useFileStore = create<FileState>((set, get) => ({
   files: [],
   selectedFile: null,
   uploading: false,
+  deleting: false,
   error: null,
   unsubscribe: null,
 
@@ -140,6 +148,19 @@ export const useFileStore = create<FileState>((set, get) => ({
         await setDoc(fileRef, newFileData)
         console.log('✅ New file created')
         toast.success(`Đã tải lên ${file.name}`)
+        
+        // Create notification for new file upload
+        const projectDoc = await getDoc(doc(db, 'projects', projectId))
+        if (projectDoc.exists()) {
+          const projectData = projectDoc.data()
+          await createNotification({
+            type: 'upload',
+            projectId,
+            fileId,
+            message: `File mới "${newFileData.name}" đã được tải lên`,
+            adminEmail: projectData.adminEmail
+          })
+        }
       }
       
       console.log('🎉 Upload process completed successfully!')
@@ -162,6 +183,56 @@ export const useFileStore = create<FileState>((set, get) => ({
 
   selectFile: (file: FileType | null) => {
     set({ selectedFile: file })
+  },
+
+  deleteFile: async (projectId: string, fileId: string) => {
+    set({ deleting: true, error: null })
+    
+    try {
+      const file = get().files.find(f => f.id === fileId)
+      if (!file) {
+        throw new Error('File không tồn tại')
+      }
+
+      // Delete all file versions from Storage
+      for (const version of file.versions) {
+        try {
+          const storagePath = `projects/${projectId}/${fileId}/v${version.version}/${version.metadata.name}`
+          const storageRef = ref(storage, storagePath)
+          await deleteObject(storageRef)
+          console.log(`🗑️ Deleted storage file: ${storagePath}`)
+        } catch (storageError: any) {
+          // Continue even if storage deletion fails (file might not exist)
+          console.warn(`⚠️ Failed to delete storage file: ${storageError.message}`)
+        }
+      }
+
+      // Delete all comments associated with this file
+      const commentsQuery = query(
+        collection(db, 'projects', projectId, 'comments'),
+        where('fileId', '==', fileId)
+      )
+      const commentsSnapshot = await getDocs(commentsQuery)
+      const deleteCommentPromises = commentsSnapshot.docs.map(doc => 
+        deleteDoc(doc.ref)
+      )
+      await Promise.all(deleteCommentPromises)
+      console.log(`🗑️ Deleted ${commentsSnapshot.size} comments`)
+
+      // Delete the file document from Firestore
+      await deleteDoc(doc(db, 'projects', projectId, 'files', fileId))
+      console.log(`✅ File deleted successfully: ${fileId}`)
+
+      toast.success(`Đã xóa file "${file.name}"`)
+    } catch (error: any) {
+      console.error('❌ Delete failed:', error)
+      const errorMessage = 'Xóa file thất bại: ' + (error.message || 'Lỗi không xác định')
+      set({ error: errorMessage })
+      toast.error(errorMessage)
+      throw error
+    } finally {
+      set({ deleting: false })
+    }
   },
 
   switchVersion: async (fileId: string, version: number) => {

@@ -1,23 +1,39 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { RouterProvider, createBrowserRouter, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useAuthStore } from './stores/auth'
+import { useThemeStore } from './stores/theme'
 
-// Layouts
+// Layouts (not lazy - needed immediately)
 import { AdminLayout } from './components/layout/AdminLayout'
 import { PublicLayout } from './components/layout/PublicLayout'
 import { AuthGuard } from './components/auth/AuthGuard'
 
-// Pages
-import LoginPage from './pages/LoginPage'
-import ProjectsPage from './pages/admin/ProjectsPage'
-import ProjectDetailPage from './pages/admin/ProjectDetailPage'
-import ReviewPage from './pages/ReviewPage'
+// Lazy load pages
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const ProjectsPage = lazy(() => import('./pages/admin/ProjectsPage'))
+const ProjectDetailPage = lazy(() => import('./pages/admin/ProjectDetailPage'))
+const ClientsPage = lazy(() => import('./pages/admin/ClientsPage'))
+const ReviewPage = lazy(() => import('./pages/ReviewPage'))
+
+// Loading component
+const PageLoader = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="text-center space-y-4">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+      <p className="text-muted-foreground">Đang tải...</p>
+    </div>
+  </div>
+)
 
 const router = createBrowserRouter([
   {
     path: '/login',
-    element: <LoginPage />,
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <LoginPage />
+      </Suspense>
+    ),
   },
   {
     path: '/app',
@@ -32,11 +48,27 @@ const router = createBrowserRouter([
           },
           {
             path: 'projects',
-            element: <ProjectsPage />,
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <ProjectsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: 'clients',
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <ClientsPage />
+              </Suspense>
+            ),
           },
           {
             path: 'projects/:projectId',
-            element: <ProjectDetailPage />,
+            element: (
+              <Suspense fallback={<PageLoader />}>
+                <ProjectDetailPage />
+              </Suspense>
+            ),
           },
         ],
       },
@@ -48,7 +80,11 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <ReviewPage />,
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <ReviewPage />
+          </Suspense>
+        ),
       },
     ],
   },
@@ -60,17 +96,18 @@ const router = createBrowserRouter([
 
 function App() {
   const initialize = useAuthStore((state) => state.initialize)
+  const { theme, setTheme } = useThemeStore()
 
   useEffect(() => {
-    // Set dark mode by default
-    document.documentElement.classList.add('dark')
+    // Initialize theme from localStorage or default to dark
+    setTheme(theme)
     
     // Initialize auth listener
     const unsubscribe = initialize()
     return () => {
       if (unsubscribe) unsubscribe()
     }
-  }, [initialize])
+  }, [initialize, setTheme, theme])
 
   return (
     <>

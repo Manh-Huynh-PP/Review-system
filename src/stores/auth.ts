@@ -3,7 +3,10 @@ import type { User } from 'firebase/auth'
 import { 
   signInWithEmailAndPassword, 
   signOut as firebaseSignOut,
-  onAuthStateChanged 
+  onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence
 } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import toast from 'react-hot-toast'
@@ -12,7 +15,7 @@ interface AuthState {
   user: User | null
   loading: boolean
   initialized: boolean
-  signIn: (email: string, password: string) => Promise<void>
+  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<void>
   signOut: () => Promise<void>
   initialize: () => (() => void)
 }
@@ -29,9 +32,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     return unsubscribe
   },
 
-  signIn: async (email: string, password: string) => {
+  signIn: async (email: string, password: string, rememberMe: boolean = false) => {
     set({ loading: true })
     try {
+      // Set persistence based on remember me option
+      await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence)
+      
       await signInWithEmailAndPassword(auth, email, password)
       toast.success('Đăng nhập thành công')
     } catch (error: any) {

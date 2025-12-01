@@ -37,7 +37,7 @@ import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slide
 import { AddComment } from '@/components/comments/AddComment'
 import { CommentsList } from '@/components/comments/CommentsList'
 import { ImageSequenceViewer } from '@/components/viewers/ImageSequenceViewer'
-import { CustomVideoPlayer } from '@/components/viewers/CustomVideoPlayer'
+import { CustomVideoPlayer, type CustomVideoPlayerRef } from '@/components/viewers/CustomVideoPlayer'
 import { VideoFrameControls } from '@/components/viewers/VideoFrameControls'
 import { AnnotationCanvasKonva } from '@/components/annotations/AnnotationCanvasKonva'
 import { AnnotationToolbar } from '@/components/annotations/AnnotationToolbar'
@@ -114,6 +114,7 @@ export function FileViewDialogShared({
   const [videoDuration, setVideoDuration] = useState(0)
   const [currentAnnotationCommentId, setCurrentAnnotationCommentId] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const customVideoPlayerRef = useRef<CustomVideoPlayerRef>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const glbViewerRef = useRef<GLBViewerRef>(null)
   const [compareMode, setCompareMode] = useState(false)
@@ -694,10 +695,20 @@ export function FileViewDialogShared({
         }
       }
 
+      const handleExportFrame = (dataUrl: string, timestamp: number) => {
+        // Download the image
+        const link = document.createElement('a')
+        const formattedTime = `${Math.floor(timestamp / 60)}-${Math.floor(timestamp % 60).toString().padStart(2, '0')}`
+        link.download = `${file.name.replace(/\.[^/.]+$/, '')}-frame-${formattedTime}.png`
+        link.href = dataUrl
+        link.click()
+      }
+
       return (
         <div className="space-y-3 w-full h-full flex flex-col max-h-[calc(100%-8rem)] 2xl:max-h-[calc(100%-10rem)]">
           <div className="relative bg-black flex-1 min-h-0 max-h-[calc(100vh-12rem)] 2xl:max-h-[calc(100vh-15rem)]">
             <CustomVideoPlayer
+              ref={customVideoPlayerRef}
               src={effectiveUrl}
               comments={allFileComments}
               currentTime={currentTime}
@@ -714,6 +725,7 @@ export function FileViewDialogShared({
                 setVideoDuration(duration)
                 setVideoFps(fps)
               }}
+              onExportFrame={handleExportFrame}
               className="w-full"
             />
             {renderAnnotationOverlay()}
@@ -724,6 +736,7 @@ export function FileViewDialogShared({
             onPrevFrame={handlePrevFrame}
             onSkipForward={handleSkipForward}
             onSkipBackward={handleSkipBackward}
+            onExportFrame={() => customVideoPlayerRef.current?.exportFrame()}
             currentFps={videoFps}
           />
         </div>

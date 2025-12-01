@@ -11,9 +11,10 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu'
-import { Search, ArrowUpDown, Calendar, Clock, Tag } from 'lucide-react'
+import { Search, ArrowUpDown, Calendar, Clock, Tag, LayoutGrid, List } from 'lucide-react'
 
 type SortOption = 'newest' | 'oldest' | 'name' | 'deadline' | 'updated'
+type ViewMode = 'list' | 'thumbnails'
 
 export default function ProjectsPage() {
   const { projects, subscribeToProjects, isSubscribed } = useProjectStore()
@@ -21,6 +22,10 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<SortOption>('newest')
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'archived'>('all')
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem('projectViewMode')
+    return (saved === 'list' || saved === 'thumbnails') ? saved : 'list'
+  })
 
   console.log('📁 ProjectsPage render:', {
     user: user?.email,
@@ -113,6 +118,32 @@ export default function ProjectsPage() {
         </div>
 
         <div className="flex gap-2">
+          {/* View Mode Toggle */}
+          <div className="flex border rounded-md">
+            <Button 
+              variant={viewMode === 'list' ? 'default' : 'ghost'} 
+              size="icon"
+              onClick={() => {
+                setViewMode('list')
+                localStorage.setItem('projectViewMode', 'list')
+              }}
+              className="rounded-r-none"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant={viewMode === 'thumbnails' ? 'default' : 'ghost'} 
+              size="icon"
+              onClick={() => {
+                setViewMode('thumbnails')
+                localStorage.setItem('projectViewMode', 'thumbnails')
+              }}
+              className="rounded-l-none"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </div>
+
           {/* Status Filter */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -168,17 +199,21 @@ export default function ProjectsPage() {
       </div>
 
       {/* Projects Grid */}
-      <div className="grid gap-4">
+      <div className={
+        viewMode === 'list' 
+          ? 'grid gap-4' 
+          : 'grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+      }>
         {filteredAndSortedProjects.map(p => (
-          <ProjectCard key={p.id} project={p} />
+          <ProjectCard key={p.id} project={p} viewMode={viewMode} />
         ))}
         {filteredAndSortedProjects.length === 0 && projects.length > 0 && (
-          <p className="text-muted-foreground text-center py-8">
+          <p className="text-muted-foreground text-center py-8 col-span-full">
             Không tìm thấy dự án phù hợp
           </p>
         )}
         {projects.length === 0 && (
-          <p className="text-muted-foreground text-center py-8">
+          <p className="text-muted-foreground text-center py-8 col-span-full">
             Chưa có dự án nào. Hãy tạo dự án mới.
           </p>
         )}

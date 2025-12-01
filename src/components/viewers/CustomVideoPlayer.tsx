@@ -1,7 +1,11 @@
-import { useRef, useEffect, useState } from 'react'
-import { Play, Pause, Volume2, VolumeX, Maximize, StickyNote } from 'lucide-react'
+import { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react'
+import { Play, Pause, Volume2, VolumeX, Maximize, StickyNote, Camera } from 'lucide-react'
 import type { Comment } from '@/types'
 import './CustomVideoPlayer.css'
+
+export interface CustomVideoPlayerRef {
+    exportFrame: () => void
+}
 
 interface CustomVideoPlayerProps {
     src: string
@@ -11,10 +15,11 @@ interface CustomVideoPlayerProps {
     onCommentMarkerClick: (comment: Comment) => void
     onLoadedMetadata?: (duration: number, fps: number) => void
     onFullscreenChange?: (isFullscreen: boolean) => void
+    onExportFrame?: (dataUrl: string, timestamp: number) => void
     className?: string
 }
 
-export function CustomVideoPlayer({
+export const CustomVideoPlayer = forwardRef<CustomVideoPlayerRef, CustomVideoPlayerProps>(({
     src,
     comments,
     currentTime,
@@ -22,16 +27,20 @@ export function CustomVideoPlayer({
     onCommentMarkerClick,
     onLoadedMetadata,
     onFullscreenChange,
+    onExportFrame,
     className = ''
-}: CustomVideoPlayerProps) {
+}, ref) => {
     const videoRef = useRef<HTMLVideoElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
+    const canvasRef = useRef<HTMLCanvasElement>(null)
     const [duration, setDuration] = useState(0)
     const [playbackRate, setPlaybackRate] = useState(1)
     const [isPlaying, setIsPlaying] = useState(false)
     const [isMuted, setIsMuted] = useState(false)
     const [localCurrentTime, setLocalCurrentTime] = useState(0)
     const [isFullscreen, setIsFullscreen] = useState(false)
+    const [aspectRatio, setAspectRatio] = useState<number | null>(null)
+    const [isPortrait, setIsPortrait] = useState(false)
 
     // Fullscreen change event listener
     useEffect(() => {
@@ -54,6 +63,16 @@ export function CustomVideoPlayer({
         const handleLoadedMetadata = () => {
             const dur = video.duration
             setDuration(dur)
+            
+            // Detect aspect ratio
+            const videoWidth = video.videoWidth
+            const videoHeight = video.videoHeight
+            if (videoWidth && videoHeight) {
+                const ratio = videoWidth / videoHeight
+                setAspectRatio(ratio)
+                setIsPortrait(ratio < 1) // Portrait if width < height
+            }
+            
             onLoadedMetadata?.(dur, 30)
         }
 
@@ -136,6 +155,78 @@ export function CustomVideoPlayer({
         }
     }
 
+    const handleExportFrame = async () => {
+        const video = videoRef.current
+        if (!video) return
+
+        try {
+            // Pause video to ensure we capture the exact current frame
+            const wasPlaying = !video.paused
+            if (wasPlaying) {
+                video.pause()
+            }
+
+            // Wait a tiny bit for the frame to stabilize
+            await new Promise(resolve => setTimeout(resolve, 50))
+
+            // Create or get canvas
+            let canvas = canvasRef.current
+            if (!canvas) {
+                canvas = document.createElement('canvas')
+                canvasRef.current = canvas
+            }
+
+            // Set canvas size to match video
+            canvas.width = video.videoWidth
+            canvas.height = video.videoHeight
+
+            // Draw current frame to canvas
+            const ctx = canvas.getContext('2d')
+            if (!ctx) return
+
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+            
+            // Convert to blob instead of dataURL to avoid CORS issues
+            canvas.toBlob((blob) => {
+                if (!blob) {
+                    alert('Không thể xuất frame. Vui lòng thử lại.')
+                    return
+                }
+
+                // Create object URL from blob
+                const url = URL.createObjectURL(blob)
+                
+                // Get current timestamp for filename
+                const currentTimestamp = video.currentTime
+                const timestamp = formatTime(currentTimestamp).replace(':', '-')
+                
+                // Callback with blob URL or download directly
+                if (onExportFrame) {
+                    // For callback, we still need to convert to dataURL
+                    const reader = new FileReader()
+                    reader.onloadend = () => {
+                        onExportFrame(reader.result as string, currentTimestamp)
+                    }
+                    reader.readAsDataURL(blob)
+                } else {
+                    // Default behavior: download the image directly
+                    const link = document.createElement('a')
+                    link.download = `frame-${timestamp}.png`
+                    link.href = url
+                    document.body.appendChild(link)
+                    link.click()
+                    document.body.removeChild(link)
+                    
+                    // Clean up the object URL after download
+                    setTimeout(() => URL.revokeObjectURL(url), 100)
+                }
+            }, 'image/png')
+        } catch (error) {
+            console.error('Failed to export frame:', error)
+            alert('Không thể xuất frame. Vui lòng thử lại.')
+        }
+    }
+
     const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
         const timeline = e.currentTarget
         const rect = timeline.getBoundingClientRect()
@@ -158,18 +249,37 @@ export function CustomVideoPlayer({
 
     const currentProgress = duration > 0 ? (localCurrentTime / duration) * 100 : 0
 
+    // Expose exportFrame method via ref
+    useImperativeHandle(ref, () => ({
+        exportFrame: handleExportFrame
+    }), [handleExportFrame])
+
+    // Dynamic max-height based on aspect ratio
+    const getVideoMaxHeight = () => {
+        if (isFullscreen) return 'calc(100vh - 120px)'
+        if (isPortrait) {
+            // Portrait videos get more height
+            return 'max-h-[70vh] xl:max-h-[65vh] 2xl:max-h-[60vh]'
+        }
+        // Default landscape
+        return 'max-h-[55vh] xl:max-h-[50vh] 2xl:max-h-[45vh]'
+    }
+
     return (
-        <div ref={containerRef} className={`custom-video-player ${className}`}>
+        <div ref={containerRef} className={`custom-video-player ${isPortrait ? 'portrait-video' : 'landscape-video'} ${className}`}>
             <video
                 ref={videoRef}
                 src={src}
-                className={`w-full h-auto bg-black ${!isFullscreen ? 'max-h-[55vh] xl:max-h-[50vh] 2xl:max-h-[45vh]' : ''}`}
+                crossOrigin="anonymous"
+                className={`w-full h-auto bg-black ${!isFullscreen ? getVideoMaxHeight() : ''}`}
                 style={isFullscreen ? {
                     maxHeight: 'calc(100vh - 120px)',
                     objectFit: 'contain'
                 } : undefined}
                 onClick={togglePlayPause}
             />
+            {/* Hidden canvas for frame export */}
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
 
             {/* Custom Controls */}
             <div className="video-controls">
@@ -249,6 +359,10 @@ export function CustomVideoPlayer({
                             </select>
                         </div>
 
+                        <button onClick={handleExportFrame} className="control-btn" title="Xuất frame hiện tại">
+                            <Camera className="w-5 h-5" />
+                        </button>
+
                         <button onClick={toggleFullscreen} className="control-btn" title="Fullscreen">
                             <Maximize className="w-5 h-5" />
                         </button>
@@ -257,4 +371,4 @@ export function CustomVideoPlayer({
             </div>
         </div>
     )
-}
+})

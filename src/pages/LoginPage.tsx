@@ -9,13 +9,14 @@ import { Label } from '@/components/ui/label'
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const { signIn, loading } = useAuthStore()
   const navigate = useNavigate()
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     try {
-      await signIn(email, password)
+      await signIn(email, password, rememberMe)
       navigate('/app/projects')
     } catch (error) {
       // Error handled by store
@@ -56,6 +57,21 @@ export default function LoginPage() {
               required
               disabled={loading}
             />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="remember"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              disabled={loading}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              aria-label="Ghi nhớ đăng nhập"
+            />
+            <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
+              Ghi nhớ đăng nhập
+            </Label>
           </div>
 
           <Button type="submit" className="w-full" disabled={loading}>

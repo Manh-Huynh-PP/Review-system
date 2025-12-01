@@ -3,6 +3,7 @@ import {
   collection, 
   addDoc, 
   updateDoc, 
+  deleteDoc,
   doc, 
   getDoc,
   onSnapshot, 
@@ -29,6 +30,7 @@ interface ProjectState {
   fetchProject: (projectId: string) => Promise<void>
   createProject: (data: Partial<Project>) => Promise<string>
   updateProject: (id: string, data: Partial<Project>) => Promise<void>
+  deleteProject: (id: string) => Promise<void>
   selectProject: (project: Project | null) => void
   cleanup: () => void
 }
@@ -169,8 +171,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
   },
 
-  // Optional helper: archive/unarchive
-  
+  deleteProject: async (id: string) => {
+    set({ loading: true })
+    try {
+      await deleteDoc(doc(db, 'projects', id))
+      toast.success('Xóa dự án thành công')
+    } catch (error: any) {
+      toast.error('Lỗi xóa dự án: ' + error.message)
+      throw error
+    } finally {
+      set({ loading: false })
+    }
+  },
 
   selectProject: (project: Project | null) => {
     set({ selectedProject: project })

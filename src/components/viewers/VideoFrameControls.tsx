@@ -1,11 +1,12 @@
 import { Button } from '@/components/ui/button'
-import { SkipBack, SkipForward, ChevronLeft, ChevronRight } from 'lucide-react'
+import { SkipBack, SkipForward, ChevronLeft, ChevronRight, Camera } from 'lucide-react'
 
 interface VideoControlsProps {
     onPrevFrame: () => void
     onNextFrame: () => void
     onSkipBackward: () => void
     onSkipForward: () => void
+    onExportFrame?: () => void
     disabled?: boolean
     currentFps?: number
 }
@@ -15,6 +16,7 @@ export function VideoFrameControls({
     onNextFrame,
     onSkipBackward,
     onSkipForward,
+    onExportFrame,
     disabled = false,
     currentFps = 30
 }: VideoControlsProps) {
@@ -75,6 +77,22 @@ export function VideoFrameControls({
                     <SkipForward className="w-4 h-4" />
                 </Button>
             </div>
+
+            {onExportFrame && (
+                <div className="ml-2 pl-2 border-l border-border">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onExportFrame}
+                        disabled={disabled}
+                        title="Xuất frame hiện tại thành ảnh"
+                        className="h-9 px-3 hover:bg-green-500/10 hover:border-green-500/50 transition-all"
+                    >
+                        <Camera className="w-4 h-4" />
+                        <span className="ml-1.5 text-xs font-medium">Export Frame</span>
+                    </Button>
+                </div>
+            )}
         </div>
     )
 }

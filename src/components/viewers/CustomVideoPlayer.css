@@ -19,6 +19,24 @@
     object-fit: contain;
 }
 
+/* Portrait video adjustments */
+.custom-video-player.portrait-video video {
+    max-width: 80%;
+    margin: 0 auto;
+}
+
+/* Landscape video adjustments */
+.custom-video-player.landscape-video video {
+    max-width: 100%;
+}
+
+/* Hidden canvas for frame export */
+.custom-video-player canvas {
+    display: none;
+    position: absolute;
+    pointer-events: none;
+}
+
 /* Video Controls */
 .video-controls {
     background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.7));
@@ -322,6 +340,11 @@
     .timeline-marker:hover .marker-line {
         height: 22px;
         width: 3px;
+    }
+
+    /* Portrait video on mobile - take more width */
+    .custom-video-player.portrait-video video {
+        max-width: 100%;
     }
 }
 

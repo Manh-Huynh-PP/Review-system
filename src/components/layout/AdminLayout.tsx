@@ -5,14 +5,16 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
+import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog'
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
   DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+  DropdownMenuTrigger,
+  DropdownMenuLabel
 } from '@/components/ui/dropdown-menu'
-import { LogOut, FolderOpen, Home, ChevronDown, Plus, Users } from 'lucide-react'
+import { LogOut, FolderOpen, Home, ChevronDown, Plus, Users, User } from 'lucide-react'
 import { useEffect } from 'react'
 
 export function AdminLayout() {
@@ -107,13 +109,33 @@ export function AdminLayout() {
             <ThemeToggle />
             <NotificationBell />
             <Separator orientation="vertical" className="h-6" />
-            <span className="text-sm text-muted-foreground hidden sm:block">
-              {user?.email}
-            </span>
-            <Button variant="ghost" size="sm" onClick={() => signOut()}>
-              <LogOut className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Đăng xuất</span>
-            </Button>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline max-w-[150px] truncate">{user?.email}</span>
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">Tài khoản</span>
+                    <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <div className="p-2">
+                  <ChangePasswordDialog />
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => signOut()}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Đăng xuất
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>

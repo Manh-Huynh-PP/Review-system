@@ -12,18 +12,11 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-console.log('🔥 Firebase config:', {
-  projectId: firebaseConfig.projectId,
-  storageBucket: firebaseConfig.storageBucket
-})
-
 const app = initializeApp(firebaseConfig)
 
 export const auth = getAuth(app)
 export const db = getFirestore(app)
 export const storage = getStorage(app)
-
-console.log('🗄️ Firebase Storage initialized with bucket:', firebaseConfig.storageBucket)
 
 // Upload file to Firebase Storage and return download URL
 export async function uploadFile(file: File, path: string): Promise<string> {
@@ -33,7 +26,7 @@ export async function uploadFile(file: File, path: string): Promise<string> {
 }
 
 // Upload multiple comment attachments
-export async function uploadCommentAttachments(files: File[], projectId: string, commentId: string): Promise<{id: string, type: 'image' | 'file', url: string, name: string, size: number, mimeType?: string}[]> {
+export async function uploadCommentAttachments(files: File[], projectId: string, commentId: string): Promise<{ id: string, type: 'image' | 'file', url: string, name: string, size: number, mimeType?: string }[]> {
   // Ensure the user is authenticated before attempting to upload attachments.
   // Firebase Storage rules expect `request.auth != null` for writes to comments/ paths.
   if (!auth.currentUser) {
@@ -43,9 +36,9 @@ export async function uploadCommentAttachments(files: File[], projectId: string,
     const timestamp = Date.now()
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
     const path = `comments/${projectId}/${commentId}/${timestamp}_${index}_${sanitizedFileName}`
-    
+
     const url = await uploadFile(file, path)
-    
+
     return {
       id: `${commentId}_${timestamp}_${index}`,
       type: file.type.startsWith('image/') ? 'image' as const : 'file' as const,
@@ -55,7 +48,7 @@ export async function uploadCommentAttachments(files: File[], projectId: string,
       mimeType: file.type
     }
   })
-  
+
   return await Promise.all(uploadPromises)
 }
 

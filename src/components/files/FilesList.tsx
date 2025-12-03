@@ -29,7 +29,7 @@ const getFileTypeLabel = (type: string) => {
 
 export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', searchTerm = '' }: FilesListProps) {
   const { files, switchVersion, uploading, deleteFile, deleting, uploadFile, setSequenceViewMode, updateFrameCaption, selectedFile: storeSelectedFile, selectFile: storeSelectFile } = useFileStore()
-  const { comments, subscribeToComments, addComment, toggleResolve, cleanup: cleanupComments } = useCommentStore()
+  const { comments, subscribeToComments, addComment, toggleResolve, editComment, deleteComment, cleanup: cleanupComments } = useCommentStore()
   const { user } = useAuthStore()
   const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({})
   const [selectedFile, setSelectedFile] = useState<FileType | null>(null)
@@ -194,6 +194,14 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
   const handleCaptionChange = async (fileId: string, version: number, frame: number, caption: string) => {
     await updateFrameCaption(projectId, fileId, version, frame, caption)
   }
+
+  const handleEditComment = async (commentId: string, newContent: string) => {
+    await editComment(projectId, commentId, newContent)
+  }
+
+  const handleDeleteComment = async (commentId: string) => {
+    await deleteComment(projectId, commentId)
+  }
   const filteredAndSortedFiles = useMemo(() => {
     if (!files) return []
 
@@ -334,6 +342,8 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
 
           isAdmin={!!user}
           onCaptionChange={user ? handleCaptionChange : undefined}
+          onEditComment={user ? handleEditComment : undefined}
+          onDeleteComment={user ? handleDeleteComment : undefined}
         />
       )}
 

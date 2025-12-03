@@ -30,9 +30,9 @@ export default function ProjectDetailPage() {
 
   const handleCopyReviewLink = async () => {
     if (!projectId) return
-    
+
     const reviewUrl = `${window.location.origin}/review/${projectId}`
-    
+
     try {
       await navigator.clipboard.writeText(reviewUrl)
       setCopied(true)
@@ -81,7 +81,7 @@ export default function ProjectDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header với Upload Button */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">{project.name}</h1>
           <p className="text-sm text-muted-foreground mt-1">Trạng thái: {project.status}</p>
@@ -95,12 +95,12 @@ export default function ProjectDetailPage() {
             {copied ? (
               <>
                 <Check className="h-4 w-4" />
-                Đã copy!
+                <span className="hidden sm:inline">Đã copy!</span>
               </>
             ) : (
               <>
                 <Share2 className="h-4 w-4" />
-                Share link review
+                <span className="hidden sm:inline">Share link review</span>
               </>
             )}
           </Button>
@@ -109,45 +109,45 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Search and Sort Controls */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 flex-1 max-w-md">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Tìm kiếm file..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-10"
-            />
-            {searchTerm && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-              >
-                <X className="w-3 h-3" />
-              </Button>
-            )}
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="relative flex-1 max-w-full sm:max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Tìm kiếm file..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-10"
+          />
+          {searchTerm && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+            >
+              <X className="w-3 h-3" />
+            </Button>
+          )}
         </div>
-        
+
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Sắp xếp theo:</span>
+          <span className="text-sm text-muted-foreground hidden sm:inline">Sắp xếp theo:</span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2">
                 <ArrowUpDown className="w-4 h-4" />
-                {sortBy === 'name' && 'Tên file'}
-                {sortBy === 'date' && 'Ngày tải lên'}
-                {sortBy === 'type' && 'Loại file'}
-                {sortBy === 'size' && 'Kích thước'}
-                <span className="text-xs text-muted-foreground ml-1">
+                <span className="hidden sm:inline">
+                  {sortBy === 'name' && 'Tên file'}
+                  {sortBy === 'date' && 'Ngày tải lên'}
+                  {sortBy === 'type' && 'Loại file'}
+                  {sortBy === 'size' && 'Kích thước'}
+                </span>
+                <span className="text-xs text-muted-foreground">
                   ({sortDirection === 'asc' ? '↑' : '↓'})
                 </span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
+            <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => handleSort('name')}>
                 <FileType className="w-4 h-4 mr-2" />
                 Tên file

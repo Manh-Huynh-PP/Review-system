@@ -1,4 +1,4 @@
-import { useState, useRef, lazy, Suspense, useEffect } from 'react'
+import { useState, useRef, lazy, Suspense, useEffect, useCallback, useMemo } from 'react'
 import type { File as FileType } from '@/types'
 import { format } from 'date-fns'
 import { formatFileSize } from '@/lib/utils'
@@ -61,6 +61,8 @@ interface Props {
   onUserNameChange: (name: string) => void
   onAddComment: (userName: string, content: string, timestamp?: number, parentCommentId?: string, annotationData?: string | null, attachments?: File[]) => Promise<void>
   onResolveToggle?: (commentId: string, isResolved: boolean) => void
+  onEditComment?: (commentId: string, newContent: string) => Promise<void>
+  onDeleteComment?: (commentId: string) => Promise<void>
   isAdmin?: boolean
   onCaptionChange?: (fileId: string, version: number, frame: number, caption: string) => Promise<void>
   // Sequence frame context - for when viewing a single frame from a sequence
@@ -102,6 +104,8 @@ export function FileViewDialogShared({
   onUserNameChange,
   onAddComment,
   onResolveToggle,
+  onEditComment,
+  onDeleteComment,
   isAdmin = false,
   onCaptionChange,
   sequenceContext
@@ -114,7 +118,7 @@ export function FileViewDialogShared({
   const [videoFps, setVideoFps] = useState(30)
   const [videoDuration, setVideoDuration] = useState(0)
   const [currentAnnotationCommentId, setCurrentAnnotationCommentId] = useState<string | null>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
+
   const customVideoPlayerRef = useRef<CustomVideoPlayerRef>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const glbViewerRef = useRef<GLBViewerRef>(null)
@@ -138,6 +142,53 @@ export function FileViewDialogShared({
   const [sequenceViewMode, setSequenceViewMode] = useState<'video' | 'carousel' | 'grid'>('video')
   const [frameDetailView, setFrameDetailView] = useState<number | null>(null)
   const [navMode, setNavMode] = useState<'frame' | 'marker'>('frame')
+  const [isPlaying, setIsPlaying] = useState(false)
+
+  // Memoize video player callbacks to prevent CustomVideoPlayer re-renders
+  const handleTimeUpdate = useCallback((time: number) => {
+    setCurrentTime(time)
+  }, [])
+
+  const handleFullscreenChange = useCallback((fullscreen: boolean) => {
+    setIsVideoFullscreen(fullscreen)
+    if (fullscreen) {
+      setShowOnlyCurrentTimeComments(true)
+    }
+  }, [])
+
+  const handleLoadedMetadata = useCallback((duration: number, fps: number) => {
+    setVideoDuration(duration)
+    setVideoFps(fps)
+  }, [])
+
+  const handleVideoPlay = useCallback(() => {
+    setIsPlaying(true)
+  }, [])
+
+  const handleVideoPause = useCallback(() => {
+    setIsPlaying(false)
+  }, [])
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleCommentMarkerClick = useCallback((comment: any) => {
+    if (!file) return
+    setCurrentTime(comment.timestamp || 0)
+    if (comment.annotationData) {
+      // We'll call handleViewAnnotation which will be defined later
+      // This is okay because it's only called during event handlers, not during render
+      handleViewAnnotation(comment.annotationData, comment)
+    }
+  }, [file])
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleExportFrame = useCallback((dataUrl: string, timestamp: number) => {
+    if (!file) return
+    const link = document.createElement('a')
+    const formattedTime = `${Math.floor(timestamp / 60)}-${Math.floor(timestamp % 60).toString().padStart(2, '0')}`
+    link.download = `${file.name.replace(/\.[^/.]+$/, '')}-frame-${formattedTime}.png`
+    link.href = dataUrl
+    link.click()
+  }, [file?.name])
 
   // Update current version when file changes
   useEffect(() => {
@@ -147,8 +198,9 @@ export function FileViewDialogShared({
       setLeftVersion(null)
       setRightVersion(null)
       // Reset video time when switching versions
-      if (videoRef.current) {
-        videoRef.current.currentTime = 0
+      // Reset video time when switching versions
+      if (customVideoPlayerRef.current) {
+        customVideoPlayerRef.current.seekTo(0)
       }
     }
   }, [file?.currentVersion, file?.id])
@@ -159,7 +211,11 @@ export function FileViewDialogShared({
   const effectiveUrl = resolvedUrl || current?.url
   const uploadDate = current?.uploadedAt?.toDate ? current.uploadedAt.toDate() : new Date()
 
-  const allFileComments = comments.filter(c => c.fileId === file.id && c.version === currentVersion)
+  // Memoize allFileComments to prevent CustomVideoPlayer re-renders
+  const allFileComments = useMemo(
+    () => comments.filter(c => c.fileId === file.id && c.version === currentVersion),
+    [comments, file.id, currentVersion]
+  )
 
   // Filter comments based on current time/frame if enabled
   const fileComments = showOnlyCurrentTimeComments && (file.type === 'video' || file.type === 'sequence')
@@ -224,9 +280,9 @@ export function FileViewDialogShared({
   }, [currentTime, currentFrame, file.type, isAnnotating, isReadOnly, allFileComments, videoFps, currentAnnotationCommentId])
 
   const handleTimestampClick = (timestamp: number) => {
-    if (file.type === 'video' && videoRef.current) {
-      videoRef.current.currentTime = timestamp
-      videoRef.current.pause() // Pause when jumping to a timestamp
+    if (file.type === 'video' && customVideoPlayerRef.current) {
+      customVideoPlayerRef.current.seekTo(timestamp)
+      customVideoPlayerRef.current.pause() // Pause when jumping to a timestamp
     } else if (file.type === 'sequence') {
       // For sequences, timestamp represents frame number
       setCurrentFrame(Math.floor(timestamp))
@@ -243,12 +299,13 @@ export function FileViewDialogShared({
     setAnnotationHistoryIndex(0)
 
     // Pause video when starting to annotate
-    if (file.type === 'video' && videoRef.current) {
-      videoRef.current.pause()
+    if (file.type === 'video' && customVideoPlayerRef.current) {
+      customVideoPlayerRef.current.pause()
     }
   }
 
-  const handleViewAnnotation = (dataStr: string, comment?: any) => {
+  // Memoize handleViewAnnotation
+  const handleViewAnnotation = useCallback((dataStr: string, comment?: any) => {
     try {
       const parsed = JSON.parse(dataStr)
       let data = parsed
@@ -265,6 +322,36 @@ export function FileViewDialogShared({
       setIsReadOnly(true)
       if (comment) {
         setCurrentAnnotationCommentId(comment.id)
+
+        // Jump to timeline if comment has timestamp (for video/sequence)
+        if (comment.timestamp !== undefined && comment.timestamp !== null) {
+          console.log('🎯 Jumping to timestamp:', comment.timestamp, 'for file type:', file.type)
+          if (file.type === 'video') {
+            // Use state to trigger video jump (this is more reliable)
+            setCurrentTime(comment.timestamp)
+
+            // Wait for video ref to be ready, then jump
+            const jumpToTime = () => {
+              if (customVideoPlayerRef.current) {
+                console.log('📹 Setting video time to:', comment.timestamp)
+                customVideoPlayerRef.current.seekTo(comment.timestamp)
+                customVideoPlayerRef.current.pause()
+              } else {
+                console.warn('⚠️ customVideoPlayerRef.current is still null, retrying...')
+                // Retry after a short delay
+                setTimeout(jumpToTime, 100)
+              }
+            }
+
+            // Try immediately, then with delays
+            requestAnimationFrame(() => {
+              setTimeout(jumpToTime, 50)
+            })
+          } else if (file.type === 'sequence') {
+            console.log('🖼️ Setting frame to:', Math.floor(comment.timestamp))
+            setCurrentFrame(Math.floor(comment.timestamp))
+          }
+        }
       } else {
         setCurrentAnnotationCommentId(null)
       }
@@ -279,7 +366,7 @@ export function FileViewDialogShared({
     } catch (e) {
       console.error('Failed to parse annotation data', e)
     }
-  }
+  }, [file.type])
 
   const handleDoneAnnotating = () => {
     setIsAnnotating(false)
@@ -746,23 +833,18 @@ export function FileViewDialogShared({
               src={effectiveUrl}
               comments={allFileComments}
               currentTime={currentTime}
-              onTimeUpdate={setCurrentTime}
+              onTimeUpdate={handleTimeUpdate}
               onCommentMarkerClick={handleCommentMarkerClick}
-              onFullscreenChange={(fullscreen) => {
-                setIsVideoFullscreen(fullscreen)
-                // Auto-enable time filtering when entering fullscreen
-                if (fullscreen) {
-                  setShowOnlyCurrentTimeComments(true)
-                }
-              }}
-              onLoadedMetadata={(duration, fps) => {
-                setVideoDuration(duration)
-                setVideoFps(fps)
-              }}
+              onFullscreenChange={handleFullscreenChange}
+              onLoadedMetadata={handleLoadedMetadata}
               onExportFrame={handleExportFrame}
+              onPlay={handleVideoPlay}
+              onPause={handleVideoPause}
               className="w-full h-full"
             />
-            {renderAnnotationOverlay()}
+
+            {/* Only show overlays when not playing to improve performance */}
+            {!isPlaying && renderAnnotationOverlay()}
           </div>
 
           {/* Frame Controls + Filter/Comment Toggle on Mobile */}
@@ -1110,6 +1192,8 @@ export function FileViewDialogShared({
                     }}
                     isSequence={file.type === 'sequence'}
                     isAdmin={isAdmin}
+                    onEdit={onEditComment}
+                    onDelete={onDeleteComment}
                   />
                   {fileComments.length === 0 && (
                     <div className="text-center text-muted-foreground py-8">
@@ -1190,6 +1274,8 @@ export function FileViewDialogShared({
                     }}
                     isSequence={file.type === 'sequence'}
                     isAdmin={isAdmin}
+                    onEdit={onEditComment}
+                    onDelete={onDeleteComment}
                   />
                   {fileComments.length === 0 && (
                     <div className="text-center text-muted-foreground py-8">
@@ -1252,6 +1338,8 @@ export function FileViewDialogShared({
                 await onAddComment(userName, content, frameDetailView, parentCommentId, annotationData, attachments)
               }}
               onResolveToggle={onResolveToggle}
+              onEditComment={onEditComment}
+              onDeleteComment={onDeleteComment}
               isAdmin={isAdmin}
               onCaptionChange={onCaptionChange ? async (fileId, version, _frame, caption) => {
                 await onCaptionChange(fileId, version, frameDetailView, caption)

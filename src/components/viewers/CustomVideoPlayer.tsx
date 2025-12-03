@@ -1,10 +1,12 @@
-import { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react'
+import { useRef, useEffect, useState, forwardRef, useImperativeHandle, useCallback, memo } from 'react'
 import { Play, Pause, Volume2, VolumeX, Maximize, StickyNote, Camera } from 'lucide-react'
 import type { Comment } from '@/types'
 import './CustomVideoPlayer.css'
 
 export interface CustomVideoPlayerRef {
     exportFrame: () => void
+    seekTo: (time: number) => void
+    pause: () => void
 }
 
 interface CustomVideoPlayerProps {
@@ -16,10 +18,12 @@ interface CustomVideoPlayerProps {
     onLoadedMetadata?: (duration: number, fps: number) => void
     onFullscreenChange?: (isFullscreen: boolean) => void
     onExportFrame?: (dataUrl: string, timestamp: number) => void
+    onPlay?: () => void
+    onPause?: () => void
     className?: string
 }
 
-export const CustomVideoPlayer = forwardRef<CustomVideoPlayerRef, CustomVideoPlayerProps>(({
+export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVideoPlayerProps>(({
     src,
     comments,
     currentTime,
@@ -28,6 +32,8 @@ export const CustomVideoPlayer = forwardRef<CustomVideoPlayerRef, CustomVideoPla
     onLoadedMetadata,
     onFullscreenChange,
     onExportFrame,
+    onPlay,
+    onPause,
     className = ''
 }, ref) => {
     const videoRef = useRef<HTMLVideoElement>(null)
@@ -40,6 +46,10 @@ export const CustomVideoPlayer = forwardRef<CustomVideoPlayerRef, CustomVideoPla
     const [localCurrentTime, setLocalCurrentTime] = useState(0)
     const [isFullscreen, setIsFullscreen] = useState(false)
     const [isPortrait, setIsPortrait] = useState(false)
+
+    // Ref to track if the current time update was triggered by the video itself
+    // This prevents the "fighting" loop where onTimeUpdate -> parent -> currentTime prop -> seek -> stutter
+    const isUpdatingTimeRef = useRef(false)
 
     // Fullscreen change event listener
     useEffect(() => {
@@ -62,7 +72,7 @@ export const CustomVideoPlayer = forwardRef<CustomVideoPlayerRef, CustomVideoPla
         const handleLoadedMetadata = () => {
             const dur = video.duration
             setDuration(dur)
-            
+
             // Detect aspect ratio
             const videoWidth = video.videoWidth
             const videoHeight = video.videoHeight
@@ -70,17 +80,41 @@ export const CustomVideoPlayer = forwardRef<CustomVideoPlayerRef, CustomVideoPla
                 const ratio = videoWidth / videoHeight
                 setIsPortrait(ratio < 1) // Portrait if width < height
             }
-            
+
             onLoadedMetadata?.(dur, 30)
         }
 
+        // Throttle timeupdate events using requestAnimationFrame
+        // This reduces state updates while maintaining smooth progress bar
+        let rafId: number | null = null
+        let lastUpdateTime = 0
         const handleTimeUpdate = () => {
-            setLocalCurrentTime(video.currentTime)
-            onTimeUpdate(video.currentTime)
+            if (rafId !== null) return // Already scheduled
+
+            rafId = requestAnimationFrame(() => {
+                const now = performance.now()
+                // Update at most 10 times per second for smooth progress bar
+                if (now - lastUpdateTime >= 100) {
+                    setLocalCurrentTime(video.currentTime)
+
+                    // Mark that we are updating the time, so the incoming prop change should be ignored
+                    isUpdatingTimeRef.current = true
+                    onTimeUpdate(video.currentTime)
+
+                    lastUpdateTime = now
+                }
+                rafId = null
+            })
         }
 
-        const handlePlay = () => setIsPlaying(true)
-        const handlePause = () => setIsPlaying(false)
+        const handlePlay = () => {
+            setIsPlaying(true)
+            onPlay?.()
+        }
+        const handlePause = () => {
+            setIsPlaying(false)
+            onPause?.()
+        }
 
         video.addEventListener('loadedmetadata', handleLoadedMetadata)
         video.addEventListener('timeupdate', handleTimeUpdate)
@@ -88,17 +122,26 @@ export const CustomVideoPlayer = forwardRef<CustomVideoPlayerRef, CustomVideoPla
         video.addEventListener('pause', handlePause)
 
         return () => {
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId)
+            }
             video.removeEventListener('loadedmetadata', handleLoadedMetadata)
             video.removeEventListener('timeupdate', handleTimeUpdate)
             video.removeEventListener('play', handlePlay)
             video.removeEventListener('pause', handlePause)
         }
-    }, [onTimeUpdate, onLoadedMetadata])
+    }, [onTimeUpdate, onLoadedMetadata, onPlay, onPause])
 
     // Seek to external currentTime changes (from frame navigation)
     useEffect(() => {
         const video = videoRef.current
         if (video && currentTime !== undefined && !isNaN(currentTime)) {
+            // If this update was triggered by our own onTimeUpdate, ignore it
+            if (isUpdatingTimeRef.current) {
+                isUpdatingTimeRef.current = false
+                return
+            }
+
             const diff = Math.abs(video.currentTime - currentTime)
             // Use smaller threshold for frame-accurate seeking
             if (diff > 0.01) {
@@ -108,8 +151,11 @@ export const CustomVideoPlayer = forwardRef<CustomVideoPlayerRef, CustomVideoPla
         }
     }, [currentTime])
 
-    const handleMarkerClick = (comment: Comment) => {
+    const handleMarkerClick = useCallback((comment: Comment) => {
         if (comment.timestamp !== null) {
+            // Force reset the update flag to ensure we process the seek from props
+            isUpdatingTimeRef.current = false
+
             if (videoRef.current) {
                 videoRef.current.pause()
             }
@@ -117,7 +163,7 @@ export const CustomVideoPlayer = forwardRef<CustomVideoPlayerRef, CustomVideoPla
             // This avoids double-seeking and potential conflicts
             onCommentMarkerClick(comment)
         }
-    }
+    }, [onCommentMarkerClick])
 
     const handlePlaybackRateChange = (rate: number) => {
         if (videoRef.current) {
@@ -153,7 +199,7 @@ export const CustomVideoPlayer = forwardRef<CustomVideoPlayerRef, CustomVideoPla
         }
     }
 
-    const handleExportFrame = async () => {
+    const handleExportFrame = useCallback(async () => {
         const video = videoRef.current
         if (!video) return
 
@@ -183,7 +229,7 @@ export const CustomVideoPlayer = forwardRef<CustomVideoPlayerRef, CustomVideoPla
             if (!ctx) return
 
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-            
+
             // Convert to blob instead of dataURL to avoid CORS issues
             canvas.toBlob((blob) => {
                 if (!blob) {
@@ -193,11 +239,11 @@ export const CustomVideoPlayer = forwardRef<CustomVideoPlayerRef, CustomVideoPla
 
                 // Create object URL from blob
                 const url = URL.createObjectURL(blob)
-                
+
                 // Get current timestamp for filename
                 const currentTimestamp = video.currentTime
                 const timestamp = formatTime(currentTimestamp).replace(':', '-')
-                
+
                 // Callback with blob URL or download directly
                 if (onExportFrame) {
                     // For callback, we still need to convert to dataURL
@@ -214,7 +260,7 @@ export const CustomVideoPlayer = forwardRef<CustomVideoPlayerRef, CustomVideoPla
                     document.body.appendChild(link)
                     link.click()
                     document.body.removeChild(link)
-                    
+
                     // Clean up the object URL after download
                     setTimeout(() => URL.revokeObjectURL(url), 100)
                 }
@@ -223,7 +269,7 @@ export const CustomVideoPlayer = forwardRef<CustomVideoPlayerRef, CustomVideoPla
             console.error('Failed to export frame:', error)
             alert('Không thể xuất frame. Vui lòng thử lại.')
         }
-    }
+    }, [onExportFrame])
 
     const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
         const timeline = e.currentTarget
@@ -248,9 +294,25 @@ export const CustomVideoPlayer = forwardRef<CustomVideoPlayerRef, CustomVideoPla
     const currentProgress = duration > 0 ? (localCurrentTime / duration) * 100 : 0
 
     // Expose exportFrame method via ref
+    // Expose methods via ref
     useImperativeHandle(ref, () => ({
-        exportFrame: handleExportFrame
-    }), [handleExportFrame])
+        exportFrame: handleExportFrame,
+        seekTo: (time: number) => {
+            if (videoRef.current) {
+                videoRef.current.currentTime = time
+                setLocalCurrentTime(time)
+                // We are seeking programmatically, so we might want to set the update flag
+                // to avoid the feedback loop if the parent also updates the prop
+                isUpdatingTimeRef.current = true
+                onTimeUpdate(time)
+            }
+        },
+        pause: () => {
+            if (videoRef.current) {
+                videoRef.current.pause()
+            }
+        }
+    }), [handleExportFrame, onTimeUpdate])
 
     // Dynamic max-height based on aspect ratio
     const getVideoMaxHeight = () => {
@@ -369,4 +431,4 @@ export const CustomVideoPlayer = forwardRef<CustomVideoPlayerRef, CustomVideoPla
             </div>
         </div>
     )
-})
+}))

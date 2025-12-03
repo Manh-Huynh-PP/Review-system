@@ -23,8 +23,8 @@ export default function ReviewPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const { project, fetchProject } = useProjectStore()
   const { files, subscribeToFiles, switchVersion, cleanup: cleanupFiles } = useFileStore()
-  const { comments, subscribeToComments, addComment, cleanup: cleanupComments } = useCommentStore()
-  
+  const { comments, subscribeToComments, addComment, editComment, deleteComment, cleanup: cleanupComments } = useCommentStore()
+
   const [currentUserName, setCurrentUserName] = useState(() => {
     return localStorage.getItem('reviewUserName') || ''
   })
@@ -56,10 +56,10 @@ export default function ReviewPage() {
   const ensureDownloadUrl = async (fileId: string, version: number, storagePath: string, currentUrl?: string) => {
     const key = getKey(fileId, version)
     if (resolvedUrls[key]) return resolvedUrls[key]
-    
+
     const needsFix = currentUrl?.includes('firebasestorage.app')
     if (!needsFix) return currentUrl
-    
+
     try {
       // Prefer extracting the exact object path from the existing URL (more robust
       // for sequences or legacy uploads where metadata.name doesn't match).
@@ -177,6 +177,14 @@ export default function ReviewPage() {
     if (selectedFile) {
       await addComment(projectId!, selectedFile.id, selectedFile.currentVersion, userName, content, timestamp, parentCommentId, annotationData, attachments)
     }
+  }
+
+  const handleEditComment = async (commentId: string, newContent: string) => {
+    await editComment(projectId!, commentId, newContent)
+  }
+
+  const handleDeleteComment = async (commentId: string) => {
+    await deleteComment(projectId!, commentId)
   }
 
   const handleSwitchVersion = async (fileId: string, version: number) => {
@@ -298,6 +306,8 @@ export default function ReviewPage() {
                 currentUserName={currentUserName}
                 onUserNameChange={handleUserNameChange}
                 onAddComment={handleAddComment}
+                onEditComment={handleEditComment}
+                onDeleteComment={handleDeleteComment}
                 isAdmin={false}
               />
             )}

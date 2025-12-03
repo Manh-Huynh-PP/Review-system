@@ -227,17 +227,17 @@ export function ImageSequenceViewer({
 
       {/* Image Display - Hide in Grid Mode */}
       {viewMode !== 'grid' && (
-        <div className="relative viewport flex-1 min-h-0 flex items-center justify-center max-h-[calc(100vh-16rem)] 2xl:max-h-[calc(100vh-20rem)]" id="sequence-image-container">
+        <div className="relative viewport flex-1 min-h-0 flex items-center justify-center max-h-[calc(100dvh-16rem)] 2xl:max-h-[calc(100dvh-20rem)]" id="sequence-image-container">
           <img
             src={urls[currentFrame]}
             alt={`Frame ${currentFrame + 1}`}
-            className="w-full h-full object-contain max-h-[55vh] xl:max-h-[50vh] 2xl:max-h-[45vh]"
+            className="w-full h-full object-contain max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh]"
             draggable={false}
           />
           <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm border border-border/50 px-3 py-1.5 rounded-md text-sm font-mono pointer-events-none z-10">
             Frame {currentFrame + 1} / {frameCount}
           </div>
-          
+
           {/* Annotation overlay for video/carousel modes only */}
           {isAnnotating && (
             <>

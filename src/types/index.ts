@@ -83,6 +83,9 @@ export interface Comment {
     size: number
     mimeType?: string
   }[]
+  isPending?: boolean // Optimistic UI state
+  isEdited?: boolean
+  updatedAt?: Timestamp
 }
 
 export interface AnnotationObject {

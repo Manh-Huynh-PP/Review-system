@@ -30,15 +30,15 @@ export function ProjectCard({ project, viewMode = 'list' }: { project: Project; 
 
   if (viewMode === 'thumbnails') {
     return (
-      <div 
+      <div
         className="rounded-lg border shadow-sm hover:shadow-md transition-all cursor-pointer group overflow-hidden"
         onClick={() => navigate(`/app/projects/${project.id}`)}
       >
         {/* Thumbnail Image */}
         <div className="relative h-40 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center overflow-hidden">
           {thumbnailUrl ? (
-            <img 
-              src={thumbnailUrl} 
+            <img
+              src={thumbnailUrl}
               alt={project.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
@@ -161,7 +161,7 @@ export function ProjectCard({ project, viewMode = 'list' }: { project: Project; 
               </Badge>
             )}
           </div>
-          
+
           {project.description && (
             <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
               {project.description}
@@ -170,21 +170,21 @@ export function ProjectCard({ project, viewMode = 'list' }: { project: Project; 
 
           <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
             <span>Tạo: {format(created, 'dd/MM/yyyy', { locale: vi })}</span>
-            
+
             {project.clientName && (
               <span className="flex items-center gap-1">
                 <User className="h-3 w-3" />
                 {project.clientName}
               </span>
             )}
-            
+
             {project.clientEmail && (
               <span className="flex items-center gap-1">
                 <Mail className="h-3 w-3" />
                 {project.clientEmail}
               </span>
             )}
-            
+
             {deadline && (
               <span className={`flex items-center gap-1 ${isOverdue ? 'text-destructive font-medium' : ''}`}>
                 <Calendar className="h-3 w-3" />
@@ -208,7 +208,7 @@ export function ProjectCard({ project, viewMode = 'list' }: { project: Project; 
           <Button variant="secondary" onClick={() => navigate(`/app/projects/${project.id}`)}>
             Mở
           </Button>
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">

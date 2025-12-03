@@ -5,11 +5,11 @@ import { ProjectCreateDialog } from '@/components/projects/ProjectCreateDialog'
 import { ProjectCard } from '@/components/projects/ProjectCard'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { Search, ArrowUpDown, Calendar, Clock, Tag, LayoutGrid, List } from 'lucide-react'
 
@@ -55,8 +55,8 @@ export default function ProjectsPage() {
       filtered = filtered.filter(p => {
         const matchName = p.name.toLowerCase().includes(query)
         const matchDesc = p.description?.toLowerCase().includes(query)
-        const matchClient = p.clientName?.toLowerCase().includes(query) || 
-                          p.clientEmail?.toLowerCase().includes(query)
+        const matchClient = p.clientName?.toLowerCase().includes(query) ||
+          p.clientEmail?.toLowerCase().includes(query)
         const matchTags = p.tags?.some(tag => tag.toLowerCase().includes(query))
         return matchName || matchDesc || matchClient || matchTags
       })
@@ -117,28 +117,30 @@ export default function ProjectsPage() {
           />
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap sm:flex-nowrap">
           {/* View Mode Toggle */}
           <div className="flex border rounded-md">
-            <Button 
-              variant={viewMode === 'list' ? 'default' : 'ghost'} 
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
               size="icon"
               onClick={() => {
                 setViewMode('list')
                 localStorage.setItem('projectViewMode', 'list')
               }}
               className="rounded-r-none"
+              title="Xem dạng danh sách"
             >
               <List className="h-4 w-4" />
             </Button>
-            <Button 
-              variant={viewMode === 'thumbnails' ? 'default' : 'ghost'} 
+            <Button
+              variant={viewMode === 'thumbnails' ? 'default' : 'ghost'}
               size="icon"
               onClick={() => {
                 setViewMode('thumbnails')
                 localStorage.setItem('projectViewMode', 'thumbnails')
               }}
               className="rounded-l-none"
+              title="Xem dạng lưới"
             >
               <LayoutGrid className="h-4 w-4" />
             </Button>
@@ -147,10 +149,12 @@ export default function ProjectsPage() {
           {/* Status Filter */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Tag className="h-4 w-4 mr-2" />
-                {filterStatus === 'all' ? 'Tất cả' : 
-                 filterStatus === 'active' ? 'Đang hoạt động' : 'Đã lưu trữ'}
+              <Button variant="outline" className="gap-2">
+                <Tag className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {filterStatus === 'all' ? 'Tất cả' :
+                    filterStatus === 'active' ? 'Đang hoạt động' : 'Đã lưu trữ'}
+                </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -169,9 +173,9 @@ export default function ProjectsPage() {
           {/* Sort Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <ArrowUpDown className="h-4 w-4 mr-2" />
-                {getSortLabel()}
+              <Button variant="outline" className="gap-2">
+                <ArrowUpDown className="h-4 w-4" />
+                <span className="hidden sm:inline">{getSortLabel()}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -200,8 +204,8 @@ export default function ProjectsPage() {
 
       {/* Projects Grid */}
       <div className={
-        viewMode === 'list' 
-          ? 'grid gap-4' 
+        viewMode === 'list'
+          ? 'grid gap-4'
           : 'grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
       }>
         {filteredAndSortedProjects.map(p => (

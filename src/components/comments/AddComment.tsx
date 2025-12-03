@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
-import { Send, PenTool, Image, X, Paperclip } from 'lucide-react'
+import { Send, PenTool, Image, X, Paperclip, Camera } from 'lucide-react'
 
 interface AttachmentPreview {
     id: string
@@ -12,7 +12,7 @@ interface AttachmentPreview {
 }
 
 interface AddCommentProps {
-    onSubmit: (userName: string, content: string, timestamp?: number, parentCommentId?: string, annotationData?: string | null, attachments?: File[]) => Promise<void>
+    onSubmit: (userName: string, content: string, timestamp?: number, parentCommentId?: string, annotationData?: string | null, attachments?: File[], captureView?: boolean) => Promise<void>
     currentTimestamp?: number
     showTimestamp?: boolean
     userName?: string
@@ -20,6 +20,7 @@ interface AddCommentProps {
     isSequence?: boolean // For image sequences, timestamp is frame number
     annotationData?: any[] | null
     onAnnotationClick?: () => void
+    canCaptureView?: boolean
 }
 
 export function AddComment({
@@ -30,12 +31,14 @@ export function AddComment({
     onUserNameChange,
     isSequence = false,
     annotationData,
-    onAnnotationClick
+    onAnnotationClick,
+    canCaptureView
 }: AddCommentProps) {
     const [userName, setUserName] = useState(initialUserName || '')
     const [content, setContent] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [attachments, setAttachments] = useState<AttachmentPreview[]>([])
+    const [captureView, setCaptureView] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -53,11 +56,13 @@ export function AddComment({
                 showTimestamp ? currentTimestamp : undefined,
                 undefined,
                 null, // annotationData is handled by parent
-                attachmentFiles.length > 0 ? attachmentFiles : undefined
+                attachmentFiles.length > 0 ? attachmentFiles : undefined,
+                captureView
             )
             // Clear immediately on success
             setContent('')
             setAttachments([])
+            setCaptureView(false)
             if (onUserNameChange) {
                 onUserNameChange(userName.trim())
             }
@@ -77,8 +82,8 @@ export function AddComment({
     const handleFiles = (files: File[]) => {
         const validFiles = files.filter(file => {
             // Accept images and some common file types
-            return file.type.startsWith('image/') || 
-                   ['application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type)
+            return file.type.startsWith('image/') ||
+                ['application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type)
         })
 
         const newAttachments: AttachmentPreview[] = validFiles.map(file => ({
@@ -89,7 +94,7 @@ export function AddComment({
         }))
 
         setAttachments(prev => [...prev, ...newAttachments])
-        
+
         // Clear file input
         if (fileInputRef.current) {
             fileInputRef.current.value = ''
@@ -176,7 +181,7 @@ export function AddComment({
                     rows={3}
                     className="text-sm resize-none pr-24"
                 />
-                
+
                 {/* Attachment Previews */}
                 {attachments.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -184,8 +189,8 @@ export function AddComment({
                             <div key={attachment.id} className="relative group">
                                 {attachment.type === 'image' ? (
                                     <div className="relative w-16 h-16 rounded-md overflow-hidden border border-border">
-                                        <img 
-                                            src={attachment.url} 
+                                        <img
+                                            src={attachment.url}
                                             alt={attachment.file.name}
                                             className="w-full h-full object-cover"
                                         />
@@ -229,7 +234,7 @@ export function AddComment({
                         className="hidden"
                         aria-label="Chọn file đính kèm"
                     />
-                    
+
                     <Button
                         type="button"
                         size="sm"
@@ -240,6 +245,20 @@ export function AddComment({
                     >
                         <Image className="w-3 h-3" />
                     </Button>
+
+                    {canCaptureView && (
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant={captureView ? 'secondary' : 'ghost'}
+                            onClick={() => setCaptureView(!captureView)}
+                            className="h-8 px-2"
+                            title={captureView ? 'Đã lưu góc nhìn' : 'Lưu góc nhìn hiện tại'}
+                        >
+                            <Camera className="w-3 h-3 mr-1" />
+                            {captureView ? 'Đã lưu' : 'Góc nhìn'}
+                        </Button>
+                    )}
 
                     {onAnnotationClick && (
                         <Button

@@ -531,13 +531,6 @@ export function CommentsList({
       </div>
     )
   }
-  if (comments.length === 0) {
-    return (
-      <div className="text-center py-8 text-sm text-muted-foreground">
-        Chưa có bình luận nào
-      </div>
-    )
-  }
 
   return (
     <>

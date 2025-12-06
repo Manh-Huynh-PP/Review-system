@@ -46,7 +46,8 @@ export const useNotificationStore = create<NotificationStore>((set) => ({
   error: null,
 
   subscribeToNotifications: (adminEmail: string) => {
-    console.log('🔔 Subscribing to notifications for:', adminEmail)
+    const normalizedEmail = adminEmail ? String(adminEmail).toLowerCase() : adminEmail
+    console.log('🔔 Subscribing to notifications for:', normalizedEmail)
     
     if (unsubscribe) {
       console.log('🔄 Cleaning up existing subscription')
@@ -59,7 +60,7 @@ export const useNotificationStore = create<NotificationStore>((set) => ({
       // Temporary: Query without orderBy until index is created
       const q = query(
         collection(db, 'notifications'),
-        where('adminEmail', '==', adminEmail)
+        where('adminEmail', '==', normalizedEmail)
       )
       
       console.log('📡 Setting up real-time listener for notifications (without orderBy - waiting for index)')
@@ -137,9 +138,10 @@ export const useNotificationStore = create<NotificationStore>((set) => ({
 
   markAllAsRead: async (adminEmail: string) => {
     try {
+      const normalizedEmail = adminEmail ? String(adminEmail).toLowerCase() : adminEmail
       const q = query(
         collection(db, 'notifications'),
-        where('adminEmail', '==', adminEmail),
+        where('adminEmail', '==', normalizedEmail),
         where('isRead', '==', false)
       )
       

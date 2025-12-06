@@ -39,7 +39,8 @@ export async function createNotification(params: {
       message: params.message,
       isRead: false,
       createdAt: Timestamp.now(),
-      adminEmail: params.adminEmail
+      // Normalize admin email to lowercase for consistent querying
+      adminEmail: params.adminEmail ? String(params.adminEmail).toLowerCase() : params.adminEmail
     }
 
     console.log('💾 Saving notification to Firestore:', notificationData)

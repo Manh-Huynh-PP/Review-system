@@ -39,8 +39,9 @@ export function NotificationBell() {
 
   useEffect(() => {
     if (user?.email) {
-      console.log('👤 NotificationBell: User email detected:', user.email)
-      subscribeToNotifications(user.email)
+      const normalized = user.email.toLowerCase()
+      console.log('👤 NotificationBell: User email detected (normalized):', normalized)
+      subscribeToNotifications(normalized)
     } else {
       console.log('⚠️ NotificationBell: No user email')
     }
@@ -70,7 +71,7 @@ export function NotificationBell() {
 
   const handleMarkAllRead = async () => {
     if (user?.email) {
-      await markAllAsRead(user.email)
+      await markAllAsRead(user.email.toLowerCase())
     }
   }
 

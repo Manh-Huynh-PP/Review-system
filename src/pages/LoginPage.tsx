@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth'
@@ -7,11 +7,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 export default function LoginPage() {
+  const { user, initialized } = useAuthStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
   const { signIn, loading } = useAuthStore()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    // If auth finished initializing and there's a user, redirect to projects
+    if (initialized && user) {
+      navigate('/app/projects', { replace: true })
+    }
+  }, [initialized, user, navigate])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()

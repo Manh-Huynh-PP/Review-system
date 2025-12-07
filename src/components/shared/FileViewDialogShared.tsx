@@ -177,12 +177,15 @@ export function FileViewDialogShared({
 
   useEffect(() => {
     if (open && file) {
-      if (!hasSeenTour(file.type as any)) {
-        // Delay slightly to wait for dialog animation/render
-        setTimeout(() => {
-          handleStartTour()
-        }, 1000)
-      }
+      ;(async () => {
+        const seen = await hasSeenTour(file.type as any)
+        if (!seen) {
+          // Delay slightly to wait for dialog animation/render
+          setTimeout(() => {
+            handleStartTour()
+          }, 1000)
+        }
+      })()
     }
   }, [open, file?.type])
 

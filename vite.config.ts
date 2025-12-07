@@ -10,4 +10,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // Increase chunk size warning limit to reduce noisy warnings for large bundles
+  // Value is in kilobytes (2000 KB = 2 MB)
+  build: {
+    chunkSizeWarningLimit: 2000,
+  },
 })

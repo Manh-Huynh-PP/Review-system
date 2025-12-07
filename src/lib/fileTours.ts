@@ -11,7 +11,26 @@ interface TourOptions {
 /**
  * Start a guided tour for the file viewer based on file type and device
  */
-export function startFileTour({ fileType, isMobile }: TourOptions) {
+async function getClientIp(): Promise<string | null> {
+  try {
+    const cached = localStorage.getItem('client_ip')
+    if (cached) return cached
+
+    const resp = await fetch('https://api.ipify.org?format=json')
+    if (!resp.ok) return null
+    const json = await resp.json()
+    const ip = json?.ip
+    if (ip) {
+      localStorage.setItem('client_ip', ip)
+      return ip
+    }
+  } catch (e) {
+    // ignore
+  }
+  return null
+}
+
+export async function startFileTour({ fileType, isMobile }: TourOptions) {
   let steps: any[] = []
 
   // Common comment step for desktop
@@ -640,8 +659,17 @@ export function startFileTour({ fileType, isMobile }: TourOptions) {
         driverObj.destroy()
       }
     },
-    onCloseClick: () => {
-      localStorage.setItem(`hasSeenTour_${fileType}`, 'true')
+    onCloseClick: async () => {
+      try {
+        const ip = await getClientIp()
+        if (ip) {
+          localStorage.setItem(`hasSeenTour_${fileType}_${ip}`, 'true')
+        } else {
+          localStorage.setItem(`hasSeenTour_${fileType}`, 'true')
+        }
+      } catch (e) {
+        localStorage.setItem(`hasSeenTour_${fileType}`, 'true')
+      }
       driverObj.destroy()
       try {
         document.body.classList.remove('tour-running')
@@ -649,8 +677,17 @@ export function startFileTour({ fileType, isMobile }: TourOptions) {
         /* ignore */
       }
     },
-    onDestroyed: () => {
-      localStorage.setItem(`hasSeenTour_${fileType}`, 'true')
+    onDestroyed: async () => {
+      try {
+        const ip = await getClientIp()
+        if (ip) {
+          localStorage.setItem(`hasSeenTour_${fileType}_${ip}`, 'true')
+        } else {
+          localStorage.setItem(`hasSeenTour_${fileType}`, 'true')
+        }
+      } catch (e) {
+        localStorage.setItem(`hasSeenTour_${fileType}`, 'true')
+      }
       try {
         document.body.classList.remove('tour-running')
       } catch (e) {
@@ -672,7 +709,19 @@ export function startFileTour({ fileType, isMobile }: TourOptions) {
 /**
  * Check if user has seen the tour for a specific file type
  */
-export function hasSeenTour(fileType: FileType): boolean {
+export async function hasSeenTour(fileType: FileType): Promise<boolean> {
+  // Try per-IP key first
+  try {
+    const ip = await getClientIp()
+    if (ip) {
+      const key = `hasSeenTour_${fileType}_${ip}`
+      if (localStorage.getItem(key) === 'true') return true
+    }
+  } catch (e) {
+    // ignore and fallback
+  }
+
+  // Backwards-compatible fallback to old key
   return localStorage.getItem(`hasSeenTour_${fileType}`) === 'true'
 }
 
@@ -681,10 +730,28 @@ export function hasSeenTour(fileType: FileType): boolean {
  */
 export function resetTourStatus(fileType?: FileType) {
   if (fileType) {
+    // remove generic key
     localStorage.removeItem(`hasSeenTour_${fileType}`)
+    // remove any per-ip keys
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (k && k.startsWith(`hasSeenTour_${fileType}_`)) {
+        localStorage.removeItem(k)
+        // adjust index because we removed an item
+        i--
+      }
+    }
   } else {
-    // Reset all
     const types: FileType[] = ['image', 'video', 'sequence', 'pdf', 'model']
-    types.forEach(type => localStorage.removeItem(`hasSeenTour_${type}`))
+    types.forEach(type => {
+      localStorage.removeItem(`hasSeenTour_${type}`)
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (k && k.startsWith(`hasSeenTour_${type}_`)) {
+          localStorage.removeItem(k)
+          i--
+        }
+      }
+    })
   }
 }

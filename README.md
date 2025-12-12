@@ -1,124 +1,105 @@
 # Creative Asset Review System
 
-Ứng dụng web để review tài sản sáng tạo (images, videos, image sequences, PDFs, và 3D models) với công cụ chú thích, bình luận timestamped cho video, và quản lý phiên bản. README này đã cập nhật để phản ánh trạng thái hiện tại của repository (components, stores, viewers và hạ tầng được tích hợp).
+A web application for reviewing creative assets (images, videos, image sequences, PDFs, and 3D models) with annotation tools, timestamped comments for videos, and version management.
 
-## ✨ Hiện trạng & Tính năng chính
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+
+## ✨ Features
 
 ### Admin (Creator)
-- 🔐 Đăng nhập qua Firebase Auth (admin flows được bảo vệ)
-- 📁 Quản lý Projects và Files (stores: `src/stores/projects.ts`, `src/stores/files.ts`)
-- 📤 Upload files: image (PNG/JPG/WebP), video (MP4), PDF, image sequences và 3D models (GLB) (`src/components/files/FileUploader.tsx`, `SequenceUploader.tsx`)
-- 🔄 Versioning: mỗi file có phiên bản, có thể chuyển giữa các version trong `FileViewDialog.tsx`
-- 📌 **Version badge**: Hiển thị thông tin phiên bản (v1, v2,...) trực tiếp trên thumbnail file card
-- 💬 Quản lý bình luận realtime, resolve/unresolve (`src/stores/comments.ts`, `CommentsList.tsx`)
-- ✏️ Annotation tools: `AnnotationCanvasKonva.tsx` + `AnnotationToolbar.tsx` (pen/rect/arrow/undo/redo)
-- 🔗 Public review links: có hỗ trợ mở link review cho reviewer (cơ chế public read theo mặc định; xem phần Security)
-- 🔗 **Share file link**: Chia sẻ link trực tiếp tới file cụ thể — khi mở link sẽ tự động hiện dialog xem file
+- 🔐 **Authentication**: Login via Firebase Auth (admin flows are protected).
+- 📁 **Project & File Management**: Manage projects and files organized by folders.
+- 📤 **Multi-format Support**: Upload images (PNG/JPG/WebP), videos (MP4), PDFs, image sequences, and 3D models (GLB).
+- 🔄 **Versioning**: Upload new versions of files and switch between them easily.
+- 📌 **Version Badges**: Clear visual indicators for file versions.
+- 💬 **Comment Management**: Real-time comments with resolve/unresolve status.
+- ✏️ **Annotation Tools**: Draw directly on assets using Pen, Rectangle, Arrow tools with Undo/Redo support.
+- 🔗 **Sharing**: Generate public review links or share specific files directly.
 
 ### Client (Reviewer)
-- 🚫 Có thể truy cập mà không cần đăng ký (public reviewer flow)
-- 👤 Nhập tên hiển thị (lưu trong `localStorage` bởi UI reviewer)
-- 🖼️ Xem file trong các viewer chuyên biệt: images, PDF (`PDFViewer.tsx`), video (`CustomVideoPlayer.tsx`), image sequences (`ImageSequenceViewer.tsx`), 3D GLB (`GLBViewer.tsx`)
-- 💬 Bình luận: hỗ trợ timestamped comments cho video, attachments trên comment
-- ⚡ Cập nhật realtime thông qua Firestore onSnapshot
+- 🚫 **No Registration Required**: Public reviewer flow allows access without account creation.
+- 👤 **Guest Identity**: Reviewers enter a display name (persisted locally).
+- framing **Specialized Viewers**: Dedicated viewers for each file type (Video player with frame-step, PDF viewer, 3D viewer, Image Sequence player).
+- 💬 **Feedback**: Leave timestamped comments on videos and general comments on other assets.
+- ⚡ **Real-time**: Updates are reflected instantly via Firestore.
 
-## 🛠️ Tech Stack (chính xác theo repo)
+## 🛠️ Tech Stack
 
 - **Frontend:** React + Vite + TypeScript
-- **Styling:** Tailwind CSS, shadcn/ui style components
-- **State:** Zustand (stores nằm ở `src/stores`)
-- **Viewers / Canvas:** `react-pdf`, `react-konva` (Konva), `react-three-fiber` + `three.js`, `@mediamonks/fast-image-sequence`
-- **Backend / Services:** Firebase (Auth, Firestore, Storage)
-- **Deployment hints:** Vercel (`vercel.json`) and Firebase Hosting (`firebase.json`)
+- **Styling:** Tailwind CSS, shadcn/ui
+- **State Management:** Zustand
+- **Visualization:** 
+    - `react-pdf` (PDFs)
+    - `react-konva` (Annotations)
+    - `react-three-fiber` + `three.js` (3D Models)
+    - `@mediamonks/fast-image-sequence` (Image Sequences)
+- **Backend:** Firebase (Auth, Firestore, Storage)
 
-## 📦 Cài đặt nhanh
+## 📦 Quick Start
 
-1. Clone & cài dependencies
+### Prerequisites
+- Node.js (v18+)
+- A Firebase project
 
-```powershell
-git clone <repo-url>
-cd Review-system
-npm install
-```
+### Installation
 
-2. Tạo Firebase Project và bật Auth/Firestore/Storage
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/manhhuynh-designer/Review-system.git
+    cd Review-system
+    ```
 
-3. Thêm biến môi trường (copy từ `.env.example` nếu có)
+2.  **Install dependencies**
+    ```bash
+    npm install
+    ```
 
-4. Chạy dev
+3.  **Configure Firebase**
+    - Create a project in the [Firebase Console](https://console.firebase.google.com/).
+    - Enable **Authentication**, **Firestore**, and **Storage**.
+    - Copy `.env.example` to `.env` and fill in your Firebase credentials:
+    ```bash
+    cp .env.example .env
+    ```
 
-```powershell
-npm run dev
-```
+4.  **Run Development Server**
+    ```bash
+    npm run dev
+    ```
+    Open [http://localhost:5173](http://localhost:5173) to view it in the browser.
 
-Mở http://localhost:5173
-
-Xem phần chi tiết cài đặt Firebase và deploy trong file gốc nếu cần (phần hướng dẫn trước đây vẫn áp dụng với các biến `VITE_*`).
-
-## 📂 Cấu trúc quan trọng (tóm tắt)
+## 📂 Project Structure
 
 ```
 src/
 ├── components/
-│   ├── files/               # FileUploader, FilesList, FileViewDialog, FileCard
-│   ├── viewers/             # PDFViewer, CustomVideoPlayer, GLBViewer, ImageSequenceViewer
-│   ├── annotations/         # AnnotationCanvasKonva, AnnotationToolbar
-│   └── ui/                  # shared UI components
+│   ├── files/               # File management (Upload, List, Dialog)
+│   ├── viewers/             # File viewers (PDF, Video, GLB, Sequence)
+│   ├── annotations/         # Annotation canvas and tools
+│   └── ui/                  # Shared UI components
 ├── lib/
-│   ├── firebase.ts          # Firebase init + helpers (upload/delete helpers)
-│   └── storageUtils.ts      # helpers (formatBytes, export, etc.)
+│   ├── firebase.ts          # Firebase configuration & helpers
+│   └── storageUtils.ts      # Utilities
 ├── pages/
-│   └── ReviewPage.tsx       # public review entry point
-├── stores/                  # Zustand stores: auth, files, comments, projects
+│   └── ReviewPage.tsx       # Public review interface
+├── stores/                  # Zustand state management
 └── App.tsx
 ```
 
-## 🔒 Security (hiện trạng và lưu ý)
+## 🔒 Security Note
 
-- Hiện tại repo sử dụng Firestore + Storage với mô hình public read cho links review (README trước đây mô tả public read). Điều này có nghĩa là bất kỳ ai có URL file (nếu công khai) hoặc review link có thể truy cập nội dung.
-- Có `firestore.rules` và `storage.rules` trong repo nhưng bạn nên kiểm tra lại rules production để đảm bảo:
-  - Reviewer public không thể ghi vào admin-only paths.
-  - Giới hạn kích thước file và kiểu file upload.
-- Rủi ro đã nhận diện từ scan:
-  - Orphaned attachments: code client hiện không chắc chắn dọn sạch attachments khi comment/file bị xóa — cần thêm Cloud Function để garbage-collect.
-  - Thiếu granular roles / SSO / audit logs cho enterprise.
+- The default configuration uses public read access for review links.
+- For production use, consider implementing strict Firestore/Storage security rules.
+- **Sensitive Data**: Currently, `private: true` prevents accidental npm publishing, but ensure you do not commit `.env` files containing secrets.
 
-Khuyến nghị ngắn gọn:
-- Thay public download bằng signed URLs (Cloud Function) nếu asset nhạy cảm.
-- Thêm invite-only review links nếu cần private reviews.
-- Triển khai Cloud Functions để dọn dẹp attachments khi documents bị xóa.
+## 🤝 Contributing
 
-## 🔍 Data model (tóm tắt từ code)
+Contributions are welcome! Please read the [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests.
 
-- Projects: `id`, `name`, `createdAt`, `status`, `adminEmail`
-- Files: `id`, `projectId`, `name`, `type`, `versions[]`, `currentVersion` (mỗi version có url + metadata)
-- Comments: `id`, `projectId`, `fileId`, `version`, `userName`, `content`, `timestamp` (video seconds or null), `isResolved`, `createdAt`
+## 📄 License
 
-Định dạng và fields chi tiết có trong `src/stores/*` và được dùng trên client.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🚧 Known limitations & security notes
+## Author
 
-- Public read default có thể không phù hợp cho tài sản nhạy cảm — cân nhắc signed URLs / invite tokens.
-- No server-side virus scan currently — nếu bạn chấp nhận uploads từ nguồn không tin cậy, hãy thêm Cloud Function scan.
-- Realtime annotations live-sharing chưa được triển khai (hiện annotation là per-client + saved per comment). Nếu cần live-collaboration, kế hoạch là lưu action deltas vào Firestore hoặc một WebSocket service.
-
-## Tài liệu bổ sung
-
-- Báo cáo đánh giá chi tiết và đề xuất tính năng đã được tạo: `REPORT_DETAILED.md` (gốc repo) — chứa so sánh đối thủ, đề xuất 11 tính năng, và hướng tiếp theo.
-
-## Roadmap ngắn hạn (gợi ý từ scan)
-
-- [ ] Signed download URLs (Cloud Function)
-- [ ] Invite-only review links / tokenized links
-- [ ] Cloud Function để dọn dẹp attachments khi xóa
-- [ ] Threaded comments + soft-delete
-
-## License
-
-MIT
-
----
-
-Nếu bạn muốn, tôi có thể tiếp tục và:
-- chuyển README sang tiếng Anh; hoặc
-- tạo task breakdown + ước lượng giờ cho 3 tính năng ưu tiên (signed URLs, invite-only links, attachment cleanup).
+**Mạnh Huỳnh**

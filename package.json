@@ -1,7 +1,18 @@
 {
   "name": "review-system",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Creative Asset Review System - Open Source",
+  "author": "Mạnh Huỳnh",
+  "license": "MIT",
+  "homepage": "https://github.com/manhhuynh-designer/Review-system#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/manhhuynh-designer/Review-system.git"
+  },
+  "bugs": {
+    "url": "https://github.com/manhhuynh-designer/Review-system/issues"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

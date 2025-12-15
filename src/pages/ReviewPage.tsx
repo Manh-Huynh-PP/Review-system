@@ -23,7 +23,7 @@ import type { File as FileType } from '@/types'
 export default function ReviewPage() {
   const { projectId, fileId } = useParams<{ projectId: string; fileId?: string }>()
   const { project, fetchProject } = useProjectStore()
-  const { files, subscribeToFiles, switchVersion, cleanup: cleanupFiles } = useFileStore()
+  const { files, subscribeToFiles, cleanup: cleanupFiles } = useFileStore()
   const { comments, subscribeToComments, addComment, editComment, deleteComment, cleanup: cleanupComments } = useCommentStore()
 
   const [currentUserName, setCurrentUserName] = useState(() => {
@@ -66,13 +66,13 @@ export default function ReviewPage() {
       // for sequences or legacy uploads where metadata.name doesn't match).
       const extractedPath = extractStoragePathFromUrl(currentUrl)
       const targetPath = extractedPath || storagePath
-      
+
       // Use secure storage utility with fallback to original URL
-      const url = await getSecureDownloadUrl(targetPath, { 
+      const url = await getSecureDownloadUrl(targetPath, {
         maxAge: 3600,
-        fallbackUrl: currentUrl 
+        fallbackUrl: currentUrl
       })
-      
+
       setResolvedUrls(prev => ({ ...prev, [key]: url }))
       return url
     } catch (e) {
@@ -133,15 +133,28 @@ export default function ReviewPage() {
     }
   }, [loading, currentUserName])
 
-  // Auto-update selected file when files array changes (version switch, etc)
+
+  // Note: We intentionally don't auto-sync selectedFile with files array
+  // This allows users to freely browse different versions without being
+  // affected by admin's currentVersion setting
+
+  // Resolve URL for selected file's current version when it changes
   useEffect(() => {
-    if (selectedFile && files) {
-      const updatedFile = files.find(f => f.id === selectedFile.id)
-      if (updatedFile && updatedFile.currentVersion !== selectedFile.currentVersion) {
-        setSelectedFile({ ...updatedFile })
-      }
-    }
-  }, [files, selectedFile])
+    if (!selectedFile || !projectId) return
+
+    const current = selectedFile.versions.find(v => v.version === selectedFile.currentVersion) || selectedFile.versions[0]
+    if (!current?.url) return
+
+    const key = getKey(selectedFile.id, current.version)
+    // Skip if already resolved
+    if (resolvedUrls[key]) return
+
+    // Only need to fix firebasestorage.app URLs
+    if (!current.url.includes('firebasestorage.app')) return
+
+    const fallbackPath = `projects/${projectId}/${selectedFile.id}/v${current.version}/${current.metadata?.name || 'file'}`
+    ensureDownloadUrl(selectedFile.id, current.version, fallbackPath, current.url)
+  }, [selectedFile?.id, selectedFile?.currentVersion, projectId, resolvedUrls])
 
   // Update page title
   useEffect(() => {
@@ -205,8 +218,15 @@ export default function ReviewPage() {
     await deleteComment(projectId!, commentId)
   }
 
-  const handleSwitchVersion = async (fileId: string, version: number) => {
-    await switchVersion(fileId, version)
+  // Handle version switching locally (no Firestore update needed for public preview)
+  const handleSwitchVersion = (_fileId: string, version: number) => {
+    if (selectedFile) {
+      // Update selectedFile with new currentVersion locally
+      setSelectedFile({
+        ...selectedFile,
+        currentVersion: version
+      })
+    }
   }
 
   if (loading) {

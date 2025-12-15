@@ -43,6 +43,7 @@ interface FileState {
   renameFile: (projectId: string, fileId: string, newName: string) => Promise<void>
   reorderSequenceFrames: (projectId: string, fileId: string, version: number, newOrder: number[]) => Promise<void>
   deleteSequenceFrames: (projectId: string, fileId: string, version: number, indicesToDelete: number[]) => Promise<void>
+  deleteVersion: (projectId: string, fileId: string, version: number) => Promise<void>
   cleanup: () => void
 }
 
@@ -698,6 +699,85 @@ export const useFileStore = create<FileState>((set, get) => ({
     } catch (error: any) {
       console.error('Failed to delete sequence frames:', error)
       toast.error('Lỗi xóa hình: ' + error.message)
+      throw error
+    }
+  },
+
+  deleteVersion: async (projectId: string, fileId: string, version: number) => {
+    try {
+      const fileRef = doc(db, 'projects', projectId, 'files', fileId)
+      const fileDoc = await getDoc(fileRef)
+
+      if (!fileDoc.exists()) throw new Error('File not found')
+
+      const data = fileDoc.data() as FileModel
+      const versions = [...data.versions]
+
+      // Don't allow deleting the last version
+      if (versions.length <= 1) {
+        toast.error('Không thể xóa phiên bản cuối cùng')
+        return
+      }
+
+      // Find and remove the version
+      const versionIndex = versions.findIndex(v => v.version === version)
+      if (versionIndex < 0) {
+        toast.error('Không tìm thấy phiên bản')
+        return
+      }
+
+      // Delete version's files from Storage
+      const versionData = versions[versionIndex]
+      try {
+        if (data.type === 'sequence' && versionData.sequenceUrls) {
+          // Delete all sequence frames
+          for (let i = 0; i < versionData.sequenceUrls.length; i++) {
+            const framePath = `projects/${projectId}/${fileId}/v${version}/frames/${String(i).padStart(4, '0')}_*`
+            console.log(`🗑️ Would delete frame: ${framePath}`)
+          }
+        } else {
+          // Single file deletion
+          const storagePath = `projects/${projectId}/${fileId}/v${version}/${versionData.metadata?.name || 'file'}`
+          const storageRef = ref(storage, storagePath)
+          await deleteObject(storageRef)
+          console.log(`🗑️ Deleted storage file: ${storagePath}`)
+        }
+
+        // Delete thumbnail if exists
+        if (versionData.thumbnailUrl) {
+          try {
+            const thumbPath = `projects/${projectId}/${fileId}/v${version}/thumbnail.jpg`
+            const thumbRef = ref(storage, thumbPath)
+            await deleteObject(thumbRef)
+          } catch (e) {
+            // Ignore thumbnail deletion errors
+          }
+        }
+      } catch (storageError: any) {
+        console.warn(`⚠️ Failed to delete storage files: ${storageError.message}`)
+        // Continue even if storage deletion fails
+      }
+
+      // Remove version from array
+      versions.splice(versionIndex, 1)
+
+      // If we're deleting the current version, switch to the latest remaining version
+      let newCurrentVersion = data.currentVersion
+      if (data.currentVersion === version) {
+        // Find the highest remaining version
+        newCurrentVersion = Math.max(...versions.map(v => v.version))
+      }
+
+      // Update Firestore
+      await updateDoc(fileRef, {
+        versions,
+        currentVersion: newCurrentVersion
+      })
+
+      toast.success(`Đã xóa phiên bản ${version}`)
+    } catch (error: any) {
+      console.error('Failed to delete version:', error)
+      toast.error('Lỗi xóa phiên bản: ' + error.message)
       throw error
     }
   },

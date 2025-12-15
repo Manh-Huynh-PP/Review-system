@@ -1,8 +1,10 @@
 
 import { useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, GitBranch, Shield, Zap, Globe, Coffee } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ParallaxBackground } from '@/components/ui/ParallaxBackground'
+import { useAuthStore } from '@/stores/auth'
 
 type Lang = 'vi' | 'en'
 
@@ -89,10 +91,16 @@ const icons = [
 ]
 
 export default function IntroPage() {
+    const { user, initialized } = useAuthStore()
     const [lang, setLang] = useState<Lang>('vi')
     const t = translations[lang]
 
     const toggleLang = () => setLang(prev => prev === 'vi' ? 'en' : 'vi')
+
+    // Redirect to projects if user is logged in
+    if (initialized && user) {
+        return <Navigate to="/app/projects" replace />
+    }
 
     return (
         <div className="min-h-screen bg-background/50 text-foreground flex flex-col font-sans relative overflow-hidden">

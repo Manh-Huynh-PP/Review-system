@@ -34,7 +34,8 @@ import {
   HelpCircle,
   Share2,
   Copy,
-  ShieldAlert
+  ShieldAlert,
+  Trash2
 } from 'lucide-react'
 import { startFileTour, hasSeenTour } from '@/lib/fileTours'
 import {
@@ -224,7 +225,7 @@ export function FileViewDialogShared({
   }, [open, file?.type])
 
   // File store for sequence frame operations
-  const { reorderSequenceFrames, deleteSequenceFrames } = useFileStore()
+  const { reorderSequenceFrames, deleteSequenceFrames, deleteVersion } = useFileStore()
 
   // Memoize video player callbacks to prevent CustomVideoPlayer re-renders
   const handleTimeUpdate = useCallback((time: number) => {
@@ -298,7 +299,10 @@ export function FileViewDialogShared({
   if (!file) return null
 
   const current = file.versions.find(v => v.version === currentVersion) || file.versions[0]
-  const effectiveUrl = resolvedUrl || current?.url
+  // Use resolvedUrl only if it's for the same version, otherwise use version's URL directly
+  const effectiveUrl = (currentVersion === file.currentVersion && resolvedUrl)
+    ? resolvedUrl
+    : current?.url
   const uploadDate = current?.uploadedAt?.toDate ? current.uploadedAt.toDate() : new Date()
 
   // Memoize allFileComments to prevent CustomVideoPlayer re-renders
@@ -1381,7 +1385,10 @@ export function FileViewDialogShared({
                           <DropdownMenuItem
                             key={version.version}
                             className="flex items-center justify-between p-3 cursor-pointer"
-                            onClick={() => onSwitchVersion?.(file.id, version.version)}
+                            onClick={() => {
+                              setCurrentVersion(version.version)
+                              onSwitchVersion?.(file.id, version.version)
+                            }}
                           >
                             <div className="flex items-center gap-3">
                               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${version.version === currentVersion
@@ -1399,6 +1406,21 @@ export function FileViewDialogShared({
                                 </div>
                               </div>
                             </div>
+                            {isAdmin && file.versions.length > 1 && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (confirm(`Xóa phiên bản ${version.version}?`)) {
+                                    deleteVersion(_projectId, file.id, version.version)
+                                  }
+                                }}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            )}
                           </DropdownMenuItem>
                         ))}
 
@@ -1441,7 +1463,10 @@ export function FileViewDialogShared({
                         <DropdownMenuItem
                           key={version.version}
                           className="flex items-center justify-between p-2 cursor-pointer"
-                          onClick={() => onSwitchVersion?.(file.id, version.version)}
+                          onClick={() => {
+                            setCurrentVersion(version.version)
+                            onSwitchVersion?.(file.id, version.version)
+                          }}
                         >
                           <div className="flex items-center gap-2">
                             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${version.version === currentVersion

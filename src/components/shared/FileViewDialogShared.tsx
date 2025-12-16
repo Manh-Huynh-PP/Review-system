@@ -1133,8 +1133,8 @@ export function FileViewDialogShared({
 
       return (
         <div className="space-y-2 sm:space-y-3 w-full h-full flex flex-col">
-          {/* Video Player - Fixed height on mobile */}
-          <div className="relative bg-black flex-shrink-0 h-[40vh] sm:h-auto sm:flex-1 sm:min-h-0 sm:max-h-[calc(100vh-12rem)] 2xl:max-h-[calc(100vh-15rem)]">
+          {/* Video Player - Better space utilization */}
+          <div className="relative bg-black flex-1 min-h-0 overflow-hidden">
             <CustomVideoPlayer
               ref={customVideoPlayerRef}
               src={effectiveUrl}

@@ -2,6 +2,13 @@ import { useRef, useEffect, useState, forwardRef, useImperativeHandle, useCallba
 import { Play, Pause, Volume2, VolumeX, Maximize, StickyNote, Camera } from 'lucide-react'
 import type { Comment } from '@/types'
 import './CustomVideoPlayer.css'
+import {
+    VideoOverlayContainer,
+    SafeZoneOverlay,
+    CompositionOverlay,
+    VideoSettingsMenu,
+    type CompositionGuide
+} from './overlays'
 
 export interface CustomVideoPlayerRef {
     exportFrame: () => void
@@ -47,6 +54,13 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
     const [isFullscreen, setIsFullscreen] = useState(false)
     const [isPortrait, setIsPortrait] = useState(false)
 
+    // Overlay state
+    const [videoRatio, setVideoRatio] = useState(16 / 9)
+    const [activeSafeZone, setActiveSafeZone] = useState<string | null>(null)
+    const [activeGuides, setActiveGuides] = useState<CompositionGuide[]>([])
+    const [overlayOpacity, setOverlayOpacity] = useState(0.2)
+    const [guideColor, setGuideColor] = useState('#ffffff')
+
     // Ref to track if the current time update was triggered by the video itself
     // This prevents the "fighting" loop where onTimeUpdate -> parent -> currentTime prop -> seek -> stutter
     const isUpdatingTimeRef = useRef(false)
@@ -79,6 +93,7 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
             if (videoWidth && videoHeight) {
                 const ratio = videoWidth / videoHeight
                 setIsPortrait(ratio < 1) // Portrait if width < height
+                setVideoRatio(ratio)
             }
 
             onLoadedMetadata?.(dur, 30)
@@ -192,9 +207,9 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
     const toggleFullscreen = () => {
         const video = videoRef.current
         const container = containerRef.current
-        
+
         // Check if we're currently in fullscreen
-        const isCurrentlyFullscreen = document.fullscreenElement || 
+        const isCurrentlyFullscreen = document.fullscreenElement ||
             (document as unknown as { webkitFullscreenElement?: Element }).webkitFullscreenElement
 
         if (isCurrentlyFullscreen) {
@@ -337,17 +352,6 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
         }
     }), [handleExportFrame, onTimeUpdate])
 
-    // Dynamic max-height based on aspect ratio
-    const getVideoMaxHeight = () => {
-        if (isFullscreen) return 'calc(100vh - 120px)'
-        if (isPortrait) {
-            // Portrait videos get more height
-            return 'max-h-[70vh] xl:max-h-[65vh] 2xl:max-h-[60vh]'
-        }
-        // Default landscape
-        return 'max-h-[55vh] xl:max-h-[50vh] 2xl:max-h-[45vh]'
-    }
-
     return (
         <div ref={containerRef} className={`custom-video-player ${isPortrait ? 'portrait-video' : 'landscape-video'} ${className}`}>
             <video
@@ -357,13 +361,25 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
                 playsInline
                 webkit-playsinline=""
                 preload="auto"
-                className={`w-full h-auto bg-black ${!isFullscreen ? getVideoMaxHeight() : ''}`}
+                className="w-full h-auto bg-black"
                 style={isFullscreen ? {
                     maxHeight: 'calc(100vh - 120px)',
                     objectFit: 'contain'
                 } : undefined}
                 onClick={togglePlayPause}
             />
+
+            {/* Video Overlays (Safe Zone + Composition Guides) */}
+            <VideoOverlayContainer videoRef={videoRef}>
+                <SafeZoneOverlay safeZoneUrl={activeSafeZone} opacity={overlayOpacity} />
+                <CompositionOverlay
+                    activeGuides={activeGuides}
+                    videoRatio={videoRatio}
+                    color={guideColor}
+                    opacity={overlayOpacity}
+                />
+            </VideoOverlayContainer>
+
             {/* Hidden canvas for frame export */}
             <canvas ref={canvasRef} style={{ display: 'none' }} />
 
@@ -446,6 +462,19 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
                                 <option value={2}>2x</option>
                             </select>
                         </div>
+
+                        {/* Overlay Settings Menu */}
+                        <VideoSettingsMenu
+                            videoRatio={videoRatio}
+                            activeSafeZone={activeSafeZone}
+                            onSafeZoneChange={setActiveSafeZone}
+                            activeGuides={activeGuides}
+                            onGuidesChange={setActiveGuides}
+                            opacity={overlayOpacity}
+                            onOpacityChange={setOverlayOpacity}
+                            guideColor={guideColor}
+                            onGuideColorChange={setGuideColor}
+                        />
 
                         <button id="video-controls-export" onClick={handleExportFrame} className="control-btn" title="Xuất frame hiện tại">
                             <Camera className="w-5 h-5" />

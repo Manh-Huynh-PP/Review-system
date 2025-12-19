@@ -1,12 +1,12 @@
 import { create } from 'zustand'
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
+import {
+  collection,
+  addDoc,
+  updateDoc,
   deleteDoc,
-  doc, 
+  doc,
   getDoc,
-  onSnapshot, 
+  onSnapshot,
   query,
   where,
   orderBy,
@@ -25,12 +25,15 @@ interface ProjectState {
   isSubscribed: boolean
   currentAdminEmail: string | null
   unsubscribe: Unsubscribe | null
-  
+
   subscribeToProjects: (adminEmail: string) => void
   fetchProject: (projectId: string) => Promise<void>
   createProject: (data: Partial<Project>) => Promise<string>
   updateProject: (id: string, data: Partial<Project>) => Promise<void>
-  deleteProject: (id: string) => Promise<void>
+  deleteProject: (id: string) => Promise<void> // Soft delete (move to trash)
+  trashProject: (id: string) => Promise<void> // Alias for deleteProject
+  restoreProject: (id: string) => Promise<void> // Restore from trash
+  permanentDeleteProject: (id: string) => Promise<void> // Hard delete
   selectProject: (project: Project | null) => void
   cleanup: () => void
 }
@@ -48,7 +51,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     try {
       const docRef = doc(db, 'projects', projectId)
       const docSnap = await getDoc(docRef)
-      
+
       if (docSnap.exists()) {
         const project = { id: docSnap.id, ...docSnap.data() } as Project
         set({ project })
@@ -65,22 +68,22 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   subscribeToProjects: (adminEmail: string) => {
     const { isSubscribed, currentAdminEmail } = get()
-    
+
     // Avoid duplicate subscriptions for same admin
     if (isSubscribed && currentAdminEmail === adminEmail) {
       console.log('🔄 Projects already subscribed for', adminEmail)
       return
     }
-    
+
     // Cleanup existing subscription if switching users
     if (isSubscribed && currentAdminEmail !== adminEmail) {
       console.log('🧹 Cleaning up subscription for', currentAdminEmail, 'switching to', adminEmail)
       get().cleanup()
     }
-    
+
     console.log('📡 Starting projects subscription for', adminEmail)
     set({ isSubscribed: true, currentAdminEmail: adminEmail })
-    
+
     const baseCol = collection(db, 'projects')
 
     // Preferred query: filter by adminEmail and order by createdAt desc
@@ -127,12 +130,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ loading: true })
     try {
       const now = Timestamp.now()
-      
+
       // Filter out undefined values
       const cleanData = Object.fromEntries(
         Object.entries(data).filter(([_, value]) => value !== undefined)
       )
-      
+
       const docRef = await addDoc(collection(db, 'projects'), {
         status: 'active',
         tags: [],
@@ -157,7 +160,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       const cleanData = Object.fromEntries(
         Object.entries(data).filter(([_, value]) => value !== undefined)
       )
-      
+
       await updateDoc(doc(db, 'projects', id), {
         ...cleanData,
         updatedAt: Timestamp.now()
@@ -172,12 +175,62 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   deleteProject: async (id: string) => {
+    // Soft delete - move to trash
+    set({ loading: true })
+    try {
+      const project = get().projects.find(p => p.id === id)
+      if (!project) throw new Error('Project not found')
+
+      await updateDoc(doc(db, 'projects', id), {
+        previousStatus: project.status,
+        status: 'trash',
+        trashedAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      })
+      toast.success('Đã chuyển dự án vào thùng rác')
+    } catch (error: any) {
+      toast.error('Lỗi xóa dự án: ' + error.message)
+      throw error
+    } finally {
+      set({ loading: false })
+    }
+  },
+
+  trashProject: async (id: string) => {
+    // Alias for deleteProject
+    return get().deleteProject(id)
+  },
+
+  restoreProject: async (id: string) => {
+    set({ loading: true })
+    try {
+      const project = get().projects.find(p => p.id === id)
+      if (!project) throw new Error('Project not found')
+
+      const restoreStatus = project.previousStatus || 'active'
+
+      await updateDoc(doc(db, 'projects', id), {
+        status: restoreStatus,
+        trashedAt: null,
+        previousStatus: null,
+        updatedAt: Timestamp.now()
+      })
+      toast.success('Đã khôi phục dự án')
+    } catch (error: any) {
+      toast.error('Lỗi khôi phục dự án: ' + error.message)
+      throw error
+    } finally {
+      set({ loading: false })
+    }
+  },
+
+  permanentDeleteProject: async (id: string) => {
     set({ loading: true })
     try {
       await deleteDoc(doc(db, 'projects', id))
-      toast.success('Xóa dự án thành công')
+      toast.success('Đã xóa vĩnh viễn dự án')
     } catch (error: any) {
-      toast.error('Lỗi xóa dự án: ' + error.message)
+      toast.error('Lỗi xóa vĩnh viễn: ' + error.message)
       throw error
     } finally {
       set({ loading: false })
@@ -193,9 +246,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     console.log('🧹 Cleaning up projects subscription')
     if (unsubscribe) {
       unsubscribe()
-      set({ 
-        unsubscribe: null, 
-        projects: [], 
+      set({
+        unsubscribe: null,
+        projects: [],
         selectedProject: null,
         isSubscribed: false,
         currentAdminEmail: null

@@ -21,7 +21,7 @@ import { DownloadProgressDialog } from '@/components/dashboard/DownloadProgressD
 
 interface FileWithProject extends FileType {
     projectName?: string
-    projectStatus?: 'active' | 'archived'
+    projectStatus?: 'active' | 'archived' | 'trash'
 }
 
 // Helper functions for file extensions
@@ -30,19 +30,19 @@ const getFileExtension = (url: string, mimeType?: string, fileType?: string): st
     // Firebase URLs often have format: ...%2Ffilename.ext?alt=media&token=...
     // So we need to decode and extract the extension
     let urlMatch = url.match(/\.([^./?#]+)(?=[?#]|$)/)
-    
+
     if (!urlMatch && url.includes('%2F')) {
         // Try to find extension in encoded URL path
         const decoded = decodeURIComponent(url.split('?')[0])
         urlMatch = decoded.match(/\.([^./?#]+)$/)
     }
-    
+
     if (urlMatch) {
         const ext = urlMatch[1].toLowerCase()
         if (ext === 'jpeg') return '.jpg'
         return `.${ext}`
     }
-    
+
     if (mimeType) {
         const mimeMap: Record<string, string> = {
             'image/jpeg': '.jpg',
@@ -60,16 +60,16 @@ const getFileExtension = (url: string, mimeType?: string, fileType?: string): st
             'model/gltf+json': '.gltf',
             'application/octet-stream': '' // Generic binary, can't determine extension
         }
-        
+
         if (mimeMap[mimeType]) return mimeMap[mimeType]
-        
+
         // Fallback: extract from MIME type
         const ext = mimeType.split('/')[1]?.split('+')[0]?.split(';')[0]
         if (ext && ext !== 'octet-stream') {
             return `.${ext.replace('jpeg', 'jpg')}`
         }
     }
-    
+
     // Fallback based on file type
     const typeMap: Record<string, string> = {
         'image': '.jpg',
@@ -78,32 +78,32 @@ const getFileExtension = (url: string, mimeType?: string, fileType?: string): st
         'model': '.glb',
         'sequence': '.jpg'
     }
-    
+
     return typeMap[fileType || ''] || ''
 }
 
 const ensureFileExtension = (filename: string, url: string, mimeType?: string, fileType?: string): string => {
     const correctExt = getFileExtension(url, mimeType, fileType)
-    
+
     // If no extension found from any source, return as is
     if (!correctExt) {
         console.warn(`No extension found for file: ${filename}`)
         return filename
     }
-    
+
     const hasExtension = /\.[a-zA-Z0-9]+$/.test(filename)
     if (hasExtension) {
         // Replace existing extension with correct one
         return filename.replace(/\.[^.]+$/, correctExt)
     }
-    
+
     // Add extension
     return `${filename}${correctExt}`
 }
 
 export default function DashboardPage() {
     const { user } = useAuthStore()
-    const { files, deleteFile } = useFileStore()
+    const { files, deleteFile, restoreFile, permanentDeleteFile } = useFileStore()
     const { projects } = useProjectStore()
     const { comments } = useCommentStore()
 
@@ -118,6 +118,9 @@ export default function DashboardPage() {
     } | null>(null)
     const [deleting, setDeleting] = useState(false)
     const [loading, setLoading] = useState(true)
+
+    // File view mode: 'active' or 'trash'
+    const [fileViewMode, setFileViewMode] = useState<'active' | 'trash'>('active')
 
     // Download progress state
     const [isDownloading, setIsDownloading] = useState(false)
@@ -195,7 +198,7 @@ export default function DashboardPage() {
             fileCount: number
             commentCount: number
             totalSize: number
-            status: 'active' | 'archived'
+            status: 'active' | 'archived' | 'trash'
         }>()
 
         files.forEach(file => {
@@ -259,13 +262,18 @@ export default function DashboardPage() {
             const sizeA = a.versions.find(v => v.version === a.currentVersion)?.metadata?.size || 0
             const sizeB = b.versions.find(v => v.version === b.currentVersion)?.metadata?.size || 0
             return sizeB - sizeA
-        }).slice(0, 50)
+        })
+
+        // Separate active and trashed files
+        const activeFiles = filesWithProject.filter(f => !f.isTrashed).slice(0, 50)
+        const trashedFiles = filesWithProject.filter(f => f.isTrashed)
 
         return {
             storageStats: { totalSize, fileCount, byType },
             projectStats,
             commentStats,
-            largestFiles: filesWithProject
+            largestFiles: activeFiles,
+            trashedFiles
         }
     }, [files, projects, comments])
 
@@ -371,7 +379,7 @@ export default function DashboardPage() {
             // If exporting files, include actual file data
             if (type === 'files' || type === 'all') {
                 const filesToExport = statistics.largestFiles.slice(0, 20) // Limit to 20 largest files
-                
+
                 // Calculate total items for progress (including sequence frames)
                 let totalItems = 0
                 for (const file of filesToExport) {
@@ -382,7 +390,7 @@ export default function DashboardPage() {
                         totalItems += 1
                     }
                 }
-                
+
                 let processedItems = 0
 
                 for (const file of filesToExport) {
@@ -395,18 +403,18 @@ export default function DashboardPage() {
                         // Handle image sequences
                         if (file.type === 'sequence' && currentVersion?.sequenceUrls && currentVersion.sequenceUrls.length > 0) {
                             setDownloadMessage(`Đang tải sequence ${file.name}...`)
-                            
+
                             // Create subfolder for sequence: files/projectName/sequenceName/
                             const sequenceFolderName = file.name.replace(/\.[^/.]+$/, '') || file.name
                             const sequenceFolder = zip.folder(`files/${folderName}/${sequenceFolderName}`)
-                            
+
                             if (sequenceFolder) {
                                 // Download all frames
                                 for (let i = 0; i < currentVersion.sequenceUrls.length; i++) {
                                     try {
                                         setDownloadMessage(`Đang tải frame ${i + 1}/${currentVersion.sequenceUrls.length} của ${file.name}`)
                                         const frameResponse = await fetch(currentVersion.sequenceUrls[i])
-                                        
+
                                         if (frameResponse.ok) {
                                             const frameBlob = await frameResponse.blob()
                                             const mimeType = frameResponse.headers.get('content-type') || frameBlob.type
@@ -417,11 +425,11 @@ export default function DashboardPage() {
                                     } catch (err) {
                                         console.error(`Error fetching frame ${i} of ${file.name}:`, err)
                                     }
-                                    
+
                                     processedItems++
                                     setDownloadProgress(20 + (processedItems / totalItems) * 60)
                                 }
-                                
+
                                 // Add sequence info file
                                 const sequenceInfo = {
                                     name: file.name,
@@ -436,21 +444,21 @@ export default function DashboardPage() {
                             // Handle single files
                             setDownloadMessage(`Đang tải ${file.name}...`)
                             const response = await fetch(currentVersion.url)
-                            
+
                             if (response.ok) {
                                 const blob = await response.blob()
-                                
+
                                 // Get MIME type from response or blob
                                 const mimeType = response.headers.get('content-type') || blob.type || currentVersion.metadata?.type
-                                
+
                                 // Ensure file has correct extension
                                 const fileName = ensureFileExtension(file.name, currentVersion.url, mimeType, file.type)
-                                
+
                                 console.log(`Export file: ${file.name} -> ${fileName} (mime: ${mimeType}, type: ${file.type})`)
-                                
+
                                 zip.file(`files/${folderName}/${fileName}`, blob)
                             }
-                            
+
                             processedItems++
                             setDownloadProgress(20 + (processedItems / totalItems) * 60)
                         }
@@ -775,17 +783,53 @@ export default function DashboardPage() {
                     <div>
                         <h2 className="text-2xl font-bold">Quản lý Files</h2>
                         <p className="text-sm text-muted-foreground">
-                            Danh sách files lớn nhất - Sắp xếp và xóa để giải phóng dung lượng
+                            {fileViewMode === 'active'
+                                ? 'Danh sách files lớn nhất - Sắp xếp và xóa để giải phóng dung lượng'
+                                : `Thùng rác - ${statistics.trashedFiles.length} file(s)`
+                            }
                         </p>
+                    </div>
+                    <div className="flex border rounded-md">
+                        <Button
+                            variant={fileViewMode === 'active' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setFileViewMode('active')}
+                            className="rounded-r-none"
+                        >
+                            Files ({statistics.largestFiles.length})
+                        </Button>
+                        <Button
+                            variant={fileViewMode === 'trash' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setFileViewMode('trash')}
+                            className="rounded-l-none"
+                        >
+                            Thùng rác ({statistics.trashedFiles.length})
+                        </Button>
                     </div>
                 </div>
 
                 <DataTable
-                    files={statistics.largestFiles}
+                    files={fileViewMode === 'active' ? statistics.largestFiles : statistics.trashedFiles}
                     loading={loading}
+                    viewMode={fileViewMode}
                     onDelete={handleDeleteClick}
                     onBulkDelete={handleBulkDelete}
                     onBulkDownload={handleBulkDownload}
+                    onRestore={(fileId, projectId) => restoreFile(projectId, fileId)}
+                    onPermanentDelete={(fileId, projectId) => {
+                        if (window.confirm('Bạn có chắc chắn muốn xóa vĩnh viễn file này? Hành động này không thể hoàn tác.')) {
+                            permanentDeleteFile(projectId, fileId)
+                        }
+                    }}
+                    onBulkRestore={(filesToRestore) => {
+                        filesToRestore.forEach(f => restoreFile(f.projectId, f.id))
+                    }}
+                    onBulkPermanentDelete={(filesToDelete) => {
+                        if (window.confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn ${filesToDelete.length} files? Hành động này không thể hoàn tác.`)) {
+                            filesToDelete.forEach(f => permanentDeleteFile(f.projectId, f.id))
+                        }
+                    }}
                 />
             </div>
 

@@ -34,7 +34,10 @@ interface FileState {
   loadFiles: (projectId: string) => void
   uploadFile: (projectId: string, file: File, existingFileId?: string) => Promise<void>
   uploadSequence: (projectId: string, files: File[], name: string, fps?: number, existingFileId?: string) => Promise<void>
-  deleteFile: (projectId: string, fileId: string) => Promise<void>
+  deleteFile: (projectId: string, fileId: string) => Promise<void> // Soft delete (move to trash)
+  trashFile: (projectId: string, fileId: string) => Promise<void> // Alias for deleteFile
+  restoreFile: (projectId: string, fileId: string) => Promise<void> // Restore from trash
+  permanentDeleteFile: (projectId: string, fileId: string) => Promise<void> // Hard delete
   selectFile: (file: FileModel | null) => void
   switchVersion: (fileId: string, version: number) => Promise<void>
   setSequenceViewMode: (projectId: string, fileId: string, mode: 'video' | 'carousel' | 'grid') => Promise<void>
@@ -426,6 +429,67 @@ export const useFileStore = create<FileState>((set, get) => ({
   },
 
   deleteFile: async (projectId: string, fileId: string) => {
+    // Soft delete - move to trash
+    set({ deleting: true, error: null })
+
+    try {
+      const file = get().files.find(f => f.id === fileId)
+      if (!file) {
+        throw new Error('File không tồn tại')
+      }
+
+      // Update file to mark as trashed
+      await updateDoc(doc(db, 'projects', projectId, 'files', fileId), {
+        isTrashed: true,
+        trashedAt: Timestamp.now()
+      })
+      console.log(`🗑️ File moved to trash: ${fileId}`)
+
+      toast.success(`Đã chuyển "${file.name}" vào thùng rác`)
+    } catch (error: any) {
+      console.error('❌ Trash failed:', error)
+      const errorMessage = 'Xóa file thất bại: ' + (error.message || 'Lỗi không xác định')
+      set({ error: errorMessage })
+      toast.error(errorMessage)
+      throw error
+    } finally {
+      set({ deleting: false })
+    }
+  },
+
+  trashFile: async (projectId: string, fileId: string) => {
+    // Alias for deleteFile (soft delete)
+    return get().deleteFile(projectId, fileId)
+  },
+
+  restoreFile: async (projectId: string, fileId: string) => {
+    set({ deleting: true, error: null })
+
+    try {
+      const file = get().files.find(f => f.id === fileId)
+      if (!file) {
+        throw new Error('File không tồn tại')
+      }
+
+      await updateDoc(doc(db, 'projects', projectId, 'files', fileId), {
+        isTrashed: false,
+        trashedAt: null
+      })
+      console.log(`♻️ File restored: ${fileId}`)
+
+      toast.success(`Đã khôi phục "${file.name}"`)
+    } catch (error: any) {
+      console.error('❌ Restore failed:', error)
+      const errorMessage = 'Khôi phục file thất bại: ' + (error.message || 'Lỗi không xác định')
+      set({ error: errorMessage })
+      toast.error(errorMessage)
+      throw error
+    } finally {
+      set({ deleting: false })
+    }
+  },
+
+  permanentDeleteFile: async (projectId: string, fileId: string) => {
     set({ deleting: true, error: null })
 
     try {
@@ -441,11 +505,8 @@ export const useFileStore = create<FileState>((set, get) => ({
             // Delete all frames in sequence
             for (let i = 0; i < version.sequenceUrls.length; i++) {
               const framePath = `projects/${projectId}/${fileId}/v${version.version}/frames/${String(i).padStart(4, '0')}_*`
-              // Note: We can't use wildcards in deleteObject, so we construct the path pattern
-              // In practice, Firebase Storage will delete the entire folder when we delete the parent
               console.log(`🗑️ Would delete frame: ${framePath}`)
             }
-            // Delete the entire version folder (will remove all frames)
             const versionFolderPath = `projects/${projectId}/${fileId}/v${version.version}/`
             console.log(`🗑️ Deleting sequence folder: ${versionFolderPath}`)
           } else {
@@ -456,7 +517,6 @@ export const useFileStore = create<FileState>((set, get) => ({
             console.log(`🗑️ Deleted storage file: ${storagePath}`)
           }
         } catch (storageError: any) {
-          // Continue even if storage deletion fails (file might not exist)
           console.warn(`⚠️ Failed to delete storage file: ${storageError.message}`)
         }
       }
@@ -467,20 +527,20 @@ export const useFileStore = create<FileState>((set, get) => ({
         where('fileId', '==', fileId)
       )
       const commentsSnapshot = await getDocs(commentsQuery)
-      const deleteCommentPromises = commentsSnapshot.docs.map(doc =>
-        deleteDoc(doc.ref)
+      const deleteCommentPromises = commentsSnapshot.docs.map(docSnap =>
+        deleteDoc(docSnap.ref)
       )
       await Promise.all(deleteCommentPromises)
       console.log(`🗑️ Deleted ${commentsSnapshot.size} comments`)
 
       // Delete the file document from Firestore
       await deleteDoc(doc(db, 'projects', projectId, 'files', fileId))
-      console.log(`✅ File deleted successfully: ${fileId}`)
+      console.log(`✅ File permanently deleted: ${fileId}`)
 
-      toast.success(`Đã xóa file "${file.name}"`)
+      toast.success(`Đã xóa vĩnh viễn "${file.name}"`)
     } catch (error: any) {
-      console.error('❌ Delete failed:', error)
-      const errorMessage = 'Xóa file thất bại: ' + (error.message || 'Lỗi không xác định')
+      console.error('❌ Permanent delete failed:', error)
+      const errorMessage = 'Xóa vĩnh viễn thất bại: ' + (error.message || 'Lỗi không xác định')
       set({ error: errorMessage })
       toast.error(errorMessage)
       throw error

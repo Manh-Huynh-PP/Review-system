@@ -1,7 +1,7 @@
 import { Timestamp } from 'firebase/firestore'
 
 export type FileType = 'image' | 'video' | 'model' | 'sequence' | 'pdf'
-export type ProjectStatus = 'active' | 'archived'
+export type ProjectStatus = 'active' | 'archived' | 'trash'
 
 export interface Client {
   id: string
@@ -28,6 +28,13 @@ export interface Project {
   updatedAt?: Timestamp
   status: ProjectStatus
   adminEmail: string
+  // Archive fields
+  archiveUrl?: string // External long-term storage link
+  archivedAt?: Timestamp // When project was archived
+  isDataCleared?: boolean // True if files were cleared (keeping thumbnails/comments)
+  // Trash fields
+  trashedAt?: Timestamp // When project was moved to trash
+  previousStatus?: 'active' | 'archived' // To restore to correct state
 }
 
 export interface FileVersion {
@@ -67,6 +74,9 @@ export interface File {
   currentVersion: number
   sequenceViewMode?: 'video' | 'carousel' | 'grid' // Admin-set view mode for sequences
   createdAt: Timestamp
+  // Trash fields
+  isTrashed?: boolean
+  trashedAt?: Timestamp
 }
 
 export interface Comment {

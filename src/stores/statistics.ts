@@ -20,7 +20,7 @@ interface ProjectStats {
     fileCount: number
     commentCount: number
     totalSize: number
-    status: 'active' | 'archived'
+    status: 'active' | 'archived' | 'trash'
 }
 
 interface CommentStats {
@@ -32,7 +32,7 @@ interface CommentStats {
 
 interface FileWithProject extends FileType {
     projectName?: string
-    projectStatus?: 'active' | 'archived'
+    projectStatus?: 'active' | 'archived' | 'trash'
 }
 
 interface ExportData {

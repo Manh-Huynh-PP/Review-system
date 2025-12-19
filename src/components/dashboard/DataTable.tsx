@@ -17,21 +17,29 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { Trash2, ArrowUpDown, ChevronLeft, ChevronRight, Download } from 'lucide-react'
+import { Trash2, ArrowUpDown, ChevronLeft, ChevronRight, Download, RotateCcw, Trash } from 'lucide-react'
 import { formatBytes, formatDate, getFileTypeColor } from '@/lib/storageUtils'
 import type { File as FileType } from '@/types'
 
 interface FileWithProject extends FileType {
     projectName?: string
-    projectStatus?: 'active' | 'archived'
+    projectStatus?: 'active' | 'archived' | 'trash'
 }
+
+export type DataTableViewMode = 'active' | 'trash'
 
 interface DataTableProps {
     files: FileWithProject[]
     loading?: boolean
+    viewMode?: DataTableViewMode
     onDelete: (fileId: string, projectId: string) => void
     onBulkDelete?: (fileIds: { id: string; projectId: string }[]) => void
     onBulkDownload?: (files: FileWithProject[]) => void
+    // Trash-specific actions
+    onRestore?: (fileId: string, projectId: string) => void
+    onPermanentDelete?: (fileId: string, projectId: string) => void
+    onBulkRestore?: (fileIds: { id: string; projectId: string }[]) => void
+    onBulkPermanentDelete?: (fileIds: { id: string; projectId: string }[]) => void
 }
 
 type SortField = 'name' | 'size' | 'date' | 'project'
@@ -39,7 +47,18 @@ type SortOrder = 'asc' | 'desc'
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 20, 50, 100]
 
-export function DataTable({ files, loading, onDelete, onBulkDelete, onBulkDownload }: DataTableProps) {
+export function DataTable({
+    files,
+    loading,
+    viewMode = 'active',
+    onDelete,
+    onBulkDelete,
+    onBulkDownload,
+    onRestore,
+    onPermanentDelete,
+    onBulkRestore,
+    onBulkPermanentDelete
+}: DataTableProps) {
     const [sortField, setSortField] = useState<SortField>('date')
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
     const [filterType, setFilterType] = useState<string>('all')
@@ -214,25 +233,66 @@ export function DataTable({ files, loading, onDelete, onBulkDelete, onBulkDownlo
                         </Button>
                     </div>
                     <div className="flex gap-2">
-                        {onBulkDownload && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleBulkDownloadClick}
-                            >
-                                <Download className="w-4 h-4 mr-2" />
-                                Tải xuống
-                            </Button>
-                        )}
-                        {onBulkDelete && (
-                            <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={handleBulkDeleteClick}
-                            >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Xóa {selectedFiles.size} files
-                            </Button>
+                        {viewMode === 'active' ? (
+                            <>
+                                {onBulkDownload && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleBulkDownloadClick}
+                                    >
+                                        <Download className="w-4 h-4 mr-2" />
+                                        Tải xuống
+                                    </Button>
+                                )}
+                                {onBulkDelete && (
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={handleBulkDeleteClick}
+                                    >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Xóa {selectedFiles.size} files
+                                    </Button>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                {onBulkRestore && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            const filesToRestore = Array.from(selectedFiles).map(fileId => {
+                                                const file = files.find(f => f.id === fileId)
+                                                return { id: fileId, projectId: file?.projectId || '' }
+                                            }).filter(f => f.projectId)
+                                            onBulkRestore(filesToRestore)
+                                            setSelectedFiles(new Set())
+                                        }}
+                                    >
+                                        <RotateCcw className="w-4 h-4 mr-2" />
+                                        Khôi phục {selectedFiles.size} files
+                                    </Button>
+                                )}
+                                {onBulkPermanentDelete && (
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => {
+                                            const filesToDelete = Array.from(selectedFiles).map(fileId => {
+                                                const file = files.find(f => f.id === fileId)
+                                                return { id: fileId, projectId: file?.projectId || '' }
+                                            }).filter(f => f.projectId)
+                                            onBulkPermanentDelete(filesToDelete)
+                                            setSelectedFiles(new Set())
+                                        }}
+                                    >
+                                        <Trash className="w-4 h-4 mr-2" />
+                                        Xóa vĩnh viễn {selectedFiles.size} files
+                                    </Button>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
@@ -376,14 +436,42 @@ export function DataTable({ files, loading, onDelete, onBulkDelete, onBulkDownlo
                                             {formatDate(file.createdAt)}
                                         </TableCell>
                                         <TableCell>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                onClick={() => onDelete(file.id, file.projectId)}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                            {viewMode === 'active' ? (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                    onClick={() => onDelete(file.id, file.projectId)}
+                                                    title="Xóa (vào thùng rác)"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            ) : (
+                                                <div className="flex gap-1">
+                                                    {onRestore && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-100"
+                                                            onClick={() => onRestore(file.id, file.projectId)}
+                                                            title="Khôi phục"
+                                                        >
+                                                            <RotateCcw className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                    {onPermanentDelete && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                            onClick={() => onPermanentDelete(file.id, file.projectId)}
+                                                            title="Xóa vĩnh viễn"
+                                                        >
+                                                            <Trash className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 )

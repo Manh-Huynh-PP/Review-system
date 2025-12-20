@@ -44,6 +44,28 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
     }
   }
 
+  // Common header steps for desktop
+  const headerSteps = [
+    {
+      element: '#header-version-dropdown',
+      popover: {
+        title: 'Quản lý phiên bản',
+        description: 'Xem lịch sử, chuyển đổi phiên bản hoặc tải lên phiên bản mới tại đây.',
+        side: 'bottom',
+        align: 'start'
+      }
+    },
+    {
+      element: '#header-share-download-group',
+      popover: {
+        title: 'Chia sẻ & Tải xuống',
+        description: 'Chia sẻ link file hoặc tải xuống trực tiếp về máy.',
+        side: 'bottom',
+        align: 'start'
+      }
+    }
+  ]
+
   // ========== IMAGE TOURS ==========
   if (fileType === 'image') {
     if (isMobile) {
@@ -87,6 +109,7 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
       ]
     } else {
       steps = [
+        ...headerSteps,
         {
           element: '#preview-container',
           popover: {
@@ -180,6 +203,7 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
       ]
     } else {
       steps = [
+        ...headerSteps,
         {
           element: '#preview-container',
           popover: {
@@ -318,6 +342,7 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
       ]
     } else {
       steps = [
+        ...headerSteps,
         {
           element: '#preview-container',
           popover: {
@@ -420,6 +445,7 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
       ]
     } else {
       steps = [
+        ...headerSteps,
         {
           element: '#preview-container',
           popover: {
@@ -531,6 +557,7 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
       ]
     } else {
       steps = [
+        ...headerSteps,
         {
           element: '#preview-container',
           popover: {

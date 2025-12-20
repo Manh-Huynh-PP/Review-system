@@ -1270,8 +1270,9 @@ export function FileViewDialogShared({
           onDrop={handleDrop}
         >
           <DialogHeader className="px-4 sm:px-6 py-3 sm:py-4 border-b flex-shrink-0 flex flex-row items-center justify-between space-y-0 group">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-              <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg">
+            {/* LEFT: File Info */}
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-4">
+              <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg shrink-0">
                 {getFileTypeIcon(file.type)}
               </div>
               <div className="min-w-0 flex-1">
@@ -1323,7 +1324,7 @@ export function FileViewDialogShared({
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-6 w-6 shrink-0"
+                          className="h-6 w-6 shrink-0 opacity-60 hover:opacity-100 transition-opacity"
                           onClick={() => {
                             setRenameValue(file.name)
                             setIsRenaming(true)
@@ -1334,11 +1335,98 @@ export function FileViewDialogShared({
                       )}
                     </>
                   )}
-                  <Badge variant="outline" className="text-xs font-normal shrink-0">
-                    v{currentVersion}
-                  </Badge>
+
+                  {/* Version dropdown inline with title */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        id="header-version-dropdown"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 px-2 min-w-[3.5rem] ml-2"
+                        title="Lịch sử phiên bản"
+                      >
+                        <span className="font-medium text-xs">v{currentVersion}</span>
+                        <ChevronDown className="w-3 h-3 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-80">
+                      <div className="p-2 border-b mb-1">
+                        <div className="font-semibold text-sm">Lịch sử phiên bản</div>
+                      </div>
+                      <div className="max-h-[300px] overflow-y-auto">
+                        {file.versions
+                          .sort((a, b) => b.version - a.version)
+                          .map((version) => (
+                            <DropdownMenuItem
+                              key={version.version}
+                              className="flex items-center justify-between p-3 cursor-pointer"
+                              onClick={() => {
+                                setCurrentVersion(version.version)
+                                onSwitchVersion?.(file.id, version.version)
+                              }}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${version.version === currentVersion
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-muted text-muted-foreground'
+                                  }`}>
+                                  v{version.version}
+                                </div>
+                                <div>
+                                  <div className="font-medium">
+                                    {version.version === currentVersion ? 'Phiên bản hiện tại' : `Phiên bản ${version.version}`}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {format(version.uploadedAt?.toDate ? version.uploadedAt.toDate() : new Date(), 'dd/MM/yyyy HH:mm')}
+                                  </div>
+                                </div>
+                              </div>
+                              {isAdmin && file.versions.length > 1 && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    if (confirm(`Xóa phiên bản ${version.version}?`)) {
+                                      deleteVersion(_projectId, file.id, version.version)
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </DropdownMenuItem>
+                          ))}
+                      </div>
+
+                      {onUploadNewVersion && (
+                        <>
+                          <div className="h-px bg-border my-1" />
+                          <div className="p-2">
+                            {onUploadNewVersion && (
+                              <UploadDialog
+                                projectId={_projectId}
+                                existingFileId={file.id}
+                                trigger={
+                                  <Button
+                                    className="w-full justify-start"
+                                    variant="ghost"
+                                  >
+                                    <Upload className="w-4 h-4 mr-2" />
+                                    Tải lên phiên bản mới
+                                  </Button>
+                                }
+                              />
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </DialogTitle>
-                <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                <div className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2 mt-1 flex-wrap">
                   <span>{getFileTypeLabel(file.type)}</span>
                   <span className="hidden sm:inline">•</span>
                   <span className="hidden sm:inline">{formatFileSize(current.metadata.size)}</span>
@@ -1351,286 +1439,168 @@ export function FileViewDialogShared({
               </div>
             </div>
 
+            {/* RIGHT: Actions Toolbar */}
             <div className="flex items-center gap-1 sm:gap-2">
-              {/* Version Selector - Hidden on mobile, available in menu */}
-              <div className="hidden sm:block">
-                <div className="flex items-center gap-2">
-                  {onUploadNewVersion && (
-                    <UploadDialog
-                      projectId={_projectId}
-                      existingFileId={file.id}
-                      trigger={
-                        <Button variant="outline" size="sm" className="gap-2 bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary hover:text-primary">
-                          <Upload className="w-4 h-4" />
-                          <span className="hidden lg:inline">Thêm phiên bản</span>
-                        </Button>
-                      }
-                    />
-                  )}
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <Clock className="w-4 h-4" />
-                        <span className="hidden md:inline">Lịch sử</span>
-                        <ChevronDown className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-80">
-                      {file.versions
-                        .sort((a, b) => b.version - a.version)
-                        .map((version) => (
-                          <DropdownMenuItem
-                            key={version.version}
-                            className="flex items-center justify-between p-3 cursor-pointer"
-                            onClick={() => {
-                              setCurrentVersion(version.version)
-                              onSwitchVersion?.(file.id, version.version)
-                            }}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${version.version === currentVersion
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted text-muted-foreground'
-                                }`}>
-                                v{version.version}
-                              </div>
-                              <div>
-                                <div className="font-medium">
-                                  {version.version === currentVersion ? 'Phiên bản hiện tại' : `Phiên bản ${version.version}`}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {format(version.uploadedAt?.toDate ? version.uploadedAt.toDate() : new Date(), 'dd/MM/yyyy HH:mm')}
-                                </div>
-                              </div>
-                            </div>
-                            {isAdmin && file.versions.length > 1 && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  if (confirm(`Xóa phiên bản ${version.version}?`)) {
-                                    deleteVersion(_projectId, file.id, version.version)
-                                  }
-                                }}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            )}
-                          </DropdownMenuItem>
-                        ))}
-
-                      {onUploadNewVersion && (
-                        <>
-                          <div className="h-px bg-border my-1" />
-                          <div className="p-2">
-                            <Button
-                              className="w-full justify-start"
-                              variant="ghost"
-                              onClick={() => setShowUploadDialog(true)}
-                            >
-                              <Upload className="w-4 h-4 mr-2" />
-                              Tải lên phiên bản mới
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-
-              {/* Mobile: Dropdown Menu with all actions */}
-              <div className="sm:hidden">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-60">
-                    <div className="px-2 py-1.5 text-sm font-medium text-muted-foreground">
-                      Lịch sử phiên bản
-                    </div>
-                    {file.versions
-                      .sort((a, b) => b.version - a.version)
-                      .slice(0, 3) // Show only last 3 versions on mobile
-                      .map((version) => (
-                        <DropdownMenuItem
-                          key={version.version}
-                          className="flex items-center justify-between p-2 cursor-pointer"
-                          onClick={() => {
-                            setCurrentVersion(version.version)
-                            onSwitchVersion?.(file.id, version.version)
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${version.version === currentVersion
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted text-muted-foreground'
-                              }`}>
-                              v{version.version}
-                            </div>
-                            <span className="text-sm">
-                              {version.version === currentVersion ? 'Hiện tại' : `Phiên bản ${version.version}`}
-                            </span>
-                          </div>
-                        </DropdownMenuItem>
-                      ))}
-
-                    {file.versions.length > 3 && (
-                      <DropdownMenuItem className="text-xs text-muted-foreground">
-                        ... và {file.versions.length - 3} phiên bản khác
-                      </DropdownMenuItem>
-                    )}
-
-                    <div className="h-px bg-border my-1" />
-
-                    {file.type === 'image' && file.versions.length > 1 && (
-                      <DropdownMenuItem onClick={() => setCompareMode(!compareMode)}>
-                        <Columns className="w-4 h-4 mr-2" />
-                        {compareMode ? 'Thoát so sánh' : 'So sánh phiên bản'}
-                      </DropdownMenuItem>
-                    )}
-
-                    <DropdownMenuItem asChild>
-                      <a
-                        href={effectiveUrl}
-                        download={ensureFileExtension(file.name, effectiveUrl, current?.metadata?.type, file.type)}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Tải xuống
-                      </a>
-                    </DropdownMenuItem>
-
-                    <DropdownMenuItem onClick={copyShareLink}>
-                      {copied ? (
-                        <>
-                          <Check className="w-4 h-4 mr-2 text-green-500" />
-                          Đã sao chép link!
-                        </>
-                      ) : (
-                        <>
-                          <Share2 className="w-4 h-4 mr-2" />
-                          Chia sẻ link
-                        </>
-                      )}
-                    </DropdownMenuItem>
-
-                    <DropdownMenuItem onClick={() => setShowComments(!showComments)}>
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      {showComments ? 'Ẩn bình luận' : 'Hiện bình luận'}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
-              {/* Compare Button (only for images) - Hidden on mobile */}
+              {/* LEFT SIDE: Tour | Share | Download | Comments */}
               {/* Tour Button - Desktop */}
               <Button
+                id="header-tour-btn"
                 variant="ghost"
-                size="icon"
-                className="hidden sm:flex h-8 w-8"
+                size="sm"
+                className="h-9 w-9 px-0 hidden sm:flex"
                 onClick={handleStartTour}
                 title="Hướng dẫn sử dụng"
               >
                 <HelpCircle className="w-4 h-4" />
+                <span className="sr-only">Hướng dẫn</span>
               </Button>
 
-              {file.type === 'image' && file.versions.length > 1 && (
-                <Button
-                  variant={compareMode ? 'secondary' : 'outline'}
-                  size="sm"
-                  onClick={() => setCompareMode(!compareMode)}
-                  className="hidden sm:flex"
-                >
-                  <Columns className="w-4 h-4 mr-2" />
-                  <span className="hidden md:inline">So sánh</span>
-                  <span className="md:hidden">So sánh</span>
-                </Button>
-              )}
-
-              <Button variant="outline" size="sm" asChild className="hidden sm:flex">
-                <a
-                  href={effectiveUrl}
-                  download={ensureFileExtension(file.name, effectiveUrl, current?.metadata?.type, file.type)}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  <span className="hidden md:inline">Tải xuống</span>
-                  <span className="md:hidden">Tải</span>
-                </a>
-              </Button>
-
-              {/* Share Button */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="hidden sm:flex">
-                    <Share2 className="w-4 h-4 mr-2" />
-                    <span className="hidden md:inline">Chia sẻ</span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80" align="end">
-                  <div className="space-y-3">
-                    <div className="space-y-1">
-                      <h4 className="font-medium text-sm">Chia sẻ file</h4>
-                      <p className="text-xs text-muted-foreground">
-                        Bất kỳ ai có link đều có thể xem file này
-                      </p>
+              {/* Share & Download Group */}
+              <div id="header-share-download-group" className="flex items-center gap-1">
+                {/* Share Button (Icon-only) */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="header-share-btn"
+                      variant="ghost"
+                      size="sm"
+                      className="h-9 w-9 px-0 hidden sm:flex"
+                      title="Chia sẻ"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      <span className="sr-only">Chia sẻ</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="start">
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-sm">Chia sẻ file</h4>
+                        <p className="text-xs text-muted-foreground">
+                          Bất kỳ ai có link đều có thể xem file này
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          readOnly
+                          value={getShareLink()}
+                          className="text-xs h-8"
+                        />
+                        <Button size="sm" className="h-8 px-2" onClick={copyShareLink}>
+                          {copied ? (
+                            <Check className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        readOnly
-                        value={getShareLink()}
-                        className="text-xs h-8"
-                      />
-                      <Button size="sm" className="h-8 px-2" onClick={copyShareLink}>
-                        {copied ? (
-                          <Check className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <Copy className="w-4 h-4" />
-                        )}
-                      </Button>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Mobile Share Button (Icon only) */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-9 w-9 px-0 sm:hidden"
+                      title="Chia sẻ"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="end">
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-sm">Chia sẻ file</h4>
+                        <p className="text-xs text-muted-foreground">
+                          Bất kỳ ai có link đều có thể xem file này
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          readOnly
+                          value={getShareLink()}
+                          className="text-xs h-8"
+                        />
+                        <Button size="sm" className="h-8 px-2" onClick={copyShareLink}>
+                          {copied ? (
+                            <Check className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
+                  </PopoverContent>
+                </Popover>
 
-              <Button
-                variant={showComments ? 'secondary' : 'outline'}
-                size="sm"
-                onClick={() => setShowComments(!showComments)}
-                className="hidden sm:flex"
-              >
-                <MessageSquare className="w-4 h-4 mr-2" />
-                <span className="hidden md:inline">Bình luận</span>
-                <span className="md:hidden">BL</span>
-              </Button>
-
-              <div className="flex items-center sm:hidden ml-2">
+                {/* Download Button */}
                 <Button
+                  id="header-download-btn"
                   variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={handleStartTour}
-                  title="Hướng dẫn"
+                  size="sm"
+                  className="h-9 w-9 px-0"
+                  asChild
+                  title="Tải xuống"
                 >
-                  <HelpCircle className="w-4 h-4" />
+                  <a
+                    href={effectiveUrl}
+                    download={ensureFileExtension(file.name, effectiveUrl, current?.metadata?.type, file.type)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span className="sr-only">Tải xuống</span>
+                  </a>
                 </Button>
               </div>
 
+              {/* Comments Toggle */}
               <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 ml-2"
-                onClick={() => onOpenChange(false)}
+                id="header-comments-toggle"
+                variant={showComments ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setShowComments(!showComments)}
+                className="h-9 w-9 px-0 hidden sm:flex"
+                title={showComments ? 'Ẩn bình luận' : 'Hiện bình luận'}
               >
-                <X className="w-4 h-4" />
+                <MessageSquare className="w-4 h-4" />
+                <span className="sr-only">Bình luận</span>
+              </Button>
+
+              <div className="flex-1" />
+
+              {/* RIGHT SIDE: Compare (images) + Close */}
+              {/* Compare Button (Images only) - before close */}
+              {file.type === 'image' && file.versions.length > 1 && (
+                <Button
+                  id="header-compare-btn"
+                  variant={compareMode ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-9 w-9 px-0"
+                  onClick={() => setCompareMode(!compareMode)}
+                  title="So sánh phiên bản"
+                >
+                  <Columns className="w-4 h-4" />
+                  <span className="sr-only">So sánh</span>
+                </Button>
+              )}
+
+              <div className="w-px h-6 bg-border/50 mx-1" />
+
+              {/* Close Button */}
+              <Button
+                id="header-close-btn"
+                variant="ghost"
+                size="sm"
+                className="h-9 w-9 px-0 hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => onOpenChange(false)}
+                title="Đóng"
+              >
+                <X className="w-5 h-5" />
+                <span className="sr-only">Đóng</span>
               </Button>
             </div>
           </DialogHeader>

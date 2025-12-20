@@ -66,6 +66,18 @@ export default function ProjectDetailPage() {
     return off
   }, [projectId])
 
+  // Update page title
+  useEffect(() => {
+    if (project) {
+      document.title = `${project.name} | Review System`
+    }
+
+    return () => {
+      document.title = 'Review System'
+    }
+  }, [project])
+
+
   const handleSort = (option: SortOption) => {
     if (sortBy === option) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')

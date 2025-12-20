@@ -170,13 +170,14 @@ export default function ReviewPage() {
   // Update page title
   useEffect(() => {
     if (project) {
-      document.title = project.name
+      document.title = `${project.name} | Review System`
     }
 
     return () => {
       document.title = 'Review System'
     }
   }, [project])
+
 
   // Auto-open file dialog if fileId is provided in URL
   useEffect(() => {

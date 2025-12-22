@@ -394,6 +394,59 @@ export function FileViewDialogShared({
     return `${filename}${correctExt}`
   }
 
+  const handleDownload = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault()
+    if (!effectiveUrl) return
+
+    // Create a progress toast
+    const toastId = toast.loading('Đang khởi tạo tải xuống... 0%')
+
+    try {
+      // Use XMLHttpRequest for progress tracking
+      const xhr = new XMLHttpRequest()
+      xhr.open('GET', effectiveUrl, true)
+      xhr.responseType = 'blob'
+
+      xhr.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.round((event.loaded / event.total) * 100)
+          toast.loading(`Đang tải xuống... ${percentComplete}%`, { id: toastId })
+        }
+      }
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          const blob = xhr.response
+          const url = window.URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = ensureFileExtension(file.name, effectiveUrl, current?.metadata?.type, file.type)
+          document.body.appendChild(link)
+          link.click()
+          link.remove()
+          window.URL.revokeObjectURL(url)
+          toast.success('Tải xuống hoàn tất!', { id: toastId })
+        } else {
+          toast.error('Có lỗi khi tải file', { id: toastId })
+          // Fallback
+          window.open(effectiveUrl, '_blank')
+        }
+      }
+
+      xhr.onerror = () => {
+        toast.error('Lỗi kết nối kiểm tra lại mạng', { id: toastId })
+        // Fallback
+        window.open(effectiveUrl, '_blank')
+      }
+
+      xhr.send()
+    } catch (error) {
+      console.error('Download error:', error)
+      toast.error('Có lỗi khi tải file', { id: toastId })
+      window.open(effectiveUrl, '_blank')
+    }
+  }
+
   // Filter comments based on current time/frame if enabled
   const fileComments = showOnlyCurrentTimeComments && (file.type === 'video' || file.type === 'sequence' || file.type === 'pdf')
     ? allFileComments.filter(c => {
@@ -1546,6 +1599,7 @@ export function FileViewDialogShared({
                     download={ensureFileExtension(file.name, effectiveUrl, current?.metadata?.type, file.type)}
                     target="_blank"
                     rel="noreferrer"
+                    onClick={handleDownload}
                   >
                     <Download className="w-4 h-4" />
                     <span className="sr-only">Tải xuống</span>

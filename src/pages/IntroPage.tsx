@@ -14,6 +14,8 @@ const translations = {
         subtitle: 'Giải pháp Mã nguồn mở (Open Source) để review hình ảnh, video và 3D. Tối ưu hóa quy trình phản hồi với bình luận theo thời gian, công cụ chú thích và quản lý phiên bản.',
         backToPortfolio: 'Quay lại Portfolio',
         keyFeatures: 'Tính năng Chính',
+        credits: 'Mã nguồn mở',
+        creditsDesc: 'Được xây dựng với các thư viện tuyệt vời',
         footer: '© 2025 Mạnh Huỳnh. Phần mềm Mã nguồn mở.',
         viewOnGithub: 'Xem trên GitHub',
         buyMeACoffee: 'Mời tôi một ly cà phê',
@@ -49,6 +51,8 @@ const translations = {
         subtitle: 'Open Source solution for reviewing creative assets. Streamline your feedback loop with timestamped comments, annotations, and version control.',
         backToPortfolio: 'Back to Portfolio',
         keyFeatures: 'Key Features',
+        credits: 'Credits',
+        creditsDesc: 'Built with these amazing open source libraries',
         footer: '© 2025 Mạnh Huỳnh. Open Source Software.',
         viewOnGithub: 'View on GitHub',
         buyMeACoffee: 'Buy me a coffee',
@@ -88,6 +92,12 @@ const icons = [
     <Shield className="w-6 h-6 text-purple-500" key="4" />,
     <GitBranch className="w-6 h-6 text-orange-500" key="5" />,
     <Zap className="w-6 h-6 text-cyan-500" key="6" />
+]
+
+const libraries = [
+    "React", "Vite", "Firebase", "Tailwind CSS", "Zustand", "Radix UI",
+    "Lucide React", "React Router", "React Three Fiber", "Drei", "Konva", "React Konva",
+    "Video.js", "React PDF", "Date-fns", "React Hot Toast", "Dnd Kit", "Recharts", "Model Viewer", "Fast Image Sequence"
 ]
 
 export default function IntroPage() {
@@ -158,6 +168,21 @@ export default function IntroPage() {
                     </div>
                 </div>
             </main>
+
+            {/* Credits Section */}
+            <section className="py-16 px-6 md:px-12 relative z-10 bg-secondary/30 backdrop-blur-sm border-t border-border/50">
+                <div className="max-w-5xl mx-auto text-center">
+                    <h2 className="text-2xl font-bold mb-4">{t.credits}</h2>
+                    <p className="text-muted-foreground mb-8">{t.creditsDesc}</p>
+                    <div className="flex flex-wrap justify-center gap-3">
+                        {libraries.map((lib, index) => (
+                            <div key={index} className="px-4 py-2 bg-card border border-border rounded-full text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-default">
+                                {lib}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
 
             {/* Footer */}
             <footer className="py-8 text-center text-muted-foreground text-sm border-t border-border relative z-10 bg-background/80 backdrop-blur-lg">

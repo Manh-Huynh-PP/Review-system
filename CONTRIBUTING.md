@@ -12,8 +12,8 @@ This project and everyone participating in it is governed by the [Code of Conduc
 
 ### Reporting Bugs
 
-- **Ensure the bug was not already reported** by searching on GitHub under [Issues](https://github.com/Manh-Huynh-Opensource/Review-system/issues).
-- If you're unable to find an open issue addressing the problem, [open a new one](https://github.com/Manh-Huynh-Opensource/Review-system/issues/new). Be sure to include a **title and clear description**, as much relevant information as possible, and a **code sample** or an **executable test case** demonstrating the expected behavior that is not occurring.
+- **Ensure the bug was not already reported** by searching on GitHub under [Issues](https://github.com/Manh-Huynh-PP/Review-system/issues).
+- If you're unable to find an open issue addressing the problem, [open a new one](https://github.com/Manh-Huynh-PP/Review-system/issues/new). Be sure to include a **title and clear description**, as much relevant information as possible, and a **code sample** or an **executable test case** demonstrating the expected behavior that is not occurring.
 
 ### Suggesting Enhancements
 
@@ -47,7 +47,7 @@ This project and everyone participating in it is governed by the [Code of Conduc
 
 1.  **Clone the repo**:
     ```bash
-    git clone https://github.com/Manh-Huynh-Opensource/Review-system.git
+    git clone https://github.com/Manh-Huynh-PP/Review-system.git
     cd Review-system
     ```
 

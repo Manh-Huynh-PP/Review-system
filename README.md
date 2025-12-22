@@ -2,7 +2,7 @@
 
 A web application for reviewing creative assets (images, videos, image sequences, PDFs, and 3D models) with annotation tools, timestamped comments for videos, and version management.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Donate-FFDD00.svg)](https://coffee.manhhuynh.work)
 
 ## ✨ Features
@@ -46,7 +46,7 @@ A web application for reviewing creative assets (images, videos, image sequences
 
 1.  **Clone the repository**
     ```bash
-    git clone https://github.com/Manh-Huynh-Opensource/Review-system.git
+    git clone https://github.com/Manh-Huynh-PP/Review-system.git
     cd Review-system
     ```
 
@@ -99,7 +99,8 @@ Contributions are welcome! Please read the [CONTRIBUTING.md](CONTRIBUTING.md) fo
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **CC BY-NC 4.0** License - see the [LICENSE](LICENSE) file for details.
+**This software is free for non-commercial use.**
 
 ## Author
 

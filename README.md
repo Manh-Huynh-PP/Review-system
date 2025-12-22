@@ -42,7 +42,8 @@ A web application for reviewing creative assets (images, videos, image sequences
 - Node.js (v18+)
 - A Firebase project
 
-### Installation
+👉 **[Read the Full Installation Guide](docs/INSTALLATION.md)** for detailed setup instructions.
+
 
 1.  **Clone the repository**
     ```bash
@@ -96,6 +97,11 @@ src/
 ## 🤝 Contributing
 
 Contributions are welcome! Please read the [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests.
+
+## 📚 Documentation
+
+- **[Installation Guide](docs/INSTALLATION.md)**: Setup, configuration, and deployment.
+- **[User Guide](docs/USAGE.md)**: How to use the system as an Admin or Reviewer.
 
 ## 📄 License
 

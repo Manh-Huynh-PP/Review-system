@@ -17,6 +17,11 @@ const ProjectDetailPage = lazy(() => import('./pages/admin/ProjectDetailPage'))
 const ClientsPage = lazy(() => import('./pages/admin/ClientsPage'))
 const ReviewPage = lazy(() => import('./pages/ReviewPage'))
 const IntroPage = lazy(() => import('./pages/IntroPage'))
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'))
+const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'))
+const InstallationPage = lazy(() => import('./pages/InstallationPage'))
+const UsagePage = lazy(() => import('./pages/UsagePage'))
+const ServicesPage = lazy(() => import('./pages/ServicesPage'))
 
 // Loading component
 const PageLoader = () => (
@@ -111,6 +116,46 @@ const router = createBrowserRouter([
     element: (
       <Suspense fallback={<PageLoader />}>
         <IntroPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/privacy',
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <PrivacyPolicyPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/terms',
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <TermsOfServicePage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/installation',
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <InstallationPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/usage',
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <UsagePage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/services',
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <ServicesPage />
       </Suspense>
     ),
   },

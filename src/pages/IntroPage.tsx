@@ -1,12 +1,12 @@
 
-import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, GitBranch, Shield, Zap, Globe, Coffee } from 'lucide-react'
+
+import { Navigate, Link } from 'react-router-dom'
+import { ArrowLeft, CheckCircle2, GitBranch, Shield, Zap, Globe, Coffee, Sun, Moon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ParallaxBackground } from '@/components/ui/ParallaxBackground'
 import { useAuthStore } from '@/stores/auth'
-
-type Lang = 'vi' | 'en'
+import { useLanguageStore } from '@/stores/language'
+import { useThemeStore } from '@/stores/theme'
 
 const translations = {
     vi: {
@@ -102,10 +102,9 @@ const libraries = [
 
 export default function IntroPage() {
     const { user, initialized } = useAuthStore()
-    const [lang, setLang] = useState<Lang>('vi')
-    const t = translations[lang]
-
-    const toggleLang = () => setLang(prev => prev === 'vi' ? 'en' : 'vi')
+    const { language, toggleLanguage } = useLanguageStore()
+    const { theme, toggleTheme } = useThemeStore()
+    const t = translations[language]
 
     // Redirect to projects if user is logged in
     if (initialized && user) {
@@ -121,11 +120,11 @@ export default function IntroPage() {
                 <Button
                     variant="outline"
                     size="sm"
-                    onClick={toggleLang}
+                    onClick={toggleLanguage}
                     className="flex items-center gap-2 rounded-full backdrop-blur-sm bg-background/50"
                 >
                     <Globe className="w-4 h-4" />
-                    <span className="font-semibold w-6 text-center">{lang.toUpperCase()}</span>
+                    <span className="font-semibold w-6 text-center">{language.toUpperCase()}</span>
                 </Button>
             </div>
 
@@ -141,7 +140,7 @@ export default function IntroPage() {
                     {t.subtitle}
                 </p>
 
-                <div className="pt-8 flex justify-center">
+                <div className="pt-8 flex justify-center gap-4">
                     <a
                         href="https://manhhuynh.work"
                         className="inline-flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground font-semibold rounded-full hover:bg-primary/90 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1"
@@ -149,6 +148,13 @@ export default function IntroPage() {
                         <ArrowLeft className="w-5 h-5" />
                         {t.backToPortfolio}
                     </a>
+                    <Link
+                        to="/services"
+                        className="inline-flex items-center gap-2 px-8 py-4 bg-background border-2 border-primary text-primary font-bold rounded-full hover:bg-primary/5 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                    >
+                        <Zap className="w-5 h-5" />
+                        Dịch vụ Setup
+                    </Link>
                 </div>
             </header>
 
@@ -206,9 +212,25 @@ export default function IntroPage() {
                         <Coffee className="w-4 h-4" />
                         {t.buyMeACoffee}
                     </a>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={toggleTheme}
+                        className="gap-2"
+                        title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                    >
+                        {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                        <span className="hidden sm:inline">{theme === 'dark' ? 'Light' : 'Dark'}</span>
+                    </Button>
+                </div>
+                <div className="mt-6 flex items-center justify-center gap-6 text-xs text-muted-foreground/60">
+                    <Link to="/installation" className="hover:text-foreground transition-colors">Installation</Link>
+                    <Link to="/usage" className="hover:text-foreground transition-colors">Usage Guide</Link>
+                    <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+                    <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
                 </div>
             </footer>
-        </div>
+        </div >
     )
 }
 
@@ -221,4 +243,3 @@ function FeatureCard({ icon, title, desc }: { icon: React.ReactNode, title: stri
         </div>
     )
 }
-

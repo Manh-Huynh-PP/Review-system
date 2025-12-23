@@ -86,7 +86,7 @@ export default async function handler(req, res) {
     } catch (error) {
         console.error('Metadata Error:', error);
         debugError = error.message;
-        title = 'Review System (Error)';
+        title = `DEBUG ERROR: ${error.message}`; // Show error in title for debugging
     }
 
     // Determine destination URL

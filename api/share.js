@@ -60,12 +60,19 @@ export default async function handler(req, res) {
                 const data = fileDoc.data();
                 title = data.name || 'File';
 
-                // Find best thumbnail
+                // Find best thumbnail based on file type
                 const currentVersion = data.currentVersion || 1;
                 const versionData = data.versions?.find(v => v.version === currentVersion);
 
                 if (versionData) {
-                    image = versionData.thumbnail || versionData.poster || versionData.url;
+                    // Priority: thumbnailUrl (for model/pdf) > sequenceUrls[0] (for sequence) > url (for image/video)
+                    if (versionData.thumbnailUrl) {
+                        image = versionData.thumbnailUrl;
+                    } else if (versionData.sequenceUrls && versionData.sequenceUrls.length > 0) {
+                        image = versionData.sequenceUrls[0]; // First frame for sequences
+                    } else if (versionData.url) {
+                        image = versionData.url; // Direct URL for image/video
+                    }
                 }
             } else {
                 debugError = `File ID ${fileId} not found in DB`;
@@ -85,7 +92,14 @@ export default async function handler(req, res) {
                     const currentVersion = firstFile.currentVersion || 1;
                     const versionData = firstFile.versions?.find(v => v.version === currentVersion);
                     if (versionData) {
-                        image = versionData.thumbnail || versionData.poster || versionData.url;
+                        // Priority: thumbnailUrl > sequenceUrls[0] > url
+                        if (versionData.thumbnailUrl) {
+                            image = versionData.thumbnailUrl;
+                        } else if (versionData.sequenceUrls && versionData.sequenceUrls.length > 0) {
+                            image = versionData.sequenceUrls[0];
+                        } else if (versionData.url) {
+                            image = versionData.url;
+                        }
                     }
                 }
             } else {

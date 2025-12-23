@@ -116,8 +116,7 @@ export default async function handler(req, res) {
     <meta property="twitter:description" content="${description} ${debugError ? `(Debug: ${debugError})` : ''}">
     ${image ? `<meta property="twitter:image" content="${image}">` : ''}
 
-    <!-- Redirect for Humans -->
-    <meta http-equiv="refresh" content="0;url=${destUrl}">
+    <!-- Redirect for Humans (JavaScript only, preventing Bots from following meta-refresh) -->
     <script type="text/javascript">
         window.location.href = "${destUrl}";
     </script>

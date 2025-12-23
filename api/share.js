@@ -89,8 +89,9 @@ export default async function handler(req, res) {
         }
 
         // Check User Agent
-        const userAgent = req.headers['user-agent'] || '';
-        const isBot = /facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegram|skype|slack/i.test(userAgent);
+        // Check User Agent with broader regex
+        const userAgent = (req.headers['user-agent'] || '').toLowerCase();
+        const isBot = /bot|googlebot|crawler|spider|robot|crawling|facebook|twitter|linkedin|slack|discord|whatsapp|telegram|skype|embedly/i.test(userAgent);
 
         if (isBot) {
             const html = `

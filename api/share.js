@@ -7,24 +7,25 @@ const SERVICE_ACCOUNT = process.env.FIREBASE_SERVICE_ACCOUNT
     ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
     : null;
 
-if (!getApps().length && SERVICE_ACCOUNT) {
-    initializeApp({
-        credential: cert(SERVICE_ACCOUNT)
-    });
-} else if (!getApps().length) {
-    console.error("FIREBASE_SERVICE_ACCOUNT env var is missing!");
+// Robust initialization
+let db;
+try {
+    if (!getApps().length) {
+        if (SERVICE_ACCOUNT) {
+            initializeApp({
+                credential: cert(SERVICE_ACCOUNT)
+            });
+        } else {
+            console.warn("FIREBASE_SERVICE_ACCOUNT env var is missing/invalid!");
+        }
+    }
+    db = getFirestore();
+} catch (error) {
+    console.error("Firebase Init Error:", error);
 }
 
-const db = getFirestore();
-
 export default async function handler(req, res) {
-    // Parsing path segments from the request URL
-    // Expected URL: /share/p/:projectId/file/:fileId or /share/p/:projectId
-    // Vercel passes the full URL, we can parse it
-
-    // Note: req.url in Vercel function will be the rewritten path if used via rewrite, 
-    // or the direct path.
-    // Let's assume the rewrite rule sends /share/p/... to this function
+    const appUrlOrigin = 'https://view.manhhuynh.work';
 
     // Vercel Rewrite sends query params (slug)
     const { slug } = req.query;
@@ -33,22 +34,24 @@ export default async function handler(req, res) {
     let projectId = null;
     let fileId = null;
 
-    if (pathParts.length > 0) {
-        projectId = pathParts[0];
-    }
+    if (pathParts.length > 0) projectId = pathParts[0];
+    if (pathParts.length >= 3 && pathParts[1] === 'file') fileId = pathParts[2];
 
-    if (pathParts.length >= 3 && pathParts[1] === 'file') {
-        fileId = pathParts[2];
-    }
-
-    if (!projectId) {
-        // If no project ID, just redirect home
-        return res.redirect('/');
-    }
+    // Default Metadata
+    let title = 'Review System';
+    let description = 'Chia sẻ từ Review System';
+    let image = null;
+    let debugError = null; // For debugging output
 
     try {
-        let title = 'Review System';
-        let image = null;
+        if (!projectId) {
+            // No Project ID -> Invalid Link
+            return res.redirect('/');
+        }
+
+        if (!db) {
+            throw new Error("Database not initialized (Check FIREBASE_SERVICE_ACCOUNT)");
+        }
 
         if (fileId) {
             // Fetch File Data
@@ -64,6 +67,9 @@ export default async function handler(req, res) {
                 if (versionData) {
                     image = versionData.thumbnail || versionData.poster || versionData.url;
                 }
+            } else {
+                debugError = `File ID ${fileId} not found in DB`;
+                title = 'File Not Found';
             }
         } else {
             // Fetch Project Data
@@ -71,68 +77,59 @@ export default async function handler(req, res) {
             if (projectDoc.exists) {
                 const data = projectDoc.data();
                 title = data.name || 'Dự án';
+            } else {
+                debugError = `Project ID ${projectId} not found in DB`;
+                title = 'Project Not Found';
             }
         }
 
-        // Determine the destination URL (the Vercel app itself)
-        // We want to redirect the user to the actual "clean" URL handled by React Router
-        // e.g. /review/PROJECT_ID/file/FILE_ID
-        // Host header is the domain the user accessed
-        const host = req.headers.host;
-        const protocol = req.headers['x-forwarded-proto'] || 'https';
-        let appUrl = `${protocol}://${host}`;
+    } catch (error) {
+        console.error('Metadata Error:', error);
+        debugError = error.message;
+        title = 'Review System (Error)';
+    }
 
-        if (fileId) {
-            appUrl = `${appUrl}/review/${projectId}/file/${fileId}`;
-        } else {
-            appUrl = `${appUrl}/review/${projectId}`;
-        }
+    // Determine destination URL
+    let destUrl = appUrlOrigin;
+    if (projectId) destUrl += `/review/${projectId}`;
+    if (fileId) destUrl += `/file/${fileId}`;
 
-        // Hybrid Metadata Page Strategy:
-        // Always return HTML with OG tags for bots to scrape.
-        // Include a client-side JavaScript redirect for humans to reach the app.
-        // This avoids flaky user-agent detection and ensures metadata always loads.
-
-        const html = `
+    // Hybrid Metadata Page Strategy
+    const html = `
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <title>${title}</title>
     
-    <!-- Open Graph / Facebook -->
+    <!-- Open Graph -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="${appUrl}">
+    <meta property="og:url" content="${destUrl}">
     <meta property="og:title" content="${title}">
-    <meta property="og:description" content="Chia sẻ từ Review System">
+    <meta property="og:description" content="${description} ${debugError ? `(Debug: ${debugError})` : ''}">
     ${image ? `<meta property="og:image" content="${image}">` : ''}
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="${appUrl}">
+    <meta property="twitter:url" content="${destUrl}">
     <meta property="twitter:title" content="${title}">
-    <meta property="twitter:description" content="Chia sẻ từ Review System">
+    <meta property="twitter:description" content="${description} ${debugError ? `(Debug: ${debugError})` : ''}">
     ${image ? `<meta property="twitter:image" content="${image}">` : ''}
 
     <!-- Redirect for Humans -->
-    <meta http-equiv="refresh" content="0;url=${appUrl}">
+    <meta http-equiv="refresh" content="0;url=${destUrl}">
     <script type="text/javascript">
-        window.location.href = "${appUrl}";
+        window.location.href = "${destUrl}";
     </script>
 </head>
 <body>
-    <p>Đang chuyển hướng đến <a href="${appUrl}">Review System</a>...</p>
+    <p>Đang chuyển hướng đến <a href="${destUrl}">Review System</a>...</p>
+    ${debugError ? `<p style="color:red; display:none">Debug: ${debugError}</p>` : ''}
 </body>
 </html>
-        `;
+    `;
 
-        // Cache for 1 hour public, but revalidate
-        res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
-        res.status(200).send(html);
-
-    } catch (error) {
-        console.error('Error fetching metadata:', error);
-        // On error, just redirect safely
-        res.redirect('/');
-    }
+    // Cache for 10 seconds to allow quick debugging updates
+    res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate');
+    res.status(200).send(html);
 }

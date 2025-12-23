@@ -37,8 +37,8 @@ export default async function handler(req, res) {
     if (pathParts.length > 0) projectId = pathParts[0];
     if (pathParts.length >= 3 && pathParts[1] === 'file') fileId = pathParts[2];
 
-    // Default Metadata
-    let title = 'Review System';
+    // Default Metadata - include debug markers
+    let title = `[INIT] slug=${slug || 'none'}`;
     let description = 'Chia sẻ từ Review System';
     let image = null;
     let debugError = null; // For debugging output

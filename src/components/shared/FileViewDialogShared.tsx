@@ -2219,6 +2219,7 @@ export function FileViewDialogShared({
                           userName={currentUserName}
                           onUserNameChange={onUserNameChange}
                           currentTimestamp={file.type === 'video' ? currentTime : (file.type === 'sequence' ? currentFrame : undefined)}
+                          currentTimestampRef={currentTimeRef}
                           showTimestamp={file.type === 'video' || file.type === 'sequence'}
                           annotationData={!isReadOnly ? annotationData : null}
                           onAnnotationClick={handleStartAnnotating}
@@ -2259,6 +2260,7 @@ export function FileViewDialogShared({
                           userName={currentUserName}
                           onUserNameChange={onUserNameChange}
                           currentTimestamp={file.type === 'video' ? currentTime : (file.type === 'sequence' ? currentFrame : undefined)}
+                          currentTimestampRef={currentTimeRef}
                           showTimestamp={file.type === 'video' || file.type === 'sequence'}
                           annotationData={!isReadOnly ? annotationData : null}
                           onAnnotationClick={handleStartAnnotating}
@@ -2341,6 +2343,7 @@ export function FileViewDialogShared({
                         userName={currentUserName}
                         onUserNameChange={onUserNameChange}
                         currentTimestamp={file.type === 'video' ? currentTime : (file.type === 'sequence' ? currentFrame : undefined)}
+                        currentTimestampRef={currentTimeRef}
                         showTimestamp={file.type === 'video' || file.type === 'sequence'}
                         annotationData={!isReadOnly ? annotationData : null}
                         onAnnotationClick={handleStartAnnotating}

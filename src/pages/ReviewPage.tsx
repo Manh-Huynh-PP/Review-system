@@ -26,10 +26,20 @@ import { getSecureDownloadUrl } from '@/lib/secureStorage'
 import type { File as FileType } from '@/types'
 import { useBulkDownload } from '@/hooks/useBulkDownload'
 import { DownloadProgressDialog } from '@/components/dashboard/DownloadProgressDialog'
-import { Archive, ExternalLink } from 'lucide-react'
+import { Archive, ExternalLink, Menu } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import { useThemeStore } from '@/stores/theme'
+import { Sun, Moon } from 'lucide-react'
 
 export default function ReviewPage() {
+  const { theme, toggleTheme } = useThemeStore()
   const { projectId, fileId } = useParams<{ projectId: string; fileId?: string }>()
   const { project, fetchProject } = useProjectStore()
   const { files, subscribeToFiles, cleanup: cleanupFiles } = useFileStore()
@@ -48,6 +58,7 @@ export default function ReviewPage() {
 
   const [loading, setLoading] = useState(true)
   const [showNamePrompt, setShowNamePrompt] = useState(false)
+  const [isInitialPrompt, setIsInitialPrompt] = useState(true)
   const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({})
   const [selectedFile, setSelectedFile] = useState<FileType | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -283,6 +294,7 @@ export default function ReviewPage() {
   // Show name prompt if user doesn't have a name
   useEffect(() => {
     if (!loading && !currentUserName) {
+      setIsInitialPrompt(true)
       setShowNamePrompt(true)
     }
   }, [loading, currentUserName])
@@ -607,11 +619,15 @@ export default function ReviewPage() {
       />
 
       <Dialog open={showNamePrompt} onOpenChange={setShowNamePrompt}>
-        <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+        <DialogContent className="sm:max-w-md" onInteractOutside={(e) => isInitialPrompt && e.preventDefault()}>
           <DialogHeader>
-            <DialogTitle>Chào mừng đến với Review</DialogTitle>
+            <DialogTitle>
+              {isInitialPrompt ? 'Chào mừng đến với Review' : 'Cài đặt thông tin'}
+            </DialogTitle>
             <DialogDescription>
-              Vui lòng nhập tên và chọn avatar để tiếp tục xem và bình luận
+              {isInitialPrompt
+                ? 'Vui lòng nhập tên và chọn avatar để tiếp tục xem và bình luận'
+                : 'Cập nhật tên và hình ảnh hiển thị của bạn'}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleNameSubmit} className="space-y-4">
@@ -693,7 +709,7 @@ export default function ReviewPage() {
             </div>
 
             <Button type="submit" className="w-full">
-              Tiếp tục
+              {isInitialPrompt ? 'Tiếp tục' : 'Lưu thay đổi'}
             </Button>
           </form>
         </DialogContent>
@@ -728,75 +744,199 @@ export default function ReviewPage() {
                 <span>{projectFiles.length} tệp tin</span>
               </div>
 
-              {!isArchived && project.archiveUrl && (
-                <div className="pt-2">
-                  <a
-                    href={project.archiveUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 p-2 rounded-lg border bg-background/50 hover:bg-muted transition-colors group"
-                  >
-                    <img
-                      src={`https://www.google.com/s2/favicons?domain=${new URL(project.archiveUrl).hostname}&sz=32`}
-                      alt="Drive Icon"
-                      className="w-5 h-5"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                      }}
-                    />
-                    <ExternalLink className="w-4 h-4 hidden" />
-                    <div className="flex flex-col text-left">
-                      <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
-                        {project.archiveTitle || 'Link lưu trữ dự án'}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">
-                        {new URL(project.archiveUrl).hostname}
-                      </span>
-                    </div>
-                  </a>
+              {/* Archive Links Section */}
+              {(!isArchived && ((project.archiveLinks && project.archiveLinks.length > 0) || project.archiveUrl)) && (
+                <div className="pt-2 flex flex-wrap gap-2">
+                  {[...(project.archiveLinks || []), ...(project.archiveUrl && (!project.archiveLinks || !project.archiveLinks.some(l => l.url === project.archiveUrl)) ? [{ url: project.archiveUrl, title: project.archiveTitle }] : [])]
+                    .filter(link => link.url)
+                    .map((link, idx) => (
+                      <a
+                        key={idx}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 p-2 rounded-lg border bg-background/50 hover:bg-muted transition-colors group max-w-[250px]"
+                      >
+                        <img
+                          src={`https://www.google.com/s2/favicons?domain=${new URL(link.url).hostname}&sz=32`}
+                          alt="Drive Icon"
+                          className="w-5 h-5 flex-shrink-0"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                          }}
+                        />
+                        <ExternalLink className="w-4 h-4 hidden flex-shrink-0" />
+                        <div className="flex flex-col text-left min-w-0">
+                          <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">
+                            {link.title || 'Link lưu trữ dự án'}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground truncate">
+                            {new URL(link.url).hostname}
+                          </span>
+                        </div>
+                      </a>
+                    ))}
                 </div>
               )}
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const filesWithProject = projectFiles.map(f => ({ ...f, projectName: project.name }))
-                  handleBulkDownload(filesWithProject, comments)
-                }}
-                className="gap-2"
-                title="Tải xuống tất cả"
-              >
-                <Download className="w-4 h-4" />
-                <span className="hidden sm:inline">Tải tất cả</span>
-              </Button>
+              {/* DESKTOP ACTIONS */}
+              <div className="hidden sm:flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const filesWithProject = projectFiles.map(f => ({ ...f, projectName: project.name }))
+                    handleBulkDownload(filesWithProject, comments)
+                  }}
+                  className="gap-2"
+                  title="Tải xuống tất cả"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Tải tất cả</span>
+                </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setNotificationDialogOpen(true)}
-                className="gap-2 text-primary border-primary/20 hover:bg-primary/5"
-                title="Nhận thông báo qua email"
-              >
-                <Mail className="w-4 h-4" />
-                <span className="hidden sm:inline">Nhận thông báo</span>
-              </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setNotificationDialogOpen(true)}
+                  className="gap-2 text-primary border-primary/20 hover:bg-primary/5"
+                  title="Nhận thông báo qua email"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>Nhận thông báo</span>
+                </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  resetTourStatus()
-                  alert('Đã reset trạng thái hướng dẫn. Mở file bất kỳ để xem hướng dẫn lại.')
-                }}
-                className="gap-2"
-              >
-                <HelpCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">Hướng dẫn</span>
-              </Button>
-              <ThemeToggle />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    resetTourStatus()
+                    alert('Đã reset trạng thái hướng dẫn. Mở file bất kỳ để xem hướng dẫn lại.')
+                  }}
+                  className="gap-2"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                  <span>Hướng dẫn</span>
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 w-9 p-0 rounded-full overflow-hidden border border-border hover:border-primary transition-colors"
+                  onClick={() => {
+                    setIsInitialPrompt(false)
+                    setShowNamePrompt(true)
+                  }}
+                  title="Cài đặt thông tin"
+                >
+                  <div className="w-full h-full flex items-center justify-center p-1.5 bg-muted">
+                    <div
+                      className="w-full h-full transition-colors duration-200"
+                      style={{
+                        backgroundColor: selectedColor,
+                        maskImage: `url(${selectedAvatar})`,
+                        WebkitMaskImage: `url(${selectedAvatar})`,
+                        maskSize: 'contain',
+                        WebkitMaskSize: 'contain',
+                        maskRepeat: 'no-repeat',
+                        WebkitMaskRepeat: 'no-repeat',
+                        maskPosition: 'center',
+                        WebkitMaskPosition: 'center'
+                      }}
+                    />
+                  </div>
+                </Button>
+                <ThemeToggle />
+              </div>
+
+              {/* MOBILE ACTIONS */}
+              <div className="flex sm:hidden items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" className="h-9 w-9">
+                      <Menu className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const filesWithProject = projectFiles.map(f => ({ ...f, projectName: project.name }))
+                        handleBulkDownload(filesWithProject, comments)
+                      }}
+                      className="gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Tải tất cả</span>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem
+                      onClick={() => setNotificationDialogOpen(true)}
+                      className="gap-2"
+                    >
+                      <Mail className="w-4 h-4" />
+                      <span>Nhận thông báo</span>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem
+                      onClick={() => {
+                        resetTourStatus()
+                        alert('Đã reset trạng thái hướng dẫn. Mở file bất kỳ để xem hướng dẫn lại.')
+                      }}
+                      className="gap-2"
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                      <span>Hướng dẫn</span>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setIsInitialPrompt(false)
+                        setShowNamePrompt(true)
+                      }}
+                      className="gap-2"
+                    >
+                      <div className="w-4 h-4 rounded-full overflow-hidden border border-border">
+                        <div
+                          className="w-full h-full"
+                          style={{
+                            backgroundColor: selectedColor,
+                            maskImage: `url(${selectedAvatar})`,
+                            WebkitMaskImage: `url(${selectedAvatar})`,
+                            maskSize: 'contain',
+                            WebkitMaskSize: 'contain',
+                            maskRepeat: 'no-repeat',
+                            WebkitMaskRepeat: 'no-repeat',
+                            maskPosition: 'center',
+                            WebkitMaskPosition: 'center'
+                          }}
+                        />
+                      </div>
+                      <span>Cài đặt thông tin</span>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem
+                      onClick={toggleTheme}
+                      className="gap-2"
+                    >
+                      {theme === 'dark' ? (
+                        <>
+                          <Sun className="w-4 h-4" />
+                          <span>Giao diện sáng</span>
+                        </>
+                      ) : (
+                        <>
+                          <Moon className="w-4 h-4" />
+                          <span>Giao diện tối</span>
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </div>
         </div>
@@ -816,17 +956,22 @@ export default function ReviewPage() {
                   <p className="text-sm text-amber-700">Bình luận đã bị khóa. Chỉ hiển thị ảnh thumbnail còn lại.</p>
                 </div>
               </div>
-              {project.archiveUrl && (
-                <a
-                  href={project.archiveUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-sm font-medium text-amber-700 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-4 py-2 rounded-lg transition-colors"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Xem file gốc
-                </a>
-              )}
+              <div className="flex flex-wrap items-center gap-2">
+                {[...(project.archiveLinks || []), ...(project.archiveUrl && (!project.archiveLinks || !project.archiveLinks.some(l => l.url === project.archiveUrl)) ? [{ url: project.archiveUrl, title: project.archiveTitle }] : [])]
+                  .filter(link => link.url)
+                  .map((link, idx) => (
+                    <a
+                      key={idx}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm font-medium text-amber-700 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      {link.title || 'Xem file gốc'}
+                    </a>
+                  ))}
+              </div>
             </div>
           </div>
         </div>

@@ -248,7 +248,9 @@ export function FileViewDialogShared({
     const isMobile = (typeof window !== 'undefined') && (window.matchMedia ? window.matchMedia('(max-width: 640px)').matches : window.innerWidth <= 640)
     startFileTour({
       fileType: file.type as any,
-      isMobile
+      isMobile,
+      isAdmin,
+      sequenceViewMode: file.sequenceViewMode
     })
   }
 

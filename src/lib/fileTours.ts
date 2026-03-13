@@ -6,6 +6,8 @@ export type FileType = 'image' | 'video' | 'sequence' | 'pdf' | 'model'
 interface TourOptions {
   fileType: FileType
   isMobile: boolean
+  isAdmin?: boolean
+  sequenceViewMode?: string
 }
 
 /**
@@ -30,7 +32,7 @@ async function getClientIp(): Promise<string | null> {
   return null
 }
 
-export async function startFileTour({ fileType, isMobile }: TourOptions) {
+export async function startFileTour({ fileType, isMobile, isAdmin = false, sequenceViewMode = 'video' }: TourOptions) {
   let steps: any[] = []
 
   // Common comment step for desktop
@@ -366,7 +368,9 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
           element: '#preview-container',
           popover: {
             title: 'Chuỗi hình ảnh',
-            description: 'Vuốt hoặc chạm để xem từng frame.',
+            description: sequenceViewMode === 'grid'
+              ? 'Chạm vào một frame để xem chi tiết.'
+              : 'Vuốt hoặc chạm để xem từng frame.',
             side: 'bottom',
             align: 'center'
           }
@@ -374,8 +378,10 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
         {
           element: '#grid-toggle',
           popover: {
-            title: 'Chế độ xem',
-            description: 'Chuyển đổi giữa chế độ video, carousel hoặc lưới.',
+            title: isAdmin ? 'Chỉnh sửa chế độ xem' : 'Chế độ xem',
+            description: isAdmin
+              ? 'Chuyển đổi giữa chế độ video, carousel hoặc lưới để tối ưu trải nghiệm kiểm duyệt.'
+              : `Admin đã chọn xem ở chế độ ${sequenceViewMode === 'video' ? 'Video' : sequenceViewMode === 'carousel' ? 'Carousel' : 'Lưới'}.`,
             side: 'bottom',
             align: 'center'
           }
@@ -424,7 +430,11 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
           element: '#preview-container',
           popover: {
             title: 'Chuỗi hình ảnh',
-            description: 'Di chuột hoặc kéo để xem chuỗi hình ảnh. Nhấn phím cách để phát tự động.',
+            description: sequenceViewMode === 'video'
+              ? 'Di chuột hoặc kéo để xem chuỗi hình ảnh nhanh. Nhấn phím cách để phát tự động.'
+              : sequenceViewMode === 'carousel'
+                ? 'Duyệt qua từng khung hình bằng các nút điều hướng hoặc phím mũi tên.'
+                : 'Xem tổng quan tất cả khung hình trong chuỗi. Click vào một khung hình để xem chi tiết.',
             side: 'bottom',
             align: 'center'
           }
@@ -432,8 +442,10 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
         {
           element: '#grid-toggle',
           popover: {
-            title: 'Chế độ xem',
-            description: 'Chuyển đổi giữa chế độ phát, carousel hoặc lưới để duyệt frames.',
+            title: isAdmin ? 'Quản lý chế độ xem' : 'Chế độ hiển thị',
+            description: isAdmin
+              ? 'Chuyển đổi giữa các chế độ phát Video, duyệt Carousel hoặc xem Lưới để thuận tiện cho việc đánh giá.'
+              : `Bạn đang xem ở chế độ ${sequenceViewMode === 'video' ? 'Video tự động' : sequenceViewMode === 'carousel' ? 'Duyệt thủ công' : 'Lưới tổng quan'} theo cài đặt của Admin.`,
             side: 'bottom',
             align: 'end'
           }
@@ -442,7 +454,7 @@ export async function startFileTour({ fileType, isMobile }: TourOptions) {
           element: '#filter-time-toggle',
           popover: {
             title: 'Lọc theo thời gian',
-            description: 'Bật tùy chọn này để chỉ hiển thị bình luận ở frame hiện tại.',
+            description: 'Bật tùy chọn này để chỉ hiển thị bình luận ở frame đang xem.',
             side: 'bottom',
             align: 'center'
           }

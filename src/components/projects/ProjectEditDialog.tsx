@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useProjectStore } from '@/stores/projects'
 import { useClientStore } from '@/stores/clients'
 import { useAuthStore } from '@/stores/auth'
-import type { Project } from '@/types'
+import type { Project, ArchiveLink } from '@/types'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -22,7 +22,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Pencil, X, UserPlus, Link2, Mail } from 'lucide-react'
+import { Pencil, X, UserPlus, Link2, Mail, Plus, Trash2 } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import { ClientDialog } from '@/components/clients/ClientDialog'
 
@@ -41,8 +41,9 @@ export function ProjectEditDialog({ project, triggerAsMenuItem = false }: Props)
     project.deadline ? new Date(project.deadline.toMillis()).toISOString().split('T')[0] : ''
   )
   const [tags, setTags] = useState(project.tags?.join(', ') || '')
-  const [archiveUrl, setArchiveUrl] = useState(project.archiveUrl || '')
-  const [archiveTitle, setArchiveTitle] = useState(project.archiveTitle || '')
+  const [archiveLinks, setArchiveLinks] = useState<ArchiveLink[]>(
+    project.archiveLinks || (project.archiveUrl ? [{ url: project.archiveUrl, title: project.archiveTitle }] : [])
+  )
   const [notificationEmails, setNotificationEmails] = useState(project.notificationEmails?.join(', ') || '')
 
   const { updateProject, loading } = useProjectStore()
@@ -70,8 +71,7 @@ export function ProjectEditDialog({ project, triggerAsMenuItem = false }: Props)
         clientEmail: selectedClient?.email || undefined,
         deadline: deadline ? Timestamp.fromDate(new Date(deadline)) : undefined,
         tags: tags.trim() ? tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-        archiveUrl: archiveUrl.trim() || undefined,
-        archiveTitle: archiveTitle.trim() || undefined,
+        archiveLinks: archiveLinks.filter(l => l.url.trim()),
         notificationEmails: notificationEmails.trim()
           ? notificationEmails.split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
           : undefined
@@ -204,27 +204,59 @@ export function ProjectEditDialog({ project, triggerAsMenuItem = false }: Props)
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="archiveUrl">Link lưu trữ <span className="text-xs text-muted-foreground">(Hiển thị ở trang view client)</span></Label>
-              <div className="space-y-2">
-                <div className="relative">
-                  <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="archiveUrl"
-                    value={archiveUrl}
-                    onChange={(e) => setArchiveUrl(e.target.value)}
-                    placeholder="https://drive.google.com/..."
-                    className="pl-9"
-                  />
-                </div>
-                {archiveUrl && (
-                  <Input
-                    id="archiveTitle"
-                    value={archiveTitle}
-                    onChange={(e) => setArchiveTitle(e.target.value)}
-                    placeholder="Tiêu đề link (VD: Folder hoàn thiện, Drive dự án...)"
-                  />
-                )}
+            <div className="space-y-4">
+              <Label>Link lưu trữ <span className="text-xs text-muted-foreground">(Hiển thị ở trang view client)</span></Label>
+              <div className="space-y-3">
+                {archiveLinks.map((link, index) => (
+                  <div key={index} className="flex gap-2 items-start bg-muted/30 p-3 rounded-lg border">
+                    <div className="flex-1 space-y-2">
+                      <div className="relative">
+                        <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          value={link.url}
+                          onChange={(e) => {
+                            const newLinks = [...archiveLinks]
+                            newLinks[index].url = e.target.value
+                            setArchiveLinks(newLinks)
+                          }}
+                          placeholder="https://drive.google.com/..."
+                          className="pl-9 bg-background"
+                        />
+                      </div>
+                      <Input
+                        value={link.title}
+                        onChange={(e) => {
+                          const newLinks = [...archiveLinks]
+                          newLinks[index].title = e.target.value
+                          setArchiveLinks(newLinks)
+                        }}
+                        placeholder="Tiêu đề link (VD: Folder hoàn thành...)"
+                        className="text-xs h-8 bg-background"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setArchiveLinks(archiveLinks.filter((_, i) => i !== index))
+                      }}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setArchiveLinks([...archiveLinks, { url: '', title: '' }])}
+                  className="w-full border-dashed"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Thêm link lưu trữ
+                </Button>
               </div>
             </div>
 

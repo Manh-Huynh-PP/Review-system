@@ -12,8 +12,8 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Archive, AlertTriangle, Loader2 } from 'lucide-react'
-import type { Project } from '@/types'
+import { Archive, AlertTriangle, Loader2, Plus, Trash2, Link2 } from 'lucide-react'
+import type { Project, ArchiveLink } from '@/types'
 import { toast } from 'react-hot-toast'
 
 interface ProjectArchiveDialogProps {
@@ -23,16 +23,20 @@ interface ProjectArchiveDialogProps {
 }
 
 export function ProjectArchiveDialog({ project, open, onOpenChange }: ProjectArchiveDialogProps) {
-    const [archiveUrl, setArchiveUrl] = useState(project.archiveUrl || '')
+    const [archiveLinks, setArchiveLinks] = useState<ArchiveLink[]>(
+        project.archiveLinks || [{ url: project.archiveUrl || '', title: project.archiveTitle || '' }]
+    )
     const [confirmText, setConfirmText] = useState('')
     const [step, setStep] = useState<'info' | 'confirm'>('info')
 
     // Reset url when dialog opens
     useEffect(() => {
         if (open) {
-            setArchiveUrl(project.archiveUrl || '')
+            setArchiveLinks(
+                project.archiveLinks || [{ url: project.archiveUrl || '', title: project.archiveTitle || '' }]
+            )
         }
-    }, [open, project.archiveUrl])
+    }, [open, project.archiveLinks, project.archiveUrl, project.archiveTitle])
 
     const archiveProject = useProjectStore(s => s.archiveProject)
     const cleanupProjectFiles = useFileStore(s => s.cleanupProjectFiles)
@@ -42,8 +46,9 @@ export function ProjectArchiveDialog({ project, open, onOpenChange }: ProjectArc
 
 
     const handleArchive = async () => {
-        if (!archiveUrl.trim()) {
-            toast.error('Vui lòng nhập link lưu trữ')
+        const validLinks = archiveLinks.filter(l => l.url.trim())
+        if (validLinks.length === 0) {
+            toast.error('Vui lòng nhập ít nhất một link lưu trữ')
             return
         }
 
@@ -59,7 +64,7 @@ export function ProjectArchiveDialog({ project, open, onOpenChange }: ProjectArc
 
         try {
             // 1. Archive metadata
-            await archiveProject(project.id, archiveUrl.trim())
+            await archiveProject(project.id, validLinks)
 
             // 2. Perform deep cleanup
             await cleanupProjectFiles(project.id)
@@ -67,7 +72,7 @@ export function ProjectArchiveDialog({ project, open, onOpenChange }: ProjectArc
             onOpenChange(false)
             // Reset state
             setStep('info')
-            setArchiveUrl('')
+            setArchiveLinks([{ url: '', title: '' }])
             setConfirmText('')
         } catch (error) {
             console.error('Archive flow failed:', error)
@@ -115,17 +120,66 @@ export function ProjectArchiveDialog({ project, open, onOpenChange }: ProjectArc
                                 </ul>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="archive-url">Link lưu trữ dài hạn (Google Drive, NAS, etc.) *</Label>
-                                <Input
-                                    id="archive-url"
-                                    placeholder="https://drive.google.com/..."
-                                    value={archiveUrl}
-                                    onChange={(e) => setArchiveUrl(e.target.value)}
-                                    disabled={loading}
-                                />
+                            <div className="space-y-4">
+                                <Label>Link lưu trữ dài hạn (Google Drive, NAS, etc.) *</Label>
+                                <div className="space-y-3">
+                                    {archiveLinks.map((link, index) => (
+                                        <div key={index} className="flex gap-2 items-start">
+                                            <div className="flex-1 space-y-2">
+                                                <div className="relative">
+                                                    <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                    <Input
+                                                        placeholder="URL (https://...)"
+                                                        value={link.url}
+                                                        onChange={(e) => {
+                                                            const newLinks = [...archiveLinks]
+                                                            newLinks[index].url = e.target.value
+                                                            setArchiveLinks(newLinks)
+                                                        }}
+                                                        disabled={loading}
+                                                        className="pl-9"
+                                                    />
+                                                </div>
+                                                <Input
+                                                    placeholder="Tiêu đề link (VD: Folder hoàn thành...)"
+                                                    value={link.title}
+                                                    onChange={(e) => {
+                                                        const newLinks = [...archiveLinks]
+                                                        newLinks[index].title = e.target.value
+                                                        setArchiveLinks(newLinks)
+                                                    }}
+                                                    disabled={loading}
+                                                    className="text-xs h-8"
+                                                />
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => {
+                                                    setArchiveLinks(archiveLinks.filter((_, i) => i !== index))
+                                                }}
+                                                disabled={loading || archiveLinks.length === 1}
+                                                className="h-10 w-10 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setArchiveLinks([...archiveLinks, { url: '', title: '' }])}
+                                        disabled={loading}
+                                        className="w-full border-dashed"
+                                    >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Thêm link khác
+                                    </Button>
+                                </div>
                                 <p className="text-[10px] text-muted-foreground">
-                                    Bắt buộc nhập để có thể truy xuất lại file gốc khi cần trong tương lai.
+                                    Bắt buộc nhập ít nhất một link để có thể truy xuất lại file gốc khi cần trong tương lai.
                                 </p>
                             </div>
                         </>
@@ -133,12 +187,17 @@ export function ProjectArchiveDialog({ project, open, onOpenChange }: ProjectArc
                         <div className="space-y-4">
                             <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                                 <p className="text-sm text-muted-foreground">
-                                    Xác nhận bạn đã sao lưu dữ liệu sang:
+                                    Xác nhận bạn đã sao lưu dữ liệu sang các link sau:
                                 </p>
-                                <div className="bg-background rounded px-3 py-2 border overflow-hidden">
-                                    <span className="text-xs font-mono block break-all" title={archiveUrl}>
-                                        {archiveUrl}
-                                    </span>
+                                <div className="space-y-2 max-h-[150px] overflow-y-auto">
+                                    {archiveLinks.filter(l => l.url.trim()).map((link, idx) => (
+                                        <div key={idx} className="bg-background rounded px-3 py-2 border">
+                                            <span className="text-xs font-bold block truncate">{link.title || 'Link lưu trữ'}</span>
+                                            <span className="text-[10px] font-mono text-muted-foreground block truncate" title={link.url}>
+                                                {link.url}
+                                            </span>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
 
@@ -178,7 +237,7 @@ export function ProjectArchiveDialog({ project, open, onOpenChange }: ProjectArc
                     <Button
                         variant={step === 'confirm' ? 'destructive' : 'default'}
                         onClick={handleArchive}
-                        disabled={loading || (step === 'info' && !archiveUrl.trim()) || (step === 'confirm' && confirmText !== 'ARCHIVE')}
+                        disabled={loading || (step === 'info' && archiveLinks.filter(l => l.url.trim()).length === 0) || (step === 'confirm' && confirmText !== 'ARCHIVE')}
                     >
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         {step === 'info' ? 'Tiếp theo' : 'Xác nhận xóa & lưu trữ'}

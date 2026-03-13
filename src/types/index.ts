@@ -15,6 +15,11 @@ export interface Client {
   adminEmail: string
 }
 
+export interface ArchiveLink {
+  url: string
+  title?: string
+}
+
 export interface Project {
   id: string
   name: string
@@ -30,8 +35,9 @@ export interface Project {
   adminEmail: string
   notificationEmails?: string[] // Emails to receive notifications (uses default if not set)
   // Archive fields
-  archiveUrl?: string // External long-term storage link
-  archiveTitle?: string // Customize link title
+  archiveUrl?: string // Legacy single link
+  archiveTitle?: string // Legacy single title
+  archiveLinks?: ArchiveLink[] // Multiple storage links
   archivedAt?: Timestamp // When project was archived
   isDataCleared?: boolean // True if files were cleared (keeping thumbnails/comments)
   // Trash fields

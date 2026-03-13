@@ -34,7 +34,7 @@ interface ProjectState {
   trashProject: (id: string) => Promise<void> // Alias for deleteProject
   restoreProject: (id: string) => Promise<void> // Restore from trash
   permanentDeleteProject: (id: string) => Promise<void> // Hard delete
-  archiveProject: (id: string, archiveUrl: string) => Promise<void>
+  archiveProject: (id: string, archiveLinks: any[]) => Promise<void>
   toggleProjectLock: (id: string, isLocked: boolean) => Promise<void>
   selectProject: (project: Project | null) => void
   cleanup: () => void
@@ -240,7 +240,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
   },
 
-  archiveProject: async (id: string, archiveUrl: string) => {
+  archiveProject: async (id: string, archiveLinks: any[]) => {
     set({ loading: true })
     try {
       const now = Timestamp.now()
@@ -248,7 +248,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       // 1. Update project status and metadata
       await updateDoc(doc(db, 'projects', id), {
         status: 'archived',
-        archiveUrl,
+        archiveLinks,
+        // For backward compatibility, also update legacy fields using the first link if available
+        archiveUrl: archiveLinks[0]?.url || '',
+        archiveTitle: archiveLinks[0]?.title || '',
         archivedAt: now,
         updatedAt: now,
         isCommentsLocked: true // Auto-lock comments when archiving

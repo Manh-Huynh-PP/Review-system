@@ -411,7 +411,7 @@ export function ImageSequenceViewer({
       {/* View Mode Toggle */}
       <div className="flex items-center justify-between px-4 flex-shrink-0">
         {isAdmin ? (
-          <ToggleGroup type="single" value={viewMode} onValueChange={handleViewModeChange}>
+          <ToggleGroup id="grid-toggle" type="single" value={viewMode} onValueChange={handleViewModeChange}>
             <ToggleGroupItem value="video" aria-label="Video mode" className="gap-2">
               <Film className="w-4 h-4" />
               <span className="text-xs">Video</span>
@@ -426,7 +426,7 @@ export function ImageSequenceViewer({
             </ToggleGroupItem>
           </ToggleGroup>
         ) : (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-md">
+          <div id="grid-toggle" className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-md">
             {viewMode === 'video' ? (
               <>
                 <Film className="w-4 h-4" />

@@ -49,6 +49,8 @@ function collectPathsFromDoc(data) {
   if (Array.isArray(data.versions)) {
     data.versions.forEach(v => {
       if (!v) return;
+      // Skip external link URLs - they are not Firebase Storage paths
+      if (v.isExternal) return;
       if (v.path) paths.add(v.path);
       if (v.url && typeof v.url === 'string') {
         // If url is a Storage URL (gs:// or contains /o/), try to extract object path
@@ -905,5 +907,64 @@ exports.checkSubscription = functions.https.onCall(async (data, context) => {
   } catch (error) {
     console.error('Check subscription error:', error);
     throw new functions.https.HttpsError('internal', 'Check failed');
+  }
+});
+
+/**
+ * Secure proxy for listing Google Drive folder contents
+ * API key stays server-side, only authenticated admins can call this
+ */
+exports.listDriveFolder = functions.https.onCall(async (data, context) => {
+  // 1. Auth check - only authenticated users
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Bạn cần đăng nhập để sử dụng tính năng này.');
+  }
+
+  const { folderId } = data;
+  if (!folderId || typeof folderId !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument', 'Thiếu folder ID');
+  }
+
+  // 2. Initialize Service Account Auth
+  const path = require('path');
+  const keyFilePath = path.join(__dirname, 'google-drive-credentials.json');
+
+  try {
+    // 3. Use Google Drive API v3 with Service Account
+    const { google } = require('googleapis');
+    const auth = new google.auth.GoogleAuth({
+      keyFile: keyFilePath,
+      scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+    });
+    const drive = google.drive({ version: 'v3', auth });
+
+    const response = await drive.files.list({
+      q: `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`,
+      fields: 'files(id, name, mimeType, thumbnailLink, webContentLink)',
+      orderBy: 'name',
+      pageSize: 500,
+    });
+
+    const files = (response.data.files || []).map(f => ({
+      id: f.id,
+      name: f.name,
+      mimeType: f.mimeType,
+      thumbnailLink: f.thumbnailLink || null,
+      webContentLink: f.webContentLink || null,
+    }));
+
+    console.log(`✅ Listed ${files.length} image files from Drive folder ${folderId}`);
+    return { files };
+  } catch (error) {
+    console.error('❌ Drive API error:', error.message || error);
+
+    if (error.code === 404 || (error.errors && error.errors[0]?.reason === 'notFound')) {
+      throw new functions.https.HttpsError('not-found', 'Folder không tồn tại hoặc không được chia sẻ công khai.');
+    }
+    if (error.code === 403) {
+      throw new functions.https.HttpsError('permission-denied', 'Không có quyền truy cập folder. Đảm bảo folder đã được chia sẻ "Anyone with the link".');
+    }
+
+    throw new functions.https.HttpsError('internal', 'Lỗi khi truy cập Google Drive: ' + (error.message || 'Unknown'));
   }
 });

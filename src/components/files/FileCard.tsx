@@ -3,10 +3,12 @@ import type { File as FileType } from '@/types'
 import { format } from 'date-fns'
 import { formatFileSize } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { FileImage, Video, Box, MessageSquare, Clock, ShieldAlert, Loader2, MoreHorizontal, Share2 } from 'lucide-react'
+import { FileImage, Video, Box, MessageSquare, Clock, ShieldAlert, Loader2, MoreHorizontal, Share2, HardDrive } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { ProjectShareDialog } from '@/components/dashboard/ProjectShareDialog'
+import { CustomVideoPlayer } from '../viewers/CustomVideoPlayer'
+import { parseDriveUrl } from '@/utils/googleDrive'
 
 interface Props {
   file: FileType
@@ -34,6 +36,7 @@ export function FileCard({ file, resolvedUrl, commentCount, onClick }: Props) {
   const effectiveUrl = resolvedUrl || current?.url
   const uploadDate = current?.uploadedAt?.toDate ? current.uploadedAt.toDate() : new Date()
   const [imageError, setImageError] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
 
   const renderThumbnail = () => {
     // Hide thumbnail if infected
@@ -57,11 +60,37 @@ export function FileCard({ file, resolvedUrl, commentCount, onClick }: Props) {
     }
 
     if (file.type === 'video' && effectiveUrl) {
+      const driveInfo = parseDriveUrl(effectiveUrl)
+      
+      if (driveInfo) {
+        return (
+          <div className="w-full h-full relative">
+            <img
+              src={effectiveUrl}
+              alt={file.name}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.src = 'https://placehold.co/600x400?text=Google+Drive+Video';
+              }}
+            />
+            <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
+              <div className="bg-white/90 p-1.5 rounded-full shadow-lg">
+                <HardDrive className="w-5 h-5 text-blue-600" />
+              </div>
+            </div>
+          </div>
+        )
+      }
+
       return (
-        <video
+        <CustomVideoPlayer
           src={effectiveUrl}
-          className="w-full h-full object-cover"
-          muted
+          minimal={true}
+          autoPlay={isHovered}
+          comments={[]}
+          onTimeUpdate={() => {}}
+          onCommentMarkerClick={() => {}}
+          className="w-full h-full"
         />
       )
     }
@@ -77,6 +106,8 @@ export function FileCard({ file, resolvedUrl, commentCount, onClick }: Props) {
   return (
     <div
       onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className="group rounded-lg border bg-card overflow-hidden hover:shadow-lg hover:border-primary/50 transition-all duration-200 cursor-pointer"
     >
       {/* Thumbnail */}

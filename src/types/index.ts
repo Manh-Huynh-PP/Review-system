@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase/firestore'
 
-export type FileType = 'image' | 'video' | 'model' | 'sequence' | 'pdf' | 'canvas'
+export type FileType = 'image' | 'video' | 'model' | 'sequence' | 'pdf'
 export type ProjectStatus = 'active' | 'archived' | 'trash'
 
 export interface Client {
@@ -107,6 +107,10 @@ export interface FileVersion {
     duration?: number
   }
   validationStatus?: 'pending' | 'clean' | 'infected' | 'error'
+  // External link support
+  isExternal?: boolean
+  externalUrl?: string // Original external URL (e.g. Google Drive link)
+  externalProvider?: 'google_drive' | 'direct'
   // 3D Model Render Settings (Admin configured, applies to all viewers)
   renderSettings?: {
     toneMapping?: string // AgX, ACESFilmic, Reinhard, Cineon, Linear, NoToneMapping
@@ -130,6 +134,8 @@ export interface File {
   sequenceViewMode?: 'video' | 'carousel' | 'grid' // Admin-set view mode for sequences
   createdAt: Timestamp
   updatedAt?: Timestamp
+  // External link flag
+  isExternalLink?: boolean // Quick flag to identify files added via URL
   // Trash fields
   isTrashed?: boolean
   trashedAt?: Timestamp

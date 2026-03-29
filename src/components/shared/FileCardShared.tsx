@@ -4,7 +4,7 @@ import { format } from 'date-fns'
 import { formatFileSize } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { FileImage, Video, Box, MessageSquare, Clock, Trash2, Film, FileText, Lock, Unlock } from 'lucide-react'
+import { FileImage, Video, Box, MessageSquare, Clock, Trash2, Film, FileText, Lock, Unlock, Link2 } from 'lucide-react'
 
 interface Props {
   file: FileType
@@ -133,6 +133,12 @@ export function FileCardShared({ file, resolvedUrl, commentCount, onClick, onDel
           <Badge variant="secondary" className="text-xs backdrop-blur-sm bg-background/80">
             {getFileTypeLabel(file.type)}
           </Badge>
+          {file.isExternalLink && (
+            <Badge variant="outline" className="text-xs backdrop-blur-sm bg-blue-500/90 border-blue-500 text-white gap-1">
+              <Link2 className="w-2.5 h-2.5" />
+              Link
+            </Badge>
+          )}
           {isLocked && (
             <Badge variant="outline" className="text-xs backdrop-blur-sm bg-amber-500/90 border-amber-500 text-white gap-1">
               <Lock className="w-2.5 h-2.5" />
@@ -203,7 +209,7 @@ export function FileCardShared({ file, resolvedUrl, commentCount, onClick, onDel
         </div>
 
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{formatFileSize(current?.metadata?.size || 0)}</span>
+          <span>{file.isExternalLink ? 'Link' : formatFileSize(current?.metadata?.size || 0)}</span>
           <span className="flex items-center gap-1">
             <Clock className="w-3 h-3" />
             {format(uploadDate, 'dd/MM/yy')}

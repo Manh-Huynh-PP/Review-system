@@ -1,6 +1,7 @@
 import { forwardRef, memo } from 'react'
 import { VideoOverlayContainer, SafeZoneOverlay, CompositionOverlay, type CompositionGuide } from './overlays'
 import { Loader2 } from 'lucide-react'
+import { parseDriveUrl } from '@/utils/googleDrive'
 
 interface VideoDisplayAreaProps {
     src: string
@@ -27,15 +28,21 @@ const VideoDisplayAreaComponent = forwardRef<HTMLVideoElement, VideoDisplayAreaP
     onClick,
     onDoubleClick
 }, ref) => {
+    // Drive links don't support CORS headers, so we must disable crossOrigin for them
+    // This means we won't be able to export frames for Drive videos (tainted canvas),
+    // but the video will actually play.
+    const isDrive = !!parseDriveUrl(src)
+    const crossOrigin = isDrive ? undefined : "anonymous"
+
     return (
         <>
             <video
+                key={src}
                 ref={ref}
-                src={src}
-                crossOrigin="anonymous"
+                crossOrigin={crossOrigin}
                 playsInline
                 webkit-playsinline=""
-                preload="auto"
+                preload="metadata"
                 className="w-full h-auto bg-black"
                 style={isFullscreen ? {
                     maxHeight: 'calc(100vh - 120px)',
@@ -43,7 +50,9 @@ const VideoDisplayAreaComponent = forwardRef<HTMLVideoElement, VideoDisplayAreaP
                 } : undefined}
                 onClick={onClick}
                 onDoubleClick={onDoubleClick}
-            />
+            >
+                {src && <source src={src} type="video/mp4" />}
+            </video>
 
             {/* Loading Spinner */}
             {isBuffering && (

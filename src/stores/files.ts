@@ -58,8 +58,8 @@ interface FileState {
     lightIntensity?: number
     gamma?: number
   }) => Promise<void>
-  createCanvasFile: (projectId: string, name: string) => Promise<string>
-  saveCanvasVersion: (projectId: string, fileId: string, canvasData: any) => Promise<void>
+  addExternalLink: (projectId: string, url: string, name: string, type: FileType) => Promise<void>
+  addDriveFolderAsSequence: (projectId: string, folderId: string, name: string) => Promise<void>
   cleanupProjectFiles: (projectId: string) => Promise<void>
   cleanup: () => void
 }
@@ -564,6 +564,24 @@ export const useFileStore = create<FileState>((set, get) => ({
       const file = get().files.find(f => f.id === fileId)
       if (!file) {
         throw new Error('File không tồn tại')
+      }
+
+      // Skip storage deletion for external link files
+      if (file.isExternalLink) {
+        // Only delete Firestore doc and comments, no storage
+        const commentsQuery = query(
+          collection(db, 'projects', projectId, 'comments'),
+          where('fileId', '==', fileId)
+        )
+        const commentsSnapshot = await getDocs(commentsQuery)
+        const deleteCommentPromises = commentsSnapshot.docs.map(docSnap =>
+          deleteDoc(docSnap.ref)
+        )
+        await Promise.all(deleteCommentPromises)
+        await deleteDoc(doc(db, 'projects', projectId, 'files', fileId))
+        toast.success(`Đã xóa vĩnh viễn "${file.name}"`)
+        set({ deleting: false })
+        return
       }
 
       // Delete all file versions from Storage
@@ -1073,6 +1091,135 @@ export const useFileStore = create<FileState>((set, get) => ({
     }
   },
 
+  addExternalLink: async (projectId: string, url: string, name: string, type: FileType) => {
+    set({ uploading: true, uploadProgress: 0, error: null })
+
+    try {
+      const fileId = generateId()
+
+      // Determine provider
+      const { parseDriveUrl, getDirectImageUrl, getDirectDownloadUrl } = await import('../utils/googleDrive')
+      const driveInfo = parseDriveUrl(url)
+      const provider = driveInfo ? 'google_drive' : 'direct'
+
+      // Get viewable URL
+      let viewableUrl = url
+      if (driveInfo && driveInfo.type === 'file') {
+        viewableUrl = type === 'image'
+          ? getDirectImageUrl(driveInfo.id)
+          : getDirectDownloadUrl(driveInfo.id)
+      }
+
+      const newVersion: FileVersion = {
+        url: viewableUrl,
+        version: 1,
+        uploadedAt: Timestamp.now(),
+        isExternal: true,
+        externalUrl: url,
+        externalProvider: provider,
+        metadata: {
+          size: 0,
+          type: type === 'image' ? 'image/external' : type === 'video' ? 'video/external' : 'application/external',
+          name: name,
+          lastModified: Date.now()
+        }
+      }
+
+      const fileRef = doc(db, 'projects', projectId, 'files', fileId)
+      await setDoc(fileRef, {
+        name,
+        type,
+        versions: [newVersion],
+        currentVersion: 1,
+        isExternalLink: true,
+        createdAt: Timestamp.now()
+      })
+
+      set({ uploadProgress: 100 })
+      toast.success(`Đã thêm link "${name}"`)
+    } catch (error: any) {
+      console.error('❌ Add external link failed:', error)
+      const errorMessage = 'Thêm link thất bại: ' + (error.message || 'Lỗi không xác định')
+      set({ error: errorMessage })
+      toast.error(errorMessage)
+      throw error
+    } finally {
+      set({ uploading: false, uploadProgress: 0 })
+    }
+  },
+
+  addDriveFolderAsSequence: async (projectId: string, folderId: string, name: string) => {
+    set({ uploading: true, uploadProgress: 0, error: null })
+
+    try {
+      // Call Cloud Function to list folder contents
+      const { listDriveFolder, getDirectImageUrl } = await import('../utils/googleDrive')
+      set({ uploadProgress: 10 })
+
+      const driveFiles = await listDriveFolder(folderId)
+      set({ uploadProgress: 50 })
+
+      if (!driveFiles || driveFiles.length === 0) {
+        throw new Error('Folder trống hoặc không thể truy cập. Đảm bảo folder đã được chia sẻ công khai.')
+      }
+
+      // Filter to only image files
+      const imageFiles = driveFiles.filter(f =>
+        f.mimeType.startsWith('image/') ||
+        /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(f.name)
+      )
+
+      if (imageFiles.length === 0) {
+        throw new Error('Không tìm thấy ảnh nào trong folder Google Drive.')
+      }
+
+      // Generate direct URLs for all images
+      const sequenceUrls = imageFiles.map(f => getDirectImageUrl(f.id))
+      set({ uploadProgress: 80 })
+
+      const fileId = generateId()
+      const newVersion: FileVersion = {
+        url: sequenceUrls[0], // First image as thumbnail
+        sequenceUrls,
+        frameCount: sequenceUrls.length,
+        version: 1,
+        uploadedAt: Timestamp.now(),
+        isExternal: true,
+        externalUrl: `https://drive.google.com/drive/folders/${folderId}`,
+        externalProvider: 'google_drive',
+        metadata: {
+          size: 0,
+          type: 'image/sequence',
+          name: name,
+          lastModified: Date.now(),
+          duration: sequenceUrls.length / 24
+        }
+      }
+
+      const fileRef = doc(db, 'projects', projectId, 'files', fileId)
+      await setDoc(fileRef, {
+        name,
+        type: 'sequence' as const,
+        versions: [newVersion],
+        currentVersion: 1,
+        sequenceViewMode: 'grid' as const,
+        isExternalLink: true,
+        createdAt: Timestamp.now()
+      })
+
+      set({ uploadProgress: 100 })
+      toast.success(`Đã thêm Drive folder "${name}" với ${imageFiles.length} ảnh`)
+    } catch (error: any) {
+      console.error('❌ Drive folder import failed:', error)
+      const errorMessage = 'Nhập folder Drive thất bại: ' + (error.message || 'Lỗi không xác định')
+      set({ error: errorMessage })
+      toast.error(errorMessage)
+      throw error
+    } finally {
+      set({ uploading: false, uploadProgress: 0 })
+    }
+  },
+
   cleanupProjectFiles: async (projectId: string) => {
     set({ deleting: true })
     try {
@@ -1084,6 +1231,12 @@ export const useFileStore = create<FileState>((set, get) => ({
       const projectFiles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as FileModel[]
 
       for (const file of projectFiles) {
+        // Skip external link files — no storage to clean
+        if (file.isExternalLink) {
+          console.log(`⏭️ Skipping external file ${file.name} (no storage)`)
+          continue
+        }
+
         console.log(`📄 Cleaning up file ${file.name} (${file.id})`)
 
         const updatedVersions = []
@@ -1271,110 +1424,6 @@ export const useFileStore = create<FileState>((set, get) => ({
       console.error('Error updating model settings:', error)
       toast.error('Lỗi khi lưu cấu hình: ' + error.message)
       throw error
-    }
-  },
-
-  createCanvasFile: async (projectId: string, name: string) => {
-    set({ uploading: true, uploadProgress: 0, error: null })
-    try {
-      const fileId = generateId()
-      const version = 1
-      const fileName = `${name}.json`
-      const storagePath = `projects/${projectId}/${fileId}/v${version}/${fileName}`
-      const storageRef = ref(storage, storagePath)
-
-      // Initial empty canvas state for Konva
-      const initialData = {
-        shapes: [],
-        stagePos: { x: 0, y: 0 },
-        stageScale: 1
-      }
-      const jsonString = JSON.stringify(initialData)
-      const blob = new Blob([jsonString], { type: 'application/json' })
-
-      await uploadBytes(storageRef, blob)
-      const url = await getDownloadURL(storageRef)
-
-      const newVersion: FileVersion = {
-        url,
-        version,
-        uploadedAt: Timestamp.now(),
-        metadata: {
-          size: blob.size,
-          type: 'application/json',
-          name: fileName
-        },
-        validationStatus: 'clean'
-      }
-
-      const fileRef = doc(db, 'projects', projectId, 'files', fileId)
-      const newFileData = {
-        name,
-        type: 'canvas' as const,
-        versions: [newVersion],
-        currentVersion: version,
-        createdAt: Timestamp.now()
-      }
-
-      await setDoc(fileRef, newFileData)
-      toast.success(`Đã tạo Canvas "${name}"`)
-      return fileId
-    } catch (error: any) {
-      console.error('❌ Create Canvas failed:', error)
-      const errorMessage = 'Tạo Canvas thất bại: ' + (error.message || 'Lỗi không xác định')
-      set({ error: errorMessage })
-      toast.error(errorMessage)
-      throw error
-    } finally {
-      set({ uploading: false })
-    }
-  },
-
-  saveCanvasVersion: async (projectId: string, fileId: string, canvasData: any) => {
-    set({ uploading: true, uploadProgress: 0, error: null })
-    try {
-      const file = get().files.find(f => f.id === fileId)
-      if (!file) throw new Error('File không tồn tại')
-
-      const nextVersion = file.versions.length + 1
-      const fileName = `${file.name}.json`
-      const storagePath = `projects/${projectId}/${fileId}/v${nextVersion}/${fileName}`
-      const storageRef = ref(storage, storagePath)
-
-      const jsonString = JSON.stringify(canvasData)
-      const blob = new Blob([jsonString], { type: 'application/json' })
-
-      await uploadBytes(storageRef, blob)
-      const url = await getDownloadURL(storageRef)
-
-      const newVersion: FileVersion = {
-        url,
-        version: nextVersion,
-        uploadedAt: Timestamp.now(),
-        metadata: {
-          size: blob.size,
-          type: 'application/json',
-          name: fileName
-        },
-        validationStatus: 'clean'
-      }
-
-      const fileRef = doc(db, 'projects', projectId, 'files', fileId)
-      await updateDoc(fileRef, {
-        versions: [...file.versions, newVersion],
-        currentVersion: nextVersion,
-        updatedAt: Timestamp.now()
-      })
-
-      toast.success(`Đã lưu phiên bản ${nextVersion}`)
-    } catch (error: any) {
-      console.error('❌ Save Canvas failed:', error)
-      const errorMessage = 'Lưu Canvas thất bại: ' + (error.message || 'Lỗi không xác định')
-      set({ error: errorMessage })
-      toast.error(errorMessage)
-      throw error
-    } finally {
-      set({ uploading: false })
     }
   },
 

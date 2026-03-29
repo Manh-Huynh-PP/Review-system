@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, forwardRef, useImperativeHandle, useCallback, memo } from 'react'
+import { useRef, useEffect, useState, forwardRef, useImperativeHandle, useCallback, memo, useMemo } from 'react'
 import { Play, Pause, Volume2, VolumeX, Maximize, StickyNote, Camera, Repeat, PictureInPicture2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import type { Comment } from '@/types'
@@ -9,6 +9,8 @@ import {
 } from './overlays'
 import { VideoDisplayArea } from './VideoDisplayArea'
 import { useIsMobile } from '@/hooks/useIsMobile'
+
+import { parseDriveUrl, getDirectDownloadUrl } from '@/utils/googleDrive'
 
 export interface CustomVideoPlayerRef {
     exportFrame: () => void
@@ -28,6 +30,10 @@ interface CustomVideoPlayerProps {
     onPlay?: () => void
     onPause?: () => void
     className?: string
+    minimal?: boolean
+    autoPlay?: boolean
+    muted?: boolean
+    loop?: boolean
 }
 
 export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVideoPlayerProps>(({
@@ -41,8 +47,21 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
     onExportFrame,
     onPlay,
     onPause,
-    className = ''
+    className = '',
+    minimal = false,
+    autoPlay = false,
+    muted = false,
+    loop = false
 }, ref) => {
+    // Resolve source URL (Drive vs Direct)
+    const effectiveSrc = useMemo(() => {
+        const driveInfo = parseDriveUrl(src)
+        if (driveInfo) {
+            return getDirectDownloadUrl(driveInfo.id)
+        }
+        return src
+    }, [src])
+
     const videoRef = useRef<HTMLVideoElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -90,12 +109,19 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
     }, [onFullscreenChange])
 
     // Toggle functions with useCallback for keyboard shortcuts
-    const togglePlayPause = useCallback(() => {
+    const togglePlayPause = useCallback(async () => {
         if (videoRef.current) {
-            if (videoRef.current.paused) {
-                videoRef.current.play()
-            } else {
-                videoRef.current.pause()
+            try {
+                if (videoRef.current.paused) {
+                    await videoRef.current.play()
+                } else {
+                    videoRef.current.pause()
+                }
+            } catch (error: any) {
+                console.error('Play/Pause error:', error)
+                if (error.name === 'NotSupportedError') {
+                    toast.error('Không thể phát video này. Nếu là link Google Drive, hãy đảm bảo file < 100MB và đã được chia sẻ công khai.')
+                }
             }
         }
     }, [])
@@ -293,6 +319,17 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
         video.addEventListener('waiting', handleWaiting)
         video.addEventListener('canplay', handleCanPlay)
 
+        // Handle auto-play and loop based on props or minimal mode
+        if (minimal || autoPlay) {
+            video.muted = minimal || muted
+            video.loop = minimal || loop
+            video.play().catch(() => {
+                // Ignore auto-play errors (browser policy)
+            })
+        } else if (!autoPlay && isPlaying) {
+            video.pause()
+        }
+
         return () => {
             if (rafId !== null) {
                 cancelAnimationFrame(rafId)
@@ -304,7 +341,7 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
             video.removeEventListener('waiting', handleWaiting)
             video.removeEventListener('canplay', handleCanPlay)
         }
-    }, [onTimeUpdate, onLoadedMetadata, onPlay, onPause])
+    }, [onTimeUpdate, onLoadedMetadata, onPlay, onPause, minimal, autoPlay, muted, loop])
 
     // Seek to external currentTime changes (from frame navigation)
     // IMPORTANT: Only apply when video is PAUSED to prevent feedback loop stutters
@@ -385,6 +422,13 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
     const handleExportFrame = useCallback(async () => {
         const video = videoRef.current
         if (!video) return
+
+        // Handle Google Drive CORS limitation for Canvas
+        const driveInfo = parseDriveUrl(src)
+        if (driveInfo) {
+            toast.error('Không thể xuất frame cho video từ Google Drive do hạn chế bảo mật (CORS).')
+            return
+        }
 
         try {
             // Pause video to ensure we capture the exact current frame
@@ -490,172 +534,174 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
     }), [handleExportFrame, onTimeUpdate])
 
     return (
-        <div ref={containerRef} className={`custom-video-player ${isPortrait ? 'portrait-video' : 'landscape-video'} ${!showControls ? 'controls-hidden' : ''} ${className}`}>
+        <div ref={containerRef} className={`custom-video-player ${isPortrait ? 'portrait-video' : 'landscape-video'} ${!showControls || minimal ? 'controls-hidden' : ''} ${className} ${minimal ? 'minimal-player' : ''}`}>
             {/* Memoized Video Display Area */}
             <VideoDisplayArea
                 ref={videoRef}
-                src={src}
+                src={effectiveSrc}
                 isFullscreen={isFullscreen}
                 isBuffering={isBuffering}
-                activeSafeZone={activeSafeZone}
-                activeGuides={activeGuides}
+                activeSafeZone={minimal ? null : activeSafeZone}
+                activeGuides={minimal ? [] : activeGuides}
                 videoRatio={videoRatio}
                 guideColor={guideColor}
                 overlayOpacity={overlayOpacity}
-                onClick={togglePlayPause}
-                onDoubleClick={toggleFullscreen}
+                onClick={minimal ? () => {} : togglePlayPause}
+                onDoubleClick={minimal ? () => {} : toggleFullscreen}
             />
 
             {/* Hidden canvas for frame export */}
             <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-            {/* Custom Controls */}
-            <div className={`video-controls ${!showControls ? 'hidden' : ''}`}>
-                {/* Timeline with markers */}
-                <div
-                    id="video-timeline-container"
-                    className="timeline-wrapper"
-                    onClick={handleTimelineClick}
-                    onMouseMove={handleTimelineHover}
-                    onMouseLeave={handleTimelineLeave}
-                >
-                    <div className="timeline-track">
-                        {/* Progress bar */}
-                        <div className="timeline-progress" style={{ width: `${currentProgress}%` }} />
+            {/* Custom Controls - Hidden in minimal mode */}
+            {!minimal && (
+                <div className={`video-controls ${!showControls ? 'hidden' : ''}`}>
+                    {/* Timeline with markers */}
+                    <div
+                        id="video-timeline-container"
+                        className="timeline-wrapper"
+                        onClick={handleTimelineClick}
+                        onMouseMove={handleTimelineHover}
+                        onMouseLeave={handleTimelineLeave}
+                    >
+                        <div className="timeline-track">
+                            {/* Progress bar */}
+                            <div className="timeline-progress" style={{ width: `${currentProgress}%` }} />
 
-                        {/* Hover time preview */}
-                        {hoverTime !== null && (
-                            <div
-                                className="timeline-hover-preview"
-                                style={{ left: `${hoverPosition}px` }}
-                            >
-                                {formatTime(hoverTime)}
-                            </div>
-                        )}
-
-                        {/* Comment markers */}
-                        {comments
-                            .filter(c => c.timestamp !== null && c.timestamp !== undefined)
-                            .map((comment, index) => {
-                                const position = ((comment.timestamp! / duration) * 100).toFixed(2)
-                                return (
-                                    <div
-                                        key={`${comment.id}-${index}`}
-                                        className={`timeline-marker ${comment.isResolved ? 'resolved' : 'unresolved'}`}
-                                        style={{ left: `${position}%` }}
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            handleMarkerClick(comment)
-                                        }}
-                                    >
-                                        <div className="marker-line" />
-                                        <div className="marker-tooltip">
-                                            <div className="tooltip-header">
-                                                {comment.userName}
-                                                {comment.annotationData && (
-                                                    <StickyNote className="inline-block w-3 h-3 ml-1" />
-                                                )}
-                                            </div>
-                                            <div className="tooltip-content">{comment.content.substring(0, 100)}</div>
-                                            {comment.annotationData && (
-                                                <div className="tooltip-annotation">
-                                                    📝 Có ghi chú đính kèm
-                                                </div>
-                                            )}
-                                            <div className="tooltip-time">{formatTime(comment.timestamp!)}</div>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                    </div>
-                </div>
-
-                {/* Control buttons */}
-                <div className="controls-bar">
-                    <div className="controls-left">
-                        <button onClick={togglePlayPause} className="control-btn" title={isPlaying ? 'Pause' : 'Play'}>
-                            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-                        </button>
-
-                        <div className="volume-control">
-                            <button onClick={toggleMute} className="control-btn" title={isMuted ? 'Unmute' : 'Mute'}>
-                                {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-                            </button>
-                            {!isMobile && (
-                                <div className="volume-slider-container">
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max="1"
-                                        step="0.01"
-                                        value={isMuted ? 0 : volume}
-                                        onChange={handleVolumeChange}
-                                        className="volume-slider"
-                                        title={`Volume: ${Math.round((isMuted ? 0 : volume) * 100)}%`}
-                                    />
+                            {/* Hover time preview */}
+                            {hoverTime !== null && (
+                                <div
+                                    className="timeline-hover-preview"
+                                    style={{ left: `${hoverPosition}px` }}
+                                >
+                                    {formatTime(hoverTime)}
                                 </div>
+                            )}
+
+                            {/* Comment markers */}
+                            {comments
+                                .filter(c => c.timestamp !== null && c.timestamp !== undefined)
+                                .map((comment, index) => {
+                                    const position = ((comment.timestamp! / duration) * 100).toFixed(2)
+                                    return (
+                                        <div
+                                            key={`${comment.id}-${index}`}
+                                            className={`timeline-marker ${comment.isResolved ? 'resolved' : 'unresolved'}`}
+                                            style={{ left: `${position}%` }}
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                handleMarkerClick(comment)
+                                            }}
+                                        >
+                                            <div className="marker-line" />
+                                            <div className="marker-tooltip">
+                                                <div className="tooltip-header">
+                                                    {comment.userName}
+                                                    {comment.annotationData && (
+                                                        <StickyNote className="inline-block w-3 h-3 ml-1" />
+                                                    )}
+                                                </div>
+                                                <div className="tooltip-content">{comment.content.substring(0, 100)}</div>
+                                                {comment.annotationData && (
+                                                    <div className="tooltip-annotation">
+                                                        📝 Có ghi chú đính kèm
+                                                    </div>
+                                                )}
+                                                <div className="tooltip-time">{formatTime(comment.timestamp!)}</div>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                        </div>
+                    </div>
+
+                    {/* Control buttons */}
+                    <div className="controls-bar">
+                        <div className="controls-left">
+                            <button onClick={togglePlayPause} className="control-btn" title={isPlaying ? 'Pause' : 'Play'}>
+                                {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                            </button>
+
+                            <div className="volume-control">
+                                <button onClick={toggleMute} className="control-btn" title={isMuted ? 'Unmute' : 'Mute'}>
+                                    {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                                </button>
+                                {!isMobile && (
+                                    <div className="volume-slider-container">
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="1"
+                                            step="0.01"
+                                            value={isMuted ? 0 : volume}
+                                            onChange={handleVolumeChange}
+                                            className="volume-slider"
+                                            title={`Volume: ${Math.round((isMuted ? 0 : volume) * 100)}%`}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="time-display">
+                                {formatTime(localCurrentTime)} / {formatTime(duration)}
+                            </div>
+
+                            {!isMobile && (
+                                <>
+                                    <button onClick={toggleLoop} className={`control-btn ${isLooping ? 'active' : ''}`} title={isLooping ? 'Tắt lặp (L)' : 'Bật lặp (L)'}>
+                                        <Repeat className="w-5 h-5" />
+                                    </button>
+
+                                    <button onClick={togglePiP} className="control-btn" title="Picture-in-Picture (P)">
+                                        <PictureInPicture2 className="w-5 h-5" />
+                                    </button>
+                                </>
                             )}
                         </div>
 
-                        <div className="time-display">
-                            {formatTime(localCurrentTime)} / {formatTime(duration)}
+                        <div className="controls-right">
+                            <div className="playback-speed">
+                                <select
+                                    value={playbackRate}
+                                    onChange={(e) => handlePlaybackRateChange(Number(e.target.value))}
+                                    className="speed-select"
+                                    aria-label="Playback speed"
+                                    title="Playback speed"
+                                >
+                                    <option value={0.25}>0.25x</option>
+                                    <option value={0.5}>0.5x</option>
+                                    <option value={0.75}>0.75x</option>
+                                    <option value={1}>Normal</option>
+                                    <option value={1.25}>1.25x</option>
+                                    <option value={1.5}>1.5x</option>
+                                    <option value={2}>2x</option>
+                                </select>
+                            </div>
+
+                            {/* Overlay Settings Menu */}
+                            <VideoSettingsMenu
+                                videoRatio={videoRatio}
+                                activeSafeZone={activeSafeZone}
+                                onSafeZoneChange={setActiveSafeZone}
+                                activeGuides={activeGuides}
+                                onGuidesChange={setActiveGuides}
+                                opacity={overlayOpacity}
+                                onOpacityChange={setOverlayOpacity}
+                                guideColor={guideColor}
+                                onGuideColorChange={setGuideColor}
+                            />
+
+
+                            <button id="video-controls-export" onClick={handleExportFrame} className="control-btn" title="Xuất frame hiện tại">
+                                <Camera className="w-5 h-5" />
+                            </button>
+                            <button id="video-controls-fullscreen" onClick={toggleFullscreen} className="control-btn" title="Fullscreen">
+                                <Maximize className="w-5 h-5" />
+                            </button>
                         </div>
-
-                        {!isMobile && (
-                            <>
-                                <button onClick={toggleLoop} className={`control-btn ${isLooping ? 'active' : ''}`} title={isLooping ? 'Tắt lặp (L)' : 'Bật lặp (L)'}>
-                                    <Repeat className="w-5 h-5" />
-                                </button>
-
-                                <button onClick={togglePiP} className="control-btn" title="Picture-in-Picture (P)">
-                                    <PictureInPicture2 className="w-5 h-5" />
-                                </button>
-                            </>
-                        )}
-                    </div>
-
-                    <div className="controls-right">
-                        <div className="playback-speed">
-                            <select
-                                value={playbackRate}
-                                onChange={(e) => handlePlaybackRateChange(Number(e.target.value))}
-                                className="speed-select"
-                                aria-label="Playback speed"
-                                title="Playback speed"
-                            >
-                                <option value={0.25}>0.25x</option>
-                                <option value={0.5}>0.5x</option>
-                                <option value={0.75}>0.75x</option>
-                                <option value={1}>Normal</option>
-                                <option value={1.25}>1.25x</option>
-                                <option value={1.5}>1.5x</option>
-                                <option value={2}>2x</option>
-                            </select>
-                        </div>
-
-                        {/* Overlay Settings Menu */}
-                        <VideoSettingsMenu
-                            videoRatio={videoRatio}
-                            activeSafeZone={activeSafeZone}
-                            onSafeZoneChange={setActiveSafeZone}
-                            activeGuides={activeGuides}
-                            onGuidesChange={setActiveGuides}
-                            opacity={overlayOpacity}
-                            onOpacityChange={setOverlayOpacity}
-                            guideColor={guideColor}
-                            onGuideColorChange={setGuideColor}
-                        />
-
-
-                        <button id="video-controls-export" onClick={handleExportFrame} className="control-btn" title="Xuất frame hiện tại">
-                            <Camera className="w-5 h-5" />
-                        </button>
-                        <button id="video-controls-fullscreen" onClick={toggleFullscreen} className="control-btn" title="Fullscreen">
-                            <Maximize className="w-5 h-5" />
-                        </button>
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     )
 }))

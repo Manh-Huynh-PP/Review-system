@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -20,19 +20,28 @@ interface UploadDialogProps {
   initialFiles?: File[]
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  defaultTab?: 'single' | 'sequence'
 }
 
-export function UploadDialog({ projectId, existingFileId, existingFileType, trigger, initialFiles, open: controlledOpen, onOpenChange: setControlledOpen }: UploadDialogProps) {
+export function UploadDialog({ projectId, existingFileId, existingFileType, trigger, initialFiles, open: controlledOpen, onOpenChange: setControlledOpen, defaultTab = 'single' }: UploadDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState('single')
+  const [activeTab, setActiveTab] = useState(defaultTab)
 
   const isControlled = controlledOpen !== undefined
   const open = isControlled ? controlledOpen : internalOpen
   const setOpen = isControlled ? setControlledOpen! : setInternalOpen
 
+  // Sync activeTab when defaultTab changes (external control)
+  // or reset when dialog opens
+  useEffect(() => {
+    if (open) {
+      setActiveTab(defaultTab)
+    }
+  }, [open, defaultTab])
+
   const handleUploadComplete = () => {
     setOpen(false)
-    setActiveTab('single') // Reset to single mode
+    setActiveTab(defaultTab) // Reset to default
   }
 
   return (
@@ -63,7 +72,7 @@ export function UploadDialog({ projectId, existingFileId, existingFileType, trig
         </DialogHeader>
 
         {!existingFileId && (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="single" className="gap-2">
                 <FileImage className="w-4 h-4" />

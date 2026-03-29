@@ -1,12 +1,32 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
-import { Play, Pause, SkipBack, SkipForward, Repeat, Film, Images, Grid3x3, Edit2, Check, Maximize2, GripVertical, Trash2, Settings, Plus, Loader2 } from 'lucide-react'
+import {
+  Film,
+  Grid3x3,
+  Images,
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Maximize2,
+  Edit2,
+  GripVertical,
+  Check,
+  Plus,
+  Minus,
+  RotateCcw,
+  Repeat,
+  Trash2,
+  Settings,
+  Loader2
+} from 'lucide-react'
 import {
   ToggleGroup,
   ToggleGroupItem,
 } from '@/components/ui/toggle-group'
 import { linkifyText } from '@/lib/linkify'
+import { useZoomPan } from '@/hooks/useZoomPan'
 import { AnnotationCanvasKonva } from '@/components/annotations/AnnotationCanvasKonva'
 import { AnnotationToolbar } from '@/components/annotations/AnnotationToolbar'
 import type { AnnotationObject } from '@/types'
@@ -105,7 +125,16 @@ export function ImageSequenceViewer({
   const [currentFrame, setCurrentFrame] = useState(externalCurrentFrame !== undefined ? externalCurrentFrame : 0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLooping, setIsLooping] = useState(true)
-  const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode)
+  const {
+    zoom,
+    panOffset,
+    bind: zoomPanBind,
+    reset: resetZoomPan,
+    handleZoomIn,
+    handleZoomOut
+  } = useZoomPan({ maxZoom: 4 })
+
+  const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode || 'video')
   const [imagesLoaded, setImagesLoaded] = useState(false)
   const [loadedCount, setLoadedCount] = useState(0)
   const frameCount = urls.length
@@ -363,7 +392,7 @@ export function ImageSequenceViewer({
 
   // Mouse scrubbing handler
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isMouseDown || viewMode === 'grid') return
+    if (!isMouseDown || viewMode === 'grid' || zoom > 1) return
 
     const container = imageContainerRef.current
     if (!container) return
@@ -381,6 +410,7 @@ export function ImageSequenceViewer({
   }
 
   const handleMouseDown = () => {
+    if (zoom > 1) return // Let useZoomPan handle it
     setIsMouseDown(true)
     setIsScrubbing(false)
     // Pause playback when starting to scrub
@@ -455,46 +485,61 @@ export function ImageSequenceViewer({
       {viewMode !== 'grid' && (
         <div
           ref={imageContainerRef}
-          className={`relative viewport flex-1 min-h-0 flex items-center justify-center max-h-[calc(100dvh-16rem)] 2xl:max-h-[calc(100dvh-20rem)] ${isMouseDown ? 'cursor-grabbing' : 'cursor-grab'}`}
+          className={`relative viewport flex-1 min-h-0 flex items-center justify-center max-h-[calc(100dvh-16rem)] 2xl:max-h-[calc(100dvh-20rem)] ${zoom > 1 ? 'cursor-move' : isMouseDown ? 'cursor-grabbing' : 'cursor-grab'}`}
           id="sequence-image-container"
           onMouseMove={handleMouseMove}
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
         >
-          {/* Fast Image Sequence Canvas - Video Mode Only */}
-          {viewMode === 'video' && (
-            <div
-              ref={sequenceContainerRef}
-              className="w-full h-full max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh]"
-              style={{ position: 'relative' }}
-            />
-          )}
-
-          {/* Regular Image - Carousel Mode */}
-          {viewMode === 'carousel' && (
-            <img
-              src={urls[currentFrame]}
-              alt={`Frame ${currentFrame + 1}`}
-              className="w-full h-full object-contain max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh] select-none"
-              draggable={false}
-            />
-          )}
-
-          <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm border border-border/50 px-3 py-1.5 rounded-md text-sm font-mono pointer-events-none z-10">
-            Frame {currentFrame + 1} / {frameCount}
+          {/* Zoom Controls */}
+          <div className="absolute top-2 right-2 z-20 bg-background/80 backdrop-blur-sm border border-border/50 rounded-md shadow-sm flex items-center gap-1 p-1">
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleZoomOut}>
+              <Minus className="h-3 w-3" />
+            </Button>
+            <div className="text-xs text-muted-foreground w-10 text-center">{Math.round(zoom * 100)}%</div>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleZoomIn}>
+              <Plus className="h-3 w-3" />
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 px-2" onClick={resetZoomPan}>
+              <RotateCcw className="w-3 h-3 mr-1" />
+              Reset
+            </Button>
           </div>
 
-          {/* Scrubbing indicator */}
-          {isScrubbing && (
-            <div className="absolute top-4 right-4 bg-primary/90 backdrop-blur-sm border border-primary px-3 py-1.5 rounded-md text-sm font-medium pointer-events-none z-10 text-primary-foreground">
-              Scrubbing...
-            </div>
-          )}
+          {/* Zoomed Content Wrapper */}
+          <div
+            className="w-full h-full flex items-center justify-center origin-center"
+            {...zoomPanBind}
+            style={{
+              ...zoomPanBind.style,
+              transform: `scale(${zoom}) translate(${panOffset.x}px, ${panOffset.y}px)`,
+              pointerEvents: zoom > 1 ? 'auto' : 'none'
+            }}
+          >
+            <div className="relative w-full h-full flex items-center justify-center">
+              {/* Fast Image Sequence Canvas - Video Mode Only */}
+              {viewMode === 'video' && (
+                <div
+                  ref={sequenceContainerRef}
+                  className="w-full h-full max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh]"
+                  style={{ position: 'relative' }}
+                />
+              )}
 
-          {/* Annotation overlay for video/carousel modes only */}
-          {isAnnotating && (
-            <>
+              {/* Regular Image - Carousel Mode */}
+              {viewMode === 'carousel' && (
+                <img
+                  src={urls[currentFrame]}
+                  alt={`Frame ${currentFrame + 1}`}
+                  className="w-full h-full object-contain max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh] select-none"
+                  draggable={false}
+                />
+              )}
+            </div>
+
+            {/* Annotation overlay moved inside zoomed container */}
+            {isAnnotating && (
               <AnnotationCanvasKonva
                 mode={isAnnotationReadOnly ? 'read' : 'edit'}
                 data={annotationData || []}
@@ -505,23 +550,36 @@ export function ImageSequenceViewer({
                 onUndo={onAnnotationUndo}
                 onRedo={onAnnotationRedo}
               />
-              {!isAnnotationReadOnly && (
-                <AnnotationToolbar
-                  tool={annotationTool}
-                  onToolChange={() => { }}
-                  color={annotationColor}
-                  onColorChange={() => { }}
-                  strokeWidth={annotationStrokeWidth}
-                  onStrokeWidthChange={() => { }}
-                  onUndo={onAnnotationUndo || (() => { })}
-                  onRedo={onAnnotationRedo || (() => { })}
-                  onClear={onClearAnnotations || (() => { })}
-                  onDone={onDoneAnnotating || (() => { })}
-                  canUndo={canUndoAnnotation}
-                  canRedo={canRedoAnnotation}
-                />
-              )}
-            </>
+            )}
+          </div>
+
+          <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm border border-border/50 px-3 py-1.5 rounded-md text-sm font-mono pointer-events-none z-10">
+            Frame {currentFrame + 1} / {frameCount}
+          </div>
+
+          {/* Scrubbing indicator */}
+          {isScrubbing && zoom === 1 && (
+            <div className="absolute top-4 right-16 bg-primary/90 backdrop-blur-sm border border-primary px-3 py-1.5 rounded-md text-sm font-medium pointer-events-none z-10 text-primary-foreground">
+              Scrubbing...
+            </div>
+          )}
+
+          {/* Annotation Toolbar - remains outside zoomed container */}
+          {isAnnotating && !isAnnotationReadOnly && (
+            <AnnotationToolbar
+              tool={annotationTool}
+              onToolChange={() => { }}
+              color={annotationColor}
+              onColorChange={() => { }}
+              strokeWidth={annotationStrokeWidth}
+              onStrokeWidthChange={() => { }}
+              onUndo={onAnnotationUndo || (() => { })}
+              onRedo={onAnnotationRedo || (() => { })}
+              onClear={onClearAnnotations || (() => { })}
+              onDone={onDoneAnnotating || (() => { })}
+              canUndo={canUndoAnnotation}
+              canRedo={canRedoAnnotation}
+            />
           )}
         </div>
       )}

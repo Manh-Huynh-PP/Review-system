@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { ref, getDownloadURL } from 'firebase/storage'
 import { storage } from '@/lib/firebase'
 import { formatFileSize } from '@/lib/utils'
-import { Trash2, X, CheckSquare, Square, Grid3x3, List, MessageSquare, Calendar, FileImage, Video, Box, FileText, Download, Pencil } from 'lucide-react'
+import { Trash2, X, CheckSquare, Square, Grid3x3, List, MessageSquare, Calendar, FileImage, Video, Box, FileText, Download } from 'lucide-react'
 import type { File as FileType } from '@/types'
 import { useBulkDownload } from '@/hooks/useBulkDownload'
 import { DownloadProgressDialog } from '@/components/dashboard/DownloadProgressDialog'
@@ -34,7 +34,6 @@ const getFileTypeLabel = (type: string) => {
   if (type === 'model') return 'Mô hình 3D'
   if (type === 'sequence') return 'Image Sequence'
   if (type === 'pdf') return 'PDF'
-  if (type === 'canvas') return 'Canvas'
   return 'Tệp tin'
 }
 
@@ -647,14 +646,6 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
                 )
               }
 
-              // Canvas files
-              if (file.type === 'canvas') {
-                return (
-                  <div className="w-full h-full flex items-center justify-center bg-pink-100 dark:bg-pink-950/30">
-                    <Pencil className="w-8 h-8 text-pink-500" />
-                  </div>
-                )
-              }
 
               // Fallback for unknown types
               return (
@@ -705,7 +696,7 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
                       <Calendar className="w-3 h-3" />
                       {file.createdAt.toDate().toLocaleDateString('vi-VN')}
                     </span>
-                    <span>{formatFileSize(current?.metadata.size || 0)}</span>
+                    <span>{file.isExternalLink ? 'Link' : formatFileSize(current?.metadata.size || 0)}</span>
                     {file.versions.length > 1 && (
                       <span>v{file.currentVersion} ({file.versions.length} phiên bản)</span>
                     )}

@@ -3,19 +3,19 @@ import { useParams } from 'react-router-dom'
 import { useProjectStore } from '@/stores/projects'
 import { useFileStore } from '@/stores/files'
 import { UploadDialog } from '@/components/files/UploadDialog'
+import { ExternalLinkDialog } from '@/components/files/ExternalLinkDialog'
 import { FilesList } from '@/components/files/FilesList'
 import { db } from '@/lib/firebase'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ArrowUpDown, Calendar, FileType, Download, Search, X, Share2, Check, Mail, Pencil, Link, Settings, Plus, Upload, ChevronDown } from 'lucide-react'
+import { ArrowUpDown, Calendar, FileType, Download, Search, X, Share2, Check, Mail, Link, Settings, Upload, ChevronDown, Plus, Link2 } from 'lucide-react'
 import type { Project } from '@/types'
 import { toast } from 'react-hot-toast'
 import { ProjectEditDialog } from '@/components/projects/ProjectEditDialog'
 import { ProjectShareDialog } from '@/components/dashboard/ProjectShareDialog'
 import { SubscribersListDialog } from '@/components/projects/SubscribersListDialog'
-import { CreateCanvasDialog } from '@/components/canvas/CreateCanvasDialog'
 
 type SortOption = 'name' | 'date' | 'type' | 'size'
 type SortDirection = 'asc' | 'desc'
@@ -32,9 +32,9 @@ export default function ProjectDetailPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [copied, setCopied] = useState(false)
   const [showSubscribers, setShowSubscribers] = useState(false)
-  const [showCreateCanvas, setShowCreateCanvas] = useState(false)
   const [showShareDialog, setShowShareDialog] = useState(false)
   const [showUploadDialog, setShowUploadDialog] = useState(false)
+  const [showLinkDialog, setShowLinkDialog] = useState(false)
 
   const handleCopyReviewLink = async () => {
     if (!projectId) return
@@ -150,18 +150,18 @@ export default function ProjectDetailPage() {
             <DropdownMenuTrigger asChild>
               <Button className="gap-2">
                 <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Tạo mới</span>
+                <span className="hidden sm:inline">Thêm mới</span>
                 <ChevronDown className="h-4 w-4 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setShowUploadDialog(true)}>
                 <Upload className="h-4 w-4 mr-2" />
-                Tải tài liệu lên
+                Tải lên file
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowCreateCanvas(true)}>
-                <Pencil className="h-4 w-4 mr-2" />
-                Tạo Canvas
+              <DropdownMenuItem onClick={() => setShowLinkDialog(true)}>
+                <Link2 className="h-4 w-4 mr-2" />
+                Thêm link (URL)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -176,19 +176,21 @@ export default function ProjectDetailPage() {
           />
 
           {projectId && (
-            <UploadDialog
-              projectId={projectId}
-              open={showUploadDialog}
-              onOpenChange={setShowUploadDialog}
-              trigger={<span className="hidden" />}
-            />
+            <>
+              <UploadDialog
+                projectId={projectId}
+                open={showUploadDialog}
+                onOpenChange={setShowUploadDialog}
+                trigger={<span className="hidden" />}
+              />
+              <ExternalLinkDialog
+                projectId={projectId}
+                open={showLinkDialog}
+                onOpenChange={setShowLinkDialog}
+              />
+            </>
           )}
 
-          <CreateCanvasDialog
-            projectId={projectId!}
-            open={showCreateCanvas}
-            onOpenChange={setShowCreateCanvas}
-          />
         </div>
       </div>
 

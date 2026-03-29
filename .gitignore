@@ -39,7 +39,13 @@ dist-ssr
 serviceAccountKey.json
 adminsdk-*.json
 .runtimeconfig.json
+google-drive-credentials.json
+functions/.env
 
 # Logs & Coverage
 *.log
 coverage/
+
+# AI Agent Specific
+.agents/
+.agent/

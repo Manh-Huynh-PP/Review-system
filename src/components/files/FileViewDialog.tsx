@@ -1,4 +1,4 @@
-import { useState, useRef, Suspense } from 'react'
+import { useState, Suspense } from 'react'
 import type { File as FileType } from '@/types'
 import { format } from 'date-fns'
 import { formatFileSize } from '@/lib/utils'
@@ -23,8 +23,12 @@ import {
   Copy,
   MoreHorizontal,
   ShieldAlert,
-  Loader2
+  Loader2,
+  Plus,
+  Minus,
+  RotateCcw
 } from 'lucide-react'
+import { useZoomPan } from '@/hooks/useZoomPan'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +47,8 @@ import { CommentsList } from '@/components/comments/CommentsList'
 import { useCommentStore } from '@/stores/comments'
 import { useAuthStore } from '@/stores/auth'
 import toast from 'react-hot-toast'
+import { CustomVideoPlayer } from '../viewers/CustomVideoPlayer'
+import { parseDriveUrl } from '@/utils/googleDrive'
 
 interface Props {
   file: FileType | null
@@ -76,7 +82,14 @@ export function FileViewDialog({ file, projectId, resolvedUrl, open, onOpenChang
   const [showComments, setShowComments] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
   const [copied, setCopied] = useState(false)
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const {
+    zoom,
+    panOffset,
+    bind: zoomPanBind,
+    reset: resetZoomPan,
+    handleZoomIn,
+    handleZoomOut
+  } = useZoomPan({ maxZoom: 4 })
 
   // Generate shareable link for this file
   const getShareLink = () => {
@@ -110,10 +123,7 @@ export function FileViewDialog({ file, projectId, resolvedUrl, open, onOpenChang
   }
 
   const handleTimestampClick = (timestamp: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = timestamp
-      videoRef.current.play()
-    }
+    setCurrentTime(timestamp)
   }
 
   const renderFilePreview = () => {
@@ -163,28 +173,78 @@ export function FileViewDialog({ file, projectId, resolvedUrl, open, onOpenChang
       )
     }
 
+    const driveInfo = parseDriveUrl(effectiveUrl)
+
+    // Handle Google Drive links with the official iframe for stability
+    if (driveInfo) {
+      const previewUrl = `https://drive.google.com/file/d/${driveInfo.id}/preview`
+      return (
+        <div className="flex flex-col h-full bg-black relative min-h-[50vh]">
+          <div className="flex-1">
+            <iframe
+              src={previewUrl}
+              className="w-full h-full border-0"
+              allow="autoplay"
+              title="Google Drive Preview"
+            />
+          </div>
+        </div>
+      )
+    }
+
     if (file.type === 'image') {
       return (
-        <div className="relative bg-muted/20">
-          <img
-            src={effectiveUrl}
-            alt={file.name}
-            className="w-full h-auto max-h-[55vh] xl:max-h-[50vh] 2xl:max-h-[45vh] object-contain mx-auto"
-          />
+        <div className="relative bg-muted/20 overflow-hidden flex items-center justify-center min-h-[40vh]">
+          {/* Zoom Controls */}
+          <div className="absolute top-2 right-2 z-20 bg-background/80 backdrop-blur-sm border border-border/50 rounded-md shadow-sm flex items-center gap-1 p-1">
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleZoomOut}>
+              <Minus className="h-3 w-3" />
+            </Button>
+            <div className="text-xs text-muted-foreground w-10 text-center">{Math.round(zoom * 100)}%</div>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleZoomIn}>
+              <Plus className="h-3 w-3" />
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 px-2" onClick={resetZoomPan}>
+              <RotateCcw className="w-3 h-3 mr-1" />
+              Reset
+            </Button>
+          </div>
+
+          <div
+            className="w-full h-full flex items-center justify-center origin-center"
+            {...zoomPanBind}
+            style={{
+              ...zoomPanBind.style,
+              transform: `scale(${zoom}) translate(${panOffset.x}px, ${panOffset.y}px)`,
+              cursor: zoom > 1 ? 'move' : 'default'
+            }}
+          >
+            <div className="relative">
+              <img
+                src={effectiveUrl}
+                alt={file.name}
+                className="w-full h-auto max-h-[55vh] xl:max-h-[50vh] 2xl:max-h-[45vh] object-contain mx-auto select-none"
+                draggable={false}
+              />
+            </div>
+          </div>
         </div>
       )
     }
 
     if (file.type === 'video') {
       return (
-        <div className="relative bg-black">
-          <video
-            ref={videoRef}
-            src={effectiveUrl}
-            controls
-            className="w-full h-auto max-h-[55vh] xl:max-h-[50vh] 2xl:max-h-[45vh] mx-auto"
-            onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-          />
+        <div className="relative h-full flex flex-col min-h-[50vh]">
+          <div className="flex-1 min-h-0 bg-black">
+            <CustomVideoPlayer
+              src={effectiveUrl}
+              comments={fileComments}
+              currentTime={currentTime}
+              onTimeUpdate={setCurrentTime}
+              onCommentMarkerClick={(comment) => comment.timestamp !== null && setCurrentTime(comment.timestamp)}
+              className="w-full h-full"
+            />
+          </div>
         </div>
       )
     }

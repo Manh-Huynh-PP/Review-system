@@ -37,8 +37,7 @@ import {
   Trash2,
   Volume2,
   VolumeX,
-  Layers,
-  Loader2
+  Layers
 } from 'lucide-react'
 import { startFileTour, hasSeenTour } from '@/lib/fileTours'
 import {
@@ -56,6 +55,7 @@ import {
 import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider'
 import { AddComment } from '@/components/comments/AddComment'
 import { CommentsList } from '@/components/comments/CommentsList'
+import { useZoomPan } from '@/hooks/useZoomPan'
 import { ImageSequenceViewer } from '@/components/viewers/ImageSequenceViewer'
 import { CustomVideoPlayer, type CustomVideoPlayerRef } from '@/components/viewers/CustomVideoPlayer'
 import { VideoFrameControls } from '@/components/viewers/VideoFrameControls'
@@ -72,9 +72,9 @@ import toast from 'react-hot-toast'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { MobileFileViewLayout } from './mobile/MobileFileViewLayout'
 import { linkifyText } from '@/lib/linkify'
+import { parseDriveUrl } from '@/utils/googleDrive'
 
 const GLBViewer = lazy(() => import('@/components/viewers/GLBViewer').then(m => ({ default: m.GLBViewer })))
-const CanvasContainer = lazy(() => import('@/components/canvas/CanvasContainer'))
 
 interface Props {
   file: FileType | null
@@ -113,7 +113,6 @@ const getFileTypeIcon = (type: string) => {
   if (type === 'model') return <Box className="w-5 h-5 text-purple-500" />
   if (type === 'sequence') return <Film className="w-5 h-5 text-orange-500" />
   if (type === 'pdf' || type.endsWith('.pdf')) return <FileText className="w-5 h-5 text-red-500" />
-  if (type === 'canvas') return <Pencil className="w-5 h-5 text-pink-500" />
   return <FileImage className="w-5 h-5 text-gray-500" />
 }
 
@@ -123,7 +122,6 @@ const getFileTypeLabel = (type: string) => {
   if (type === 'model') return 'Mô hình 3D'
   if (type === 'sequence') return 'Image Sequence'
   if (type === 'pdf' || type.endsWith('.pdf')) return 'PDF'
-  if (type === 'canvas') return 'Canvas'
   return 'Tệp tin'
 }
 
@@ -208,10 +206,16 @@ export function FileViewDialogShared({
   const [copied, setCopied] = useState(false)
 
   // Image zoom level (applies to image + annotations)
-  const [zoom, setZoom] = useState(1)
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
-  const [isDragging, setIsDragging] = useState(false)
-  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 })
+  const {
+    zoom,
+    setZoom,
+    panOffset,
+    setPanOffset,
+    bind: zoomPanBind,
+    reset: resetZoomPan,
+    handleZoomIn,
+    handleZoomOut
+  } = useZoomPan({ maxZoom: 4 })
 
   // Upload & Drag-n-Drop State
   const [showUploadDialog, setShowUploadDialog] = useState(false)
@@ -342,7 +346,7 @@ export function FileViewDialogShared({
     if (zoom <= 1) {
       setPanOffset({ x: 0, y: 0 })
     }
-  }, [zoom])
+  }, [zoom, setPanOffset])
 
   // Drag and Drop Handlers
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -899,6 +903,8 @@ export function FileViewDialogShared({
       )
     }
 
+    const driveInfo = parseDriveUrl(effectiveUrl)
+
     // Check validation status
     if (current?.validationStatus === 'infected') {
       return (
@@ -988,23 +994,7 @@ export function FileViewDialogShared({
         return (
           <div
             className="p-2 w-full h-full overflow-hidden relative"
-            onMouseDown={(e) => {
-              if (zoom > 1) {
-                setIsDragging(true)
-                setLastMousePos({ x: e.clientX, y: e.clientY })
-                e.preventDefault()
-              }
-            }}
-            onMouseMove={(e) => {
-              if (isDragging && zoom > 1) {
-                const deltaX = (e.clientX - lastMousePos.x) / zoom
-                const deltaY = (e.clientY - lastMousePos.y) / zoom
-                setPanOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }))
-                setLastMousePos({ x: e.clientX, y: e.clientY })
-              }
-            }}
-            onMouseUp={() => setIsDragging(false)}
-            onMouseLeave={() => setIsDragging(false)}
+            {...zoomPanBind}
           >
             {/* Mode switch */}
             <div className="flex items-center gap-2 mb-2">
@@ -1134,14 +1124,14 @@ export function FileViewDialogShared({
 
             {/* Zoom Controls for Compare Mode */}
             <div className="absolute top-12 right-2 z-20 bg-background/80 backdrop-blur-sm border border-border/50 rounded-md shadow-sm flex items-center gap-1 p-1 pointer-events-auto">
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))}>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleZoomOut}>
                 <span className="font-medium">-</span>
               </Button>
               <div className="text-xs text-muted-foreground w-10 text-center">{Math.round(zoom * 100)}%</div>
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.min(4, z + 0.25))}>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleZoomIn}>
                 <span className="font-medium">+</span>
               </Button>
-              <Button size="sm" variant="outline" className="h-7 px-2" onClick={() => { setZoom(1); setPanOffset({ x: 0, y: 0 }) }}>Reset</Button>
+              <Button size="sm" variant="outline" className="h-7 px-2" onClick={resetZoomPan}>Reset</Button>
             </div>
 
             {/* Sequence Navigation Controls Overlay for Compare Mode */}
@@ -1180,48 +1170,33 @@ export function FileViewDialogShared({
           <div className="relative flex-1 min-h-0 w-full flex items-center justify-center overflow-hidden">
             {/* Zoom Controls */}
             <div className="absolute top-2 right-2 z-10 bg-background/80 backdrop-blur-sm border border-border/50 rounded-md shadow-sm flex items-center gap-1 p-1">
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.max(0.25, z - 0.25))}>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleZoomOut}>
                 <span className="font-medium">-</span>
               </Button>
               <div className="text-xs text-muted-foreground w-10 text-center">{Math.round(zoom * 100)}%</div>
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.min(4, z + 0.25))}>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleZoomIn}>
                 <span className="font-medium">+</span>
               </Button>
-              <Button size="sm" variant="outline" className="h-7 px-2" onClick={() => { setZoom(1); setPanOffset({ x: 0, y: 0 }) }}>Reset</Button>
+              <Button size="sm" variant="outline" className="h-7 px-2" onClick={resetZoomPan}>Reset</Button>
             </div>
 
             {/* Scaled content wrapper (image + annotations) */}
             <div
               className="origin-center cursor-grab active:cursor-grabbing w-full h-full flex items-center justify-center"
-              ref={(el) => {
-                if (!el) return
-                const pe = (zoom > 1 || isAnnotating) ? 'auto' : 'none'
-                el.style.pointerEvents = pe
-                el.style.transform = `scale(${zoom}) translate(${panOffset.x}px, ${panOffset.y}px)`
+              {...zoomPanBind}
+              style={{
+                ...zoomPanBind.style,
+                transform: `scale(${zoom}) translate(${panOffset.x}px, ${panOffset.y}px)`,
+                pointerEvents: (zoom > 1 || isAnnotating) ? 'auto' : 'none'
               }}
-              onMouseDown={(e) => {
-                if (zoom > 1) {
-                  setIsDragging(true)
-                  setLastMousePos({ x: e.clientX, y: e.clientY })
-                  e.preventDefault()
-                }
-              }}
-              onMouseMove={(e) => {
-                if (isDragging && zoom > 1) {
-                  const deltaX = (e.clientX - lastMousePos.x) / zoom
-                  const deltaY = (e.clientY - lastMousePos.y) / zoom
-                  setPanOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }))
-                  setLastMousePos({ x: e.clientX, y: e.clientY })
-                }
-              }}
-              onMouseUp={() => setIsDragging(false)}
-              onMouseLeave={() => setIsDragging(false)}
             >
-              <img
-                src={effectiveUrl}
-                alt={file.name}
-                className="w-full h-full object-contain"
-              />
+              <div className="relative w-full h-full flex items-center justify-center">
+                <img
+                  src={effectiveUrl}
+                  alt={file.name}
+                  className="w-full h-full object-contain"
+                />
+              </div>
 
               {renderAnnotationOverlay()}
             </div>
@@ -1486,23 +1461,35 @@ export function FileViewDialogShared({
         <div className="space-y-2 sm:space-y-3 w-full h-full flex flex-col">
           {/* Video Player - Better space utilization */}
           <div className="relative bg-black flex-1 min-h-0 overflow-hidden">
-            <CustomVideoPlayer
-              ref={customVideoPlayerRef}
-              src={effectiveUrl}
-              comments={allFileComments}
-              currentTime={currentTime}
-              onTimeUpdate={handleTimeUpdate}
-              onCommentMarkerClick={handleCommentMarkerClick}
-              onFullscreenChange={handleFullscreenChange}
-              onLoadedMetadata={handleLoadedMetadata}
-
-              onPlay={handleVideoPlay}
-              onPause={handleVideoPause}
-              className="w-full h-full"
-            />
-
-            {/* Only show overlays when not playing to improve performance */}
-            {!isPlaying && renderAnnotationOverlay()}
+            {driveInfo ? (
+              <div className="flex flex-col h-full bg-black relative">
+                <div className="flex-1">
+                  <iframe
+                    src={`https://drive.google.com/file/d/${driveInfo.id}/preview`}
+                    className="w-full h-full border-0"
+                    allow="autoplay"
+                    title="Google Drive Preview"
+                  />
+                </div>
+              </div>
+            ) : (
+              <>
+                <CustomVideoPlayer
+                  ref={customVideoPlayerRef}
+                  src={effectiveUrl}
+                  comments={allFileComments}
+                  currentTime={currentTime}
+                  onTimeUpdate={handleTimeUpdate}
+                  onCommentMarkerClick={handleCommentMarkerClick}
+                  onFullscreenChange={handleFullscreenChange}
+                  onLoadedMetadata={handleLoadedMetadata}
+                  onPlay={handleVideoPlay}
+                  onPause={handleVideoPause}
+                  className="w-full h-full"
+                />
+                {!isPlaying && renderAnnotationOverlay()}
+              </>
+            )}
           </div>
 
           {/* Frame Controls + Filter/Comment Toggle on Mobile */}
@@ -1606,27 +1593,6 @@ export function FileViewDialogShared({
 
 
 
-    if (file.type === 'canvas') {
-      return (
-        <Suspense fallback={
-          <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground bg-background">
-            <Loader2 className="w-8 h-8 animate-spin" />
-            <p>Đang tải module Canvas...</p>
-          </div>
-        }>
-          <CanvasContainer
-            file={file}
-            projectId={_projectId}
-            currentVersion={currentVersion}
-            onVersionSelect={(v: number) => {
-              setCurrentVersion(v)
-              onSwitchVersion?.(file.id, v)
-            }}
-            isAdmin={isAdmin}
-          />
-        </Suspense>
-      )
-    }
 
     return (
       <div className="flex items-center justify-center h-[50vh] bg-muted/20">
@@ -2076,8 +2042,7 @@ export function FileViewDialogShared({
               {/* Main Content Area */}
               <div className={`flex-1 overflow-y-auto overflow-x-hidden bg-background/50 flex flex-col ${showComments && !isVideoFullscreen ? '' : ''}`}>
                 {/* Toolbar for Annotation */}
-                {file.type !== 'canvas' && (
-                  <div id="annotation-toolbar" className="p-2 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 gap-2">
+                <div id="annotation-toolbar" className="p-2 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10 gap-2">
                     <div className="hidden sm:flex items-center gap-2 w-full sm:w-auto">
                       {!isAnnotating ? (
                         <Button onClick={handleStartAnnotating} variant="outline" size="sm" className="gap-2 flex-1 sm:flex-initial">
@@ -2117,7 +2082,6 @@ export function FileViewDialogShared({
                       </div>
                     )}
                   </div>
-                )}
 
                 {/* File Preview */}
                 <div id="preview-container" className="flex-1 p-0 sm:p-2 flex items-center justify-center min-h-0 overflow-x-hidden overflow-y-visible sm:overflow-hidden">
@@ -2125,7 +2089,7 @@ export function FileViewDialogShared({
                 </div>
               </div>
 
-              {showComments && !isVideoFullscreen && file.type !== 'canvas' && (
+              {showComments && !isVideoFullscreen && (
                 <div className="contents">
                   {/* Resize Handle */}
                   <div

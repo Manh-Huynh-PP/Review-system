@@ -13,6 +13,8 @@ import { ProjectDeleteDialog } from './ProjectDeleteDialog'
 import { ProjectArchiveDialog } from './ProjectArchiveDialog'
 import { formatFileSize } from '@/lib/utils'
 import { Calendar, User, Mail, AlertCircle, MoreVertical, Archive, ArchiveRestore, Image as ImageIcon, HardDrive, Play, Lock, Unlock } from 'lucide-react'
+import { CustomVideoPlayer } from '../viewers/CustomVideoPlayer'
+import { parseDriveUrl } from '@/utils/googleDrive'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +27,7 @@ type ViewMode = 'list' | 'thumbnails'
 
 export function ProjectCard({ project, viewMode = 'list' }: { project: Project; viewMode?: ViewMode }) {
   const [isArchiveDialogOpen, setIsArchiveDialogOpen] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
   const { updateProject } = useProjectStore()
   const navigate = useNavigate()
 
@@ -54,33 +57,64 @@ export function ProjectCard({ project, viewMode = 'list' }: { project: Project; 
           onClick={() => navigate(`/app/projects/${project.id}`)}
         >
           {/* Thumbnail Image */}
-          <div className="relative h-40 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center overflow-hidden">
+          <div 
+            className="relative h-40 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center overflow-hidden"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
             {thumbnailData ? (
-              thumbnailData.type === 'video' ? (
-                <div className="relative w-full h-full group-hover:scale-105 transition-transform duration-300 bg-black">
-                  <video
-                    src={thumbnailData.url}
-                    className="w-full h-full object-cover opacity-90"
-                    muted
-                    loop
-                    playsInline
-                    onMouseOver={e => e.currentTarget.play()}
-                    onMouseOut={e => {
-                      e.currentTarget.pause();
-                      e.currentTarget.currentTime = 0;
-                    }}
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm">
-                      <Play className="w-5 h-5 text-white fill-current ml-0.5" />
+              thumbnailData.type === 'video' && thumbnailData.url ? (
+                (() => {
+                  const driveInfo = parseDriveUrl(thumbnailData.url)
+                  if (driveInfo) {
+                    // Drive videos are unstable for hover preview, show static thumbnail instead
+                    return (
+                      <div className="relative w-full h-full">
+                        <img
+                          src={thumbnailData.url}
+                          alt={project.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://placehold.co/600x400?text=Google+Drive+Video';
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                          <div className="bg-white/90 p-1.5 rounded-full shadow-lg">
+                            <HardDrive className="w-5 h-5 text-blue-600" />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  }
+                  
+                  return (
+                    <div className="relative w-full h-full group-hover:scale-105 transition-transform duration-300 bg-black">
+                      <CustomVideoPlayer
+                        src={thumbnailData.url}
+                        minimal={true}
+                        autoPlay={isHovered}
+                        comments={[]}
+                        onTimeUpdate={() => {}}
+                        onCommentMarkerClick={() => {}}
+                        className="w-full h-full"
+                      />
+                      <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${isHovered ? 'opacity-0' : 'opacity-100'}`}>
+                        <div className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm">
+                          <Play className="w-5 h-5 text-white fill-current ml-0.5" />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  )
+                })()
               ) : (
                 <img
-                  src={thumbnailData.url}
+                  src={thumbnailData?.url || ''}
                   alt={project.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  onError={(e) => {
+                    // Fallback if image fails to load
+                    e.currentTarget.src = 'https://placehold.co/600x400?text=No+Preview';
+                  }}
                 />
               )
             ) : (

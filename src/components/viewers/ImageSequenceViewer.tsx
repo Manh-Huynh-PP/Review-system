@@ -534,6 +534,7 @@ export function ImageSequenceViewer({
                   alt={`Frame ${currentFrame + 1}`}
                   className="w-full h-full object-contain max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh] select-none"
                   draggable={false}
+                  onDragStart={(e) => e.preventDefault()}
                 />
               )}
             </div>

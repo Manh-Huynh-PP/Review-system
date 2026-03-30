@@ -352,9 +352,9 @@ export function FileViewDialogShared({
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!isAdmin) return // Only allow for admins
+    if (!isAdmin || zoom > 1) return // Only allow for admins AND when not zoomed
     if (!isDragOver) setIsDragOver(true)
-  }, [isDragOver, isAdmin])
+  }, [isDragOver, isAdmin, zoom])
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -369,7 +369,7 @@ export function FileViewDialogShared({
     e.stopPropagation()
     setIsDragOver(false)
 
-    if (!isAdmin) return // Only allow for admins
+    if (!isAdmin || zoom > 1) return // Only allow for admins AND when not zoomed
 
     const files = Array.from(e.dataTransfer.files)
     if (files.length > 0) {
@@ -378,7 +378,7 @@ export function FileViewDialogShared({
       setDroppedFiles(files)
       setShowUploadDialog(true)
     }
-  }, [])
+  }, [isAdmin, zoom])
 
   if (!file) return null
 
@@ -1048,6 +1048,7 @@ export function FileViewDialogShared({
                           alt={`v${lv}`}
                           className="w-full h-full object-contain select-none shadow-none"
                           draggable={false}
+                          onDragStart={(e) => e.preventDefault()}
                         />
                       ) : (
                         <div className="text-sm text-muted-foreground">Không có ảnh</div>
@@ -1088,6 +1089,7 @@ export function FileViewDialogShared({
                           alt={`v${rv}`}
                           className="w-full h-full object-contain select-none shadow-none"
                           draggable={false}
+                          onDragStart={(e) => e.preventDefault()}
                         />
                       ) : (
                         <div className="text-sm text-muted-foreground">Không có ảnh</div>
@@ -1108,8 +1110,8 @@ export function FileViewDialogShared({
                 >
                   {leftUrl && rightUrl ? (
                     <ReactCompareSlider
-                      itemOne={<ReactCompareSliderImage src={leftUrl} alt={`v${lv}`} />}
-                      itemTwo={<ReactCompareSliderImage src={rightUrl} alt={`v${rv}`} />}
+                      itemOne={<ReactCompareSliderImage src={leftUrl} alt={`v${lv}`} draggable={false} className="select-none" onDragStart={(e: any) => e.preventDefault()} />}
+                      itemTwo={<ReactCompareSliderImage src={rightUrl} alt={`v${rv}`} draggable={false} className="select-none" onDragStart={(e: any) => e.preventDefault()} />}
                       position={comparePosition}
                       onPositionChange={(p: number) => setComparePosition(p)}
                     />
@@ -1194,7 +1196,9 @@ export function FileViewDialogShared({
                 <img
                   src={effectiveUrl}
                   alt={file.name}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain select-none"
+                  draggable={false}
+                  onDragStart={(e) => e.preventDefault()}
                 />
               </div>
 

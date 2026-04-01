@@ -778,9 +778,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
     showProgress: true,
     steps: steps,
     onDestroyStarted: () => {
-      if (!driverObj.hasNextStep() || confirm('Bạn có muốn dừng hướng dẫn?')) {
-        driverObj.destroy()
-      }
+      // Cho phép đóng tour ngay lập tức khi người dùng yêu cầu thoát
+      driverObj.destroy()
     },
     onCloseClick: async () => {
       try {

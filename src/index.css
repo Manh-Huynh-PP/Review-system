@@ -140,6 +140,12 @@
   pointer-events: auto !important;
 }
 
+/* Đảm bảo popup của tour và các nút bên trong luôn có thể tương tác */
+.driver-popover,
+.driver-popover * {
+  pointer-events: auto !important;
+}
+
 /* Safe Area Insets for Mobile Devices with Notch/Dynamic Island */
 @layer utilities {
   .safe-area-pt {

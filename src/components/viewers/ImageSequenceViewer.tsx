@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import {
@@ -30,6 +30,7 @@ import { useZoomPan } from '@/hooks/useZoomPan'
 import { AnnotationCanvasKonva } from '@/components/annotations/AnnotationCanvasKonva'
 import { AnnotationToolbar } from '@/components/annotations/AnnotationToolbar'
 import type { AnnotationObject } from '@/types'
+import { normalizeDriveUrl } from '@/utils/googleDrive'
 
 // DnD Kit imports
 import {
@@ -137,7 +138,13 @@ export function ImageSequenceViewer({
   const [viewMode, setViewMode] = useState<ViewMode>(defaultViewMode || 'video')
   const [imagesLoaded, setImagesLoaded] = useState(false)
   const [loadedCount, setLoadedCount] = useState(0)
-  const frameCount = urls.length
+
+  // Normalize URLs at the component level to handle legacy 'uc' links
+  const normalizedUrls = useMemo(() => {
+    return urls.map(url => normalizeDriveUrl(url))
+  }, [urls])
+
+  const frameCount = normalizedUrls.length
 
   // Ref to track viewMode for tick callback
   const viewModeRef = useRef(viewMode)
@@ -232,33 +239,61 @@ export function ImageSequenceViewer({
     }
   }, [externalCurrentFrame])
 
-  // Preload images with tracking
+  // Preload images in small batches with retry to avoid Google Drive rate-limiting (429)
   useEffect(() => {
     setImagesLoaded(false)
     setLoadedCount(0)
-    let loadCount = 0
+    let cancelled = false
 
-    const promises = urls.map((url) => {
+    /**
+     * Load a single image with retry + exponential backoff.
+     * Google Drive returns 429 when too many requests are sent simultaneously.
+     */
+    const loadImageWithRetry = (url: string, maxRetries = 3): Promise<void> => {
       return new Promise<void>((resolve) => {
-        const img = new Image()
-        img.onload = () => {
-          loadCount++
-          setLoadedCount(loadCount)
-          resolve()
-        }
-        img.onerror = () => {
-          loadCount++
-          setLoadedCount(loadCount)
-          resolve() // Still resolve even on error
-        }
-        img.src = url
-      })
-    })
+        let attempt = 0
 
-    Promise.all(promises).then(() => {
-      setImagesLoaded(true)
-    })
-  }, [urls])
+        const tryLoad = () => {
+          if (cancelled) { resolve(); return }
+          const img = new Image()
+          img.onload = () => resolve()
+          img.onerror = () => {
+            attempt++
+            if (attempt < maxRetries && !cancelled) {
+              // Exponential backoff: 1s, 2s, 4s
+              const delay = Math.pow(2, attempt - 1) * 1000
+              setTimeout(tryLoad, delay)
+            } else {
+              resolve() // Give up after max retries, don't block the rest
+            }
+          }
+          img.src = url
+        }
+
+        tryLoad()
+      })
+    }
+
+    /**
+     * Process URLs in batches to avoid triggering Google rate limits.
+     * BATCH_SIZE of 3 keeps us well under Google's threshold.
+     */
+    const BATCH_SIZE = 3
+    const loadAllBatched = async () => {
+      let loadCount = 0
+      for (let i = 0; i < normalizedUrls.length; i += BATCH_SIZE) {
+        if (cancelled) return
+        const batch = normalizedUrls.slice(i, i + BATCH_SIZE)
+        await Promise.all(batch.map(url => loadImageWithRetry(url)))
+        loadCount += batch.length
+        if (!cancelled) setLoadedCount(loadCount)
+      }
+      if (!cancelled) setImagesLoaded(true)
+    }
+
+    loadAllBatched()
+    return () => { cancelled = true }
+  }, [normalizedUrls])
 
   // Initialize fast-image-sequence
   useEffect(() => {
@@ -280,7 +315,7 @@ export function ImageSequenceViewer({
         sequence = new FastImageSequence(sequenceContainerRef.current, {
           frames: frameCount,
           src: {
-            imageURL: (index: number) => urls[index] || urls[0],
+            imageURL: (index: number) => normalizedUrls[index] || normalizedUrls[0],
           },
           loop: isLooping,
           objectFit: 'contain',
@@ -491,6 +526,9 @@ export function ImageSequenceViewer({
           onMouseDown={handleMouseDown}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}
+          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onDragStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
         >
           {/* Zoom Controls */}
           <div className="absolute top-2 right-2 z-20 bg-background/80 backdrop-blur-sm border border-border/50 rounded-md shadow-sm flex items-center gap-1 p-1">
@@ -530,7 +568,7 @@ export function ImageSequenceViewer({
               {/* Regular Image - Carousel Mode */}
               {viewMode === 'carousel' && (
                 <img
-                  src={urls[currentFrame]}
+                  src={normalizedUrls[currentFrame]}
                   alt={`Frame ${currentFrame + 1}`}
                   className="w-full h-full object-contain max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh] select-none"
                   draggable={false}
@@ -851,7 +889,7 @@ export function ImageSequenceViewer({
                     <SortableGridFrameCard
                       key={originalIndex}
                       id={originalIndex}
-                      url={urls[originalIndex]}
+                      url={normalizedUrls[originalIndex]}
                       frameNumber={originalIndex}
                       frameCount={frameCount}
                       caption={frameCaptions[originalIndex]}
@@ -875,7 +913,7 @@ export function ImageSequenceViewer({
             </DndContext>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {urls.map((url, index) => (
+              {normalizedUrls.map((url, index) => (
                 <GridFrameCard
                   key={index}
                   url={url}

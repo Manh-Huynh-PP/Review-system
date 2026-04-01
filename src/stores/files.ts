@@ -1153,7 +1153,7 @@ export const useFileStore = create<FileState>((set, get) => ({
 
     try {
       // Call Cloud Function to list folder contents
-      const { listDriveFolder, getDirectImageUrl } = await import('../utils/googleDrive')
+      const { listDriveFolder, normalizeDriveUrl } = await import('../utils/googleDrive')
       set({ uploadProgress: 10 })
 
       const driveFiles = await listDriveFolder(folderId)
@@ -1174,12 +1174,12 @@ export const useFileStore = create<FileState>((set, get) => ({
       }
 
       // Generate direct URLs for all images
-      const sequenceUrls = imageFiles.map(f => getDirectImageUrl(f.id))
+      const sequenceUrls = imageFiles.map(f => normalizeDriveUrl(`https://drive.google.com/open?id=${f.id}`))
       set({ uploadProgress: 80 })
 
       const fileId = generateId()
       const newVersion: FileVersion = {
-        url: sequenceUrls[0], // First image as thumbnail
+        url: normalizeDriveUrl(sequenceUrls[0]), // First image as thumbnail
         sequenceUrls,
         frameCount: sequenceUrls.length,
         version: 1,

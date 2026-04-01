@@ -37,9 +37,54 @@ export function parseDriveUrl(url: string): { type: 'file' | 'folder'; id: strin
   }
 }
 
+/**
+ * Get a thumbnail URL for a Google Drive file with configurable size.
+ * @param fileId - The Drive file ID
+ * @param size - Width in pixels (default: 2000). Use smaller values (e.g. 800) for grid thumbnails to avoid rate-limiting.
+ */
+export function getDriveThumbnailUrl(fileId: string, size: number = 2000): string {
+  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w${size}`
+}
+
+/** @deprecated Use getDriveThumbnailUrl instead */
 export function getDirectImageUrl(fileId: string): string {
-  // Using uc?export=view is more stable than the thumbnail endpoint for direct hotlinking
-  return `https://drive.google.com/uc?export=view&id=${fileId}`
+  return getDriveThumbnailUrl(fileId, 2000)
+}
+
+/**
+ * Extract the Google Drive file ID from any Drive URL format.
+ * Returns null if the URL is not a recognized Drive format.
+ */
+export function extractDriveFileId(url: string): string | null {
+  if (!url || !url.includes('google.com')) return null
+
+  // Format: thumbnail?id=...
+  const thumbMatch = url.match(/thumbnail\?id=([a-zA-Z0-9_-]+)/)
+  if (thumbMatch) return thumbMatch[1]
+
+  // Format: uc?id=... or open?id=...
+  const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/)
+  if (idMatch) return idMatch[1]
+
+  // Format: /file/d/... or /d/...
+  const dMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/)
+  if (dMatch) return dMatch[1]
+
+  return null
+}
+
+/**
+ * Normalizes any Google Drive link to the best possible embeddable image URL.
+ * Handles old 'uc' links, file share links, etc.
+ * @param url - The Drive URL to normalize
+ * @param size - Thumbnail width in pixels (default: 2000)
+ */
+export function normalizeDriveUrl(url: string, size: number = 2000): string {
+  const fileId = extractDriveFileId(url)
+  if (fileId) {
+    return getDriveThumbnailUrl(fileId, size)
+  }
+  return url
 }
 
 /**

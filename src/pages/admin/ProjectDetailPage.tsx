@@ -16,6 +16,7 @@ import { toast } from 'react-hot-toast'
 import { ProjectEditDialog } from '@/components/projects/ProjectEditDialog'
 import { ProjectShareDialog } from '@/components/dashboard/ProjectShareDialog'
 import { SubscribersListDialog } from '@/components/projects/SubscribersListDialog'
+import { ArchiveLinksDropdown } from '@/components/projects/ArchiveLinksDropdown'
 
 type SortOption = 'name' | 'date' | 'type' | 'size'
 type SortDirection = 'asc' | 'desc'
@@ -144,6 +145,9 @@ export default function ProjectDetailPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Archive Links Dropdown */}
+          <ArchiveLinksDropdown project={project} />
 
           {/* Create Dropdown */}
           <DropdownMenu>

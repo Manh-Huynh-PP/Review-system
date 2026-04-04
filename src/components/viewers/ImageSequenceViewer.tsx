@@ -19,7 +19,8 @@ import {
   Repeat,
   Trash2,
   Settings,
-  Loader2
+  Loader2,
+  Minimize2
 } from 'lucide-react'
 import {
   ToggleGroup,
@@ -27,6 +28,8 @@ import {
 } from '@/components/ui/toggle-group'
 import { linkifyText } from '@/lib/linkify'
 import { useZoomPan } from '@/hooks/useZoomPan'
+import { useFullscreen } from '@/hooks/useFullscreen'
+import { useSequenceScrubber } from '@/hooks/useSequenceScrubber'
 import { AnnotationCanvasKonva } from '@/components/annotations/AnnotationCanvasKonva'
 import { AnnotationToolbar } from '@/components/annotations/AnnotationToolbar'
 import type { AnnotationObject } from '@/types'
@@ -301,35 +304,49 @@ export function ImageSequenceViewer({
       return
     }
 
-    let sequence: any = null
+    let active = true
+    const container = sequenceContainerRef.current
 
     const initSequence = async () => {
       try {
         const { FastImageSequence } = await import('@mediamonks/fast-image-sequence')
 
-        if (!sequenceContainerRef.current) return
+        if (!active || !container) return
 
-        // Clear container
-        sequenceContainerRef.current.innerHTML = ''
+        // Pre-clear container - important for React re-renders
+        container.innerHTML = ''
 
-        sequence = new FastImageSequence(sequenceContainerRef.current, {
+        const sequence = new FastImageSequence(container, {
           frames: frameCount,
           src: {
             imageURL: (index: number) => normalizedUrls[index] || normalizedUrls[0],
           },
           loop: isLooping,
           objectFit: 'contain',
+          clearCanvas: true, // Crucial for transparent PNGs to prevent ghosting/accumulation
         })
 
+        // Immediate check if we should stop before setting refs
+        if (!active) {
+          if (typeof sequence.destruct === 'function') {
+            sequence.destruct()
+          } else {
+            sequence.stop()
+          }
+          container.innerHTML = ''
+          return
+        }
+
+        // Assign to both local (for closure) and ref (for external access)
         sequenceRef.current = sequence
         isSequenceReady.current = true
 
-        // Register tick callback to sync frame - only update when in video mode
+        // Register tick callback
         sequence.tick(() => {
-          // Check if sequence still exists (might be null after cleanup)
-          if (!sequence) return
-          // Only sync frame from library when in video mode (use ref to get current value)
+          if (!active || !sequenceRef.current) return
+          // Use ref value to read current mode safely in closure
           if (viewModeRef.current !== 'video') return
+          
           const progress = sequence.progress
           const frame = Math.round(progress * (frameCount - 1))
           setCurrentFrame(frame)
@@ -342,18 +359,25 @@ export function ImageSequenceViewer({
     initSequence()
 
     return () => {
-      if (sequence) {
+      active = false
+      if (sequenceRef.current) {
         try {
-          sequence.stop()
-          sequence = null
-        } catch (e) {
-          // Ignore cleanup errors
-        }
+          if (typeof sequenceRef.current.destruct === 'function') {
+            sequenceRef.current.destruct()
+          } else {
+            sequenceRef.current.stop()
+          }
+        } catch (e) {}
+        sequenceRef.current = null
       }
-      sequenceRef.current = null
       isSequenceReady.current = false
+      
+      // Force clear the DOM on unmount/re-run
+      if (container) {
+        container.innerHTML = ''
+      }
     }
-  }, [viewMode, frameCount, urls, isLooping])
+  }, [viewMode, frameCount, normalizedUrls, isLooping])
 
   // Handle play/pause with library
   useEffect(() => {
@@ -420,49 +444,29 @@ export function ImageSequenceViewer({
     }
   }
 
-  // Mouse scrubbing state
-  const [isMouseDown, setIsMouseDown] = useState(false)
-  const [isScrubbing, setIsScrubbing] = useState(false)
+
+  // Fullscreen & Scrubbing Hooks
   const imageContainerRef = useRef<HTMLDivElement>(null)
+  const viewerFullRef = useRef<HTMLDivElement>(null)
+  const { isFullscreen, toggle: toggleFullscreen } = useFullscreen(viewerFullRef)
 
-  // Mouse scrubbing handler
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isMouseDown || viewMode === 'grid' || zoom > 1) return
+  const { isScrubbing, bind: bindScrub } = useSequenceScrubber({
+    totalFrames: frameCount,
+    currentFrame,
+    containerRef: imageContainerRef,
+    onFrameChange: (frame) => {
+      setCurrentFrame(frame)
+      onFrameChange?.(frame)
+    },
+    disabled: viewMode === 'grid' || zoom > 1
+  })
 
-    const container = imageContainerRef.current
-    if (!container) return
-
-    const rect = container.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const percentage = Math.max(0, Math.min(1, x / rect.width))
-    const targetFrame = Math.floor(percentage * (frameCount - 1))
-
-    if (targetFrame !== currentFrame) {
-      setCurrentFrame(targetFrame)
-      onFrameChange?.(targetFrame)
-      setIsScrubbing(true)
-    }
-  }
-
-  const handleMouseDown = () => {
-    if (zoom > 1) return // Let useZoomPan handle it
-    setIsMouseDown(true)
-    setIsScrubbing(false)
-    // Pause playback when starting to scrub
-    if (isPlaying) {
+  // Start scrubbing effect: pause playback
+  useEffect(() => {
+    if (isScrubbing && isPlaying) {
       setIsPlaying(false)
     }
-  }
-
-  const handleMouseUp = () => {
-    setIsMouseDown(false)
-    setTimeout(() => setIsScrubbing(false), 100)
-  }
-
-  const handleMouseLeave = () => {
-    setIsMouseDown(false)
-    setTimeout(() => setIsScrubbing(false), 100)
-  }
+  }, [isScrubbing, isPlaying])
 
   // Sync view mode if prop changes (e.g. from parent)
   useEffect(() => {
@@ -472,7 +476,10 @@ export function ImageSequenceViewer({
   }, [defaultViewMode])
 
   return (
-    <div className={`flex flex-col h-full gap-4 max-h-[calc(100%-2rem)] ${className || ''}`}>
+    <div 
+      ref={viewerFullRef}
+      className={`flex flex-col h-full gap-4 ${isFullscreen ? 'fixed inset-0 z-50 bg-background p-6' : 'max-h-[calc(100%-2rem)]'} ${className || ''}`}
+    >
       {/* View Mode Toggle */}
       <div className="flex items-center justify-between px-4 flex-shrink-0">
         {isAdmin ? (
@@ -520,12 +527,9 @@ export function ImageSequenceViewer({
       {viewMode !== 'grid' && (
         <div
           ref={imageContainerRef}
-          className={`relative viewport flex-1 min-h-0 flex items-center justify-center max-h-[calc(100dvh-16rem)] 2xl:max-h-[calc(100dvh-20rem)] ${zoom > 1 ? 'cursor-move' : isMouseDown ? 'cursor-grabbing' : 'cursor-grab'}`}
+          className={`relative viewport flex-1 min-h-0 flex items-center justify-center ${isFullscreen ? 'max-h-none' : 'max-h-[calc(100dvh-16rem)] 2xl:max-h-[calc(100dvh-20rem)]'} ${zoom > 1 ? 'cursor-move' : isScrubbing ? 'cursor-grabbing' : 'cursor-grab'}`}
           id="sequence-image-container"
-          onMouseMove={handleMouseMove}
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
+          {...bindScrub}
           onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onDragStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
@@ -543,6 +547,10 @@ export function ImageSequenceViewer({
               <RotateCcw className="w-3 h-3 mr-1" />
               Reset
             </Button>
+            <div className="w-px h-4 bg-border mx-1" />
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={toggleFullscreen} title={isFullscreen ? "Thoát toàn màn hình" : "Toàn màn hình"}>
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
           </div>
 
           {/* Zoomed Content Wrapper */}
@@ -559,6 +567,7 @@ export function ImageSequenceViewer({
               {/* Fast Image Sequence Canvas - Video Mode Only */}
               {viewMode === 'video' && (
                 <div
+                  key={`sequence-video-${urls[0] || 'default'}-${frameCount}`}
                   ref={sequenceContainerRef}
                   className="w-full h-full max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh]"
                   style={{ position: 'relative' }}

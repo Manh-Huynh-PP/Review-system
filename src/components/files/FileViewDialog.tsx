@@ -112,7 +112,9 @@ export function FileViewDialog({ file, projectId, resolvedUrl, open, onOpenChang
   if (!file) return null
 
   const current = file.versions.find(v => v.version === file.currentVersion) || file.versions[0]
+  const latestVersion = file.versions.reduce((max, v) => (v.version > max.version ? v : max), file.versions[0])
   const effectiveUrl = resolvedUrl || current?.url
+  const latestUrl = latestVersion?.url
   const uploadDate = current?.uploadedAt?.toDate ? current.uploadedAt.toDate() : new Date()
 
   const fileComments = comments.filter(c => c.fileId === file.id && c.version === file.currentVersion)
@@ -308,11 +310,26 @@ export function FileViewDialog({ file, projectId, resolvedUrl, open, onOpenChang
                     {file.versions.map(v => (
                       <DropdownMenuItem
                         key={v.version}
-                        onClick={() => onSwitchVersion(file.id, v.version)}
-                        className={v.version === file.currentVersion ? 'bg-accent' : ''}
+                        className={`flex items-center justify-between gap-4 ${v.version === file.currentVersion ? 'bg-accent' : ''}`}
                       >
-                        Version {v.version}
-                        {v.version === file.currentVersion && ' (hiện tại)'}
+                        <div 
+                          className="flex-1 cursor-pointer"
+                          onClick={() => onSwitchVersion(file.id, v.version)}
+                        >
+                          Version {v.version}
+                          {v.version === file.currentVersion && ' (hiện tại)'}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 hover:bg-background/80"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            window.open(v.url, '_blank')
+                          }}
+                        >
+                          <Download className="w-3 h-3 text-muted-foreground" />
+                        </Button>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
@@ -326,7 +343,7 @@ export function FileViewDialog({ file, projectId, resolvedUrl, open, onOpenChang
                 className="hidden sm:flex"
                 onClick={(e) => {
                   e.stopPropagation()
-                  effectiveUrl && window.open(effectiveUrl, '_blank')
+                  latestUrl && window.open(latestUrl, '_blank')
                 }}
               >
                 <Download className="w-4 h-4 mr-2" />
@@ -384,17 +401,32 @@ export function FileViewDialog({ file, projectId, resolvedUrl, open, onOpenChang
                         {file.versions.map(v => (
                           <DropdownMenuItem
                             key={v.version}
-                            onClick={() => onSwitchVersion(file.id, v.version)}
-                            className={v.version === file.currentVersion ? 'bg-accent' : ''}
+                            className={`flex items-center justify-between gap-4 ${v.version === file.currentVersion ? 'bg-accent' : ''}`}
                           >
-                            V{v.version} {v.version === file.currentVersion && '(hiện tại)'}
+                            <div 
+                              className="flex-1"
+                              onClick={() => onSwitchVersion(file.id, v.version)}
+                            >
+                              V{v.version} {v.version === file.currentVersion && '(hiện tại)'}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                window.open(v.url, '_blank')
+                              }}
+                            >
+                              <Download className="w-4 h-4 text-muted-foreground" />
+                            </Button>
                           </DropdownMenuItem>
                         ))}
                         <div className="h-px bg-border my-1" />
                       </>
                     )}
                     <DropdownMenuItem
-                      onClick={() => effectiveUrl && window.open(effectiveUrl, '_blank')}
+                      onClick={() => latestUrl && window.open(latestUrl, '_blank')}
                     >
                       <Download className="w-4 h-4 mr-2" />
                       Tải xuống

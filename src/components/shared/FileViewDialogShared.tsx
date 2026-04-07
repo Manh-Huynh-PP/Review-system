@@ -383,10 +383,12 @@ export function FileViewDialogShared({
   if (!file) return null
 
   const current = file.versions.find(v => v.version === currentVersion) || file.versions[0]
+  const latestVersion = file.versions.reduce((max, v) => (v.version > max.version ? v : max), file.versions[0])
   // Use resolvedUrl only if it's for the same version, otherwise use version's URL directly
   const effectiveUrl = (currentVersion === file.currentVersion && resolvedUrl)
     ? resolvedUrl
     : current?.url
+  const latestUrl = latestVersion?.url
   const uploadDate = current?.uploadedAt?.toDate ? current.uploadedAt.toDate() : new Date()
 
   // Memoize allFileComments to prevent CustomVideoPlayer re-renders
@@ -480,9 +482,11 @@ export function FileViewDialogShared({
     return `${filename}${correctExt}`
   }
 
-  const handleDownload = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleDownload = async (e: React.MouseEvent<HTMLAnchorElement>, manualUrl?: string, manualVersion?: any) => {
     e.preventDefault()
-    if (!effectiveUrl) return
+    const urlToDownload = manualUrl || latestUrl
+    const versionToDownload = manualVersion || latestVersion
+    if (!urlToDownload) return
 
     // Create a progress toast
     const toastId = toast.loading('Đang khởi tạo tải xuống... 0%')
@@ -490,7 +494,7 @@ export function FileViewDialogShared({
     try {
       // Use XMLHttpRequest for progress tracking
       const xhr = new XMLHttpRequest()
-      xhr.open('GET', effectiveUrl, true)
+      xhr.open('GET', urlToDownload, true)
       xhr.responseType = 'blob'
 
       xhr.onprogress = (event) => {
@@ -506,7 +510,7 @@ export function FileViewDialogShared({
           const url = window.URL.createObjectURL(blob)
           const link = document.createElement('a')
           link.href = url
-          link.download = ensureFileExtension(file.name, effectiveUrl, current?.metadata?.type, file.type)
+          link.download = ensureFileExtension(file.name, urlToDownload, versionToDownload?.metadata?.type, file.type)
           document.body.appendChild(link)
           link.click()
           link.remove()
@@ -515,21 +519,21 @@ export function FileViewDialogShared({
         } else {
           toast.error('Có lỗi khi tải file', { id: toastId })
           // Fallback
-          window.open(effectiveUrl, '_blank')
+          window.open(urlToDownload, '_blank')
         }
       }
 
       xhr.onerror = () => {
         toast.error('Lỗi kết nối kiểm tra lại mạng', { id: toastId })
         // Fallback
-        window.open(effectiveUrl, '_blank')
+        window.open(urlToDownload, '_blank')
       }
 
       xhr.send()
     } catch (error) {
       console.error('Download error:', error)
       toast.error('Có lỗi khi tải file', { id: toastId })
-      window.open(effectiveUrl, '_blank')
+      window.open(urlToDownload, '_blank')
     }
   }
 
@@ -1808,21 +1812,35 @@ export function FileViewDialogShared({
                                     </div>
                                   </div>
                                 </div>
-                                {isAdmin && file.versions.length > 1 && (
+                                <div className="flex items-center gap-1">
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                    className="h-6 w-6 text-muted-foreground hover:text-primary"
                                     onClick={(e) => {
                                       e.stopPropagation()
-                                      if (confirm(`Xóa phiên bản ${version.version}?`)) {
-                                        deleteVersion(_projectId, file.id, version.version)
-                                      }
+                                      handleDownload(e as any, version.url, version)
                                     }}
+                                    title="Tải xuống phiên bản này"
                                   >
-                                    <Trash2 className="w-3 h-3" />
+                                    <Download className="w-3 h-3" />
                                   </Button>
-                                )}
+                                  {isAdmin && file.versions.length > 1 && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        if (confirm(`Xóa phiên bản ${version.version}?`)) {
+                                          deleteVersion(_projectId, file.id, version.version)
+                                        }
+                                      }}
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  )}
+                                </div>
                               </DropdownMenuItem>
                             ))}
                         </div>
@@ -1982,8 +2000,8 @@ export function FileViewDialogShared({
                     title="Tải xuống"
                   >
                     <a
-                      href={effectiveUrl}
-                      download={ensureFileExtension(file.name, effectiveUrl, current?.metadata?.type, file.type)}
+                      href={latestUrl}
+                      download={ensureFileExtension(file.name, latestUrl, latestVersion?.metadata?.type, file.type)}
                       target="_blank"
                       rel="noreferrer"
                       onClick={handleDownload}

@@ -320,13 +320,13 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
         video.addEventListener('canplay', handleCanPlay)
 
         // Handle auto-play and loop based on props or minimal mode
-        if (minimal || autoPlay) {
+        if (autoPlay) {
             video.muted = minimal || muted
             video.loop = minimal || loop
             video.play().catch(() => {
                 // Ignore auto-play errors (browser policy)
             })
-        } else if (!autoPlay && isPlaying) {
+        } else if (minimal && isPlaying) {
             video.pause()
         }
 

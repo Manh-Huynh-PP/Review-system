@@ -3,7 +3,7 @@ import { collection, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import type { File as FileType } from '@/types'
 
-export function useProjectThumbnail(projectId: string) {
+export function useProjectThumbnail(projectId: string, status?: string) {
   const [thumbnailData, setThumbnailData] = useState<{ url: string; type: 'image' | 'video' } | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -36,7 +36,15 @@ export function useProjectThumbnail(projectId: string) {
             })
 
           if (files.length > 0) {
-            const latestFile = files[0]
+            let latestFile = files[0]
+
+            // If project is archived, try to find the latest image instead of just latest file
+            if (status === 'archived') {
+              const latestImage = files.find(f => f.type === 'image' || f.type === 'sequence')
+              if (latestImage) {
+                latestFile = latestImage
+              }
+            }
             const currentVersionData = latestFile.versions?.[latestFile.currentVersion - 1]
 
             if (currentVersionData) {
@@ -72,7 +80,7 @@ export function useProjectThumbnail(projectId: string) {
     }
 
     fetchLatestImage()
-  }, [projectId])
+  }, [projectId, status])
 
   return { thumbnailData, loading }
 }

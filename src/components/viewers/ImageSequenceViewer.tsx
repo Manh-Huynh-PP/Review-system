@@ -88,6 +88,7 @@ interface ImageSequenceViewerProps {
   onDeleteFrames?: (indices: number[]) => void
   onAddFrames?: (files: File[]) => void
   isUploading?: boolean
+  renderFrameOverlay?: (frameIndex: number) => React.ReactNode
 }
 
 type ViewMode = 'video' | 'carousel' | 'grid'
@@ -124,7 +125,8 @@ export function ImageSequenceViewer({
   onReorderFrames,
   onDeleteFrames,
   onAddFrames,
-  isUploading = false
+  isUploading = false,
+  renderFrameOverlay
 }: ImageSequenceViewerProps) {
   const [currentFrame, setCurrentFrame] = useState(externalCurrentFrame !== undefined ? externalCurrentFrame : 0)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -915,6 +917,7 @@ export function ImageSequenceViewer({
                       }}
                       onCaptionChange={(caption) => onCaptionChange?.(file.id, file.currentVersion, originalIndex, caption)}
                       onToggleDelete={() => toggleFrameSelection(originalIndex)}
+                      renderOverlay={renderFrameOverlay}
                     />
                   ))}
                 </div>
@@ -939,6 +942,7 @@ export function ImageSequenceViewer({
                     onFrameDetailView?.(index)
                   }}
                   onCaptionChange={(caption) => onCaptionChange?.(file.id, file.currentVersion, index, caption)}
+                  renderOverlay={renderFrameOverlay}
                 />
               ))}
             </div>
@@ -959,7 +963,8 @@ function GridFrameCard({
   isAdmin,
   onSelect,
   onViewDetail,
-  onCaptionChange
+  onCaptionChange,
+  renderOverlay
 }: {
   url: string
   frameNumber: number
@@ -970,6 +975,7 @@ function GridFrameCard({
   onSelect: () => void
   onViewDetail: () => void
   onCaptionChange?: (caption: string) => void
+  renderOverlay?: (frameIndex: number) => React.ReactNode
 }) {
   const [isEditingCaption, setIsEditingCaption] = useState(false)
   const [editedCaption, setEditedCaption] = useState(caption || '')
@@ -1026,6 +1032,13 @@ function GridFrameCard({
         <div className="absolute top-2 left-2 bg-background/90 backdrop-blur-sm border border-border/50 px-2 py-1 rounded text-xs font-mono">
           {String(frameNumber + 1).padStart(3, '0')} / {String(frameCount).padStart(3, '0')}
         </div>
+
+        {/* Custom Overlay (Extension Point) */}
+        {renderOverlay && (
+          <div className="absolute top-2 right-2 z-10">
+            {renderOverlay(frameNumber)}
+          </div>
+        )}
 
         {/* View Detail Button Overlay */}
         <div
@@ -1107,7 +1120,8 @@ function SortableGridFrameCard({
   onSelect,
   onViewDetail: _onViewDetail,
   onCaptionChange: _onCaptionChange,
-  onToggleDelete
+  onToggleDelete,
+  renderOverlay
 }: {
   id: number
   url: string
@@ -1122,6 +1136,7 @@ function SortableGridFrameCard({
   onViewDetail: () => void
   onCaptionChange?: (caption: string) => void
   onToggleDelete: () => void
+  renderOverlay?: (frameIndex: number) => React.ReactNode
 }) {
   const {
     attributes,
@@ -1154,10 +1169,17 @@ function SortableGridFrameCard({
       <div
         {...attributes}
         {...listeners}
-        className="absolute top-2 right-2 z-20 bg-background/90 backdrop-blur-sm border border-border/50 p-1.5 rounded cursor-grab active:cursor-grabbing hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
+        className="absolute top-2 right-12 z-20 bg-background/90 backdrop-blur-sm border border-border/50 p-1.5 rounded cursor-grab active:cursor-grabbing hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
       >
         <GripVertical className="w-4 h-4 text-muted-foreground" />
       </div>
+
+      {/* Custom Overlay (Extension Point) */}
+      {renderOverlay && !isDragging && (
+        <div className="absolute top-2 right-2 z-10">
+          {renderOverlay(frameNumber)}
+        </div>
+      )}
 
       {/* Delete Selection Checkbox */}
       <button

@@ -31,7 +31,7 @@ export function ProjectCard({ project, viewMode = 'list' }: { project: Project; 
   const { updateProject } = useProjectStore()
   const navigate = useNavigate()
 
-  const { thumbnailData } = useProjectThumbnail(project.id)
+  const { thumbnailData } = useProjectThumbnail(project.id, project.status)
   const allFiles = useFileStore(s => s.files)
 
   const created = project.createdAt?.toDate ? project.createdAt.toDate() : new Date()

@@ -122,6 +122,7 @@ export interface FileVersion {
     lightIntensity?: number
     gamma?: number
   }
+  pickedFrames?: Record<number, boolean> // Frames picked by client (frame index -> true)
 }
 
 export interface File {

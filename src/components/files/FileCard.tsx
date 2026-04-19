@@ -3,7 +3,7 @@ import type { File as FileType } from '@/types'
 import { format } from 'date-fns'
 import { formatFileSize } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { FileImage, Video, Box, MessageSquare, Clock, ShieldAlert, Loader2, MoreHorizontal, Share2, HardDrive } from 'lucide-react'
+import { FileImage, Video, Box, MessageSquare, Clock, ShieldAlert, Loader2, MoreHorizontal, Share2, HardDrive, Play } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { ProjectShareDialog } from '@/components/dashboard/ProjectShareDialog'
@@ -113,6 +113,14 @@ export function FileCard({ file, resolvedUrl, commentCount, onClick }: Props) {
       {/* Thumbnail */}
       <div className="aspect-video bg-muted/20 relative overflow-hidden">
         {renderThumbnail()}
+        {/* Play icon overlay for videos when not hovered */}
+        {file.type === 'video' && (
+          <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${isHovered ? 'opacity-0' : 'opacity-100'}`}>
+            <div className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm">
+              <Play className="w-5 h-5 text-white fill-current ml-0.5" />
+            </div>
+          </div>
+        )}
 
         {/* Overlay on hover */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-center justify-center">

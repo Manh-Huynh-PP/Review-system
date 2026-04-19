@@ -60,7 +60,8 @@ interface FileState {
   }) => Promise<void>
   addExternalLink: (projectId: string, url: string, name: string, type: FileType) => Promise<void>
   addDriveFolderAsSequence: (projectId: string, folderId: string, name: string) => Promise<void>
-  cleanupProjectFiles: (projectId: string) => Promise<void>
+  cleanupProjectFiles: (projectId: string) => Promise<void>,
+  togglePickedFrame: (projectId: string, fileId: string, version: number, frameIndex: number, isPicked: boolean) => Promise<void>,
   cleanup: () => void
 }
 
@@ -1424,6 +1425,41 @@ export const useFileStore = create<FileState>((set, get) => ({
       console.error('Error updating model settings:', error)
       toast.error('Lỗi khi lưu cấu hình: ' + error.message)
       throw error
+    }
+  },
+
+  togglePickedFrame: async (projectId: string, fileId: string, version: number, frameIndex: number, isPicked: boolean) => {
+    try {
+      const fileRef = doc(db, 'projects', projectId, 'files', fileId)
+      const fileDoc = await getDoc(fileRef)
+
+      if (!fileDoc.exists()) throw new Error('File not found')
+
+      const data = fileDoc.data() as FileModel
+      const versions = [...data.versions]
+      const versionIndex = versions.findIndex(v => v.version === version)
+
+      if (versionIndex >= 0) {
+        const currentVersion = versions[versionIndex]
+        const pickedFrames = { ...(currentVersion.pickedFrames || {}) }
+
+        if (isPicked) {
+          pickedFrames[frameIndex] = true
+        } else {
+          delete pickedFrames[frameIndex]
+        }
+
+        versions[versionIndex] = {
+          ...currentVersion,
+          pickedFrames
+        }
+
+        await updateDoc(fileRef, { versions })
+        // Silent update for better UX, or a very subtle toast
+      }
+    } catch (error: any) {
+      console.error('Failed to toggle picked frame:', error)
+      toast.error('Lỗi khi chọn ảnh')
     }
   },
 

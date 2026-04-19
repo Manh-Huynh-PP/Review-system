@@ -56,7 +56,7 @@ import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slide
 import { AddComment } from '@/components/comments/AddComment'
 import { CommentsList } from '@/components/comments/CommentsList'
 import { useZoomPan } from '@/hooks/useZoomPan'
-import { ImageSequenceViewer } from '@/components/viewers/ImageSequenceViewer'
+import { PickableImageSequenceViewer } from '@/components/viewers/PickableImageSequenceViewer'
 import { CustomVideoPlayer, type CustomVideoPlayerRef } from '@/components/viewers/CustomVideoPlayer'
 import { VideoFrameControls } from '@/components/viewers/VideoFrameControls'
 import { PDFViewer } from '@/components/viewers/PDFViewer'
@@ -1262,7 +1262,7 @@ export function FileViewDialogShared({
 
       return (
         <div className="relative w-full h-full">
-          <ImageSequenceViewer
+          <PickableImageSequenceViewer
             urls={sequenceUrls}
             fps={fps}
             currentFrame={currentFrame}
@@ -1276,7 +1276,7 @@ export function FileViewDialogShared({
             }}
             frameCaptions={optimisticSequenceData?.captions || effectiveFrameCaptions}
             onCaptionChange={handleCaptionChangeWithLocalUpdate}
-            file={{ id: file.id, currentVersion: current.version }}
+            file={{ id: file.id, currentVersion: current.version, projectId: file.projectId }}
             // Annotation props
             isAnnotating={isAnnotating}
             annotationData={annotationData}

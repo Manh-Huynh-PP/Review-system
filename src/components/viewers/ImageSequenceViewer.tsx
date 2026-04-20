@@ -846,7 +846,7 @@ export function ImageSequenceViewer({
         <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 relative viewport">
           {/* Edit Mode Toggle (Admin only) - Sub-header */}
           {isAdmin && (
-            <div className="flex items-center justify-between mb-4 sticky top-[3.5rem] bg-background/95 backdrop-blur-sm py-2 z-20">
+            <div className="flex items-center justify-between mb-4 sticky top-0 bg-background/95 backdrop-blur-sm py-2 z-20">
               <div className="flex items-center gap-2">
                 <Button
                   variant={isEditMode ? "default" : "outline"}

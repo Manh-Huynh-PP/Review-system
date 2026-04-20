@@ -59,7 +59,7 @@ export default function ProjectsPage() {
   }, [projects, subscribeToFiles, cleanupFiles])
 
   const filteredAndSortedProjects = useMemo(() => {
-    let filtered = projects
+    let filtered = projects.filter(p => p.status !== 'trash')
 
     // Filter by status
     if (filterStatus !== 'all') {

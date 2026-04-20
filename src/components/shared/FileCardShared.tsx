@@ -4,6 +4,7 @@ import type { File as FileType } from '@/types'
 import { cn } from '@/lib/utils'
 import { CardColorPicker } from './CardColorPicker'
 import { Button } from '@/components/ui/button'
+import { useTranslation } from 'react-i18next'
 import { useFileStore } from '@/stores/files'
 
 interface FileCardSharedProps {
@@ -26,15 +27,6 @@ const getFileTypeIcon = (type: string, size: string = 'w-8 h-8') => {
   return <FileImage className={`${size} text-gray-500`} />
 }
 
-const getFileTypeLabel = (type: string) => {
-  if (type === 'image') return 'Hình ảnh'
-  if (type === 'video') return 'Video'
-  if (type === 'model') return 'Mô hình 3D'
-  if (type === 'sequence') return 'Image Sequence'
-  if (type === 'pdf') return 'PDF'
-  return 'Tệp tin'
-}
-
 export function FileCardShared({
   file,
   resolvedUrl,
@@ -46,6 +38,16 @@ export function FileCardShared({
   isAdmin,
   compact = false
 }: FileCardSharedProps) {
+  const { t, i18n } = useTranslation(['fileView', 'common'])
+  
+  const getFileTypeLabel = (type: string) => {
+    if (type === 'image') return t('types.image')
+    if (type === 'video') return t('types.video')
+    if (type === 'model') return t('types.model')
+    if (type === 'sequence') return t('types.sequence')
+    if (type === 'pdf') return t('types.pdf')
+    return t('types.file')
+  }
   const current = file.versions.find(v => v.version === file.currentVersion) || file.versions[0]
   const effectiveUrl = resolvedUrl || current?.url
   const { updateFileBackgroundColor } = useFileStore()
@@ -169,7 +171,7 @@ export function FileCardShared({
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
           <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
             <Badge variant="secondary" className="bg-white/90 text-black border-none px-3 py-1 text-xs font-semibold shadow-xl">
-              Nhấn để xem
+              {t('common:actions.view')}
             </Badge>
           </div>
         </div>
@@ -214,7 +216,7 @@ export function FileCardShared({
                     onDelete()
                   }}
                   className="h-7 w-7 rounded-full bg-white/10 hover:bg-red-500 hover:text-white text-white transition-colors"
-                  title="Xóa file"
+                  title={t('common:actions.delete')}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
@@ -233,7 +235,7 @@ export function FileCardShared({
                       ? "bg-red-500 text-white hover:bg-red-600" 
                       : "bg-white/10 hover:bg-white/30 text-white"
                   )}
-                  title={isLocked ? "Mở khóa bình luận" : "Khóa bình luận"}
+                  title={isLocked ? t('common:actions.unlock') : t('common:actions.lock')}
                 >
                   <Lock className="h-3.5 w-3.5" />
                 </Button>
@@ -268,7 +270,7 @@ export function FileCardShared({
               </Badge>
             </div>
             <span className="text-[10px] font-medium text-muted-foreground/60">
-              {file.updatedAt?.toDate().toLocaleDateString('vi-VN')}
+              {file.updatedAt?.toDate().toLocaleDateString(i18n.language.startsWith('vi') ? 'vi-VN' : 'en-US')}
             </span>
           </div>
         )}

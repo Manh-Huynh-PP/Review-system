@@ -1,0 +1,164 @@
+{
+  "common": {
+    "comments": {
+      "title": "Bình luận & Thảo luận",
+      "description": "Xem các bình luận, thêm phản hồi hoặc đánh dấu đã giải quyết tại đây."
+    },
+    "versionToggle": {
+      "title": "Lọc phiên bản bình luận",
+      "description": "Chuyển đổi giữa xem tất cả bình luận hoặc chỉ xem bình luận của phiên bản hiện tại."
+    },
+    "compare": {
+      "title": "So sánh phiên bản",
+      "description": "So sánh trực quan giữa hai phiên bản khác nhau."
+    },
+    "attach": {
+      "title": "Đính kèm File",
+      "description": "Đính kèm ảnh hoặc tài liệu vào bình luận của bạn."
+    },
+    "link": {
+      "title": "Chèn liên kết",
+      "description": "Thêm đường dẫn (link) vào bình luận."
+    },
+    "draw": {
+      "title": "Vẽ/Ghi chú",
+      "description": "Vẽ trực tiếp lên hình ảnh để minh họa ý kiến của bạn."
+    },
+    "headerVersion": {
+      "title": "Quản lý phiên bản",
+      "description": "Xem lịch sử, chuyển đổi phiên bản hoặc tải lên phiên bản mới tại đây."
+    },
+    "headerShare": {
+      "title": "Chia sẻ & Tải xuống",
+      "description": "Chia sẻ link file hoặc tải xuống trực tiếp về máy."
+    },
+    "resizeHandle": {
+      "title": "Thay đổi kích thước",
+      "description": "Kéo thanh này sang trái hoặc phải để thay đổi chiều rộng khung bình luận."
+    }
+  },
+  "image": {
+    "preview": {
+      "title": "Xem hình ảnh",
+      "description": "Bạn có thể phóng to, thu nhỏ và di chuyển hình ảnh để xem chi tiết."
+    },
+    "previewMobile": {
+      "title": "Xem hình ảnh",
+      "description": "Chạm để phóng to/thu nhỏ và kéo để di chuyển ảnh."
+    },
+    "addCommentMobile": {
+      "title": "Thêm bình luận",
+      "description": "Nhập bình luận cho hình ảnh tại đây."
+    }
+  },
+  "video": {
+    "player": {
+      "title": "Trình phát Video",
+      "description": "Sử dụng các phím tắt (Space để phát/dừng, Mũi tên để tua) để điều khiển."
+    },
+    "playerMobile": {
+      "title": "Video player",
+      "description": "Chạm để phát/dừng video."
+    },
+    "timeline": {
+      "title": "Timeline & Markers",
+      "description": "Điểm đánh dấu trên timeline hiển thị vị trí các bình luận và ghi chú."
+    },
+    "timelineMobile": {
+      "title": "Timeline",
+      "description": "Chạm vào timeline để nhảy tới thời điểm đó. Các điểm đỏ là vị trí có bình luận."
+    },
+    "exportFrame": {
+      "title": "Sao chép Frame",
+      "description": "Nhấn vào đây để lưu ảnh frame hiện tại vào bộ nhớ tạm (clipboard)."
+    },
+    "settings": {
+      "title": "Cài đặt Overlay",
+      "description": "Mở menu để chọn Safe Zone (vùng an toàn) và Composition Guides (đường hướng dẫn bố cục). Điều chỉnh màu sắc và độ trong suốt."
+    },
+    "fullscreen": {
+      "title": "Toàn màn hình",
+      "description": "Bật chế độ toàn màn hình để xem video rõ hơn."
+    },
+    "filterTime": {
+      "title": "Lọc theo thời gian",
+      "description": "Bật tùy chọn này để chỉ hiển thị bình luận tại thời điểm hiện tại."
+    },
+    "navToggleMobile": {
+      "title": "Chế độ điều hướng",
+      "description": "Chuyển đổi giữa điều khiển theo frame (F) hoặc marker (M)."
+    }
+  },
+  "sequence": {
+    "preview": {
+      "title": "Chuỗi hình ảnh",
+      "description": "Duyệt qua từng khung hình bằng các nút điều hướng hoặc phím mũi tên."
+    },
+    "previewVideo": {
+      "title": "Chuỗi hình ảnh",
+      "description": "Di chuột hoặc kéo để xem chuỗi hình ảnh nhanh. Nhấn phím cách để phát tự động."
+    },
+    "previewGrid": {
+      "title": "Chuỗi hình ảnh",
+      "description": "Xem tổng quan tất cả khung hình trong chuỗi. Click vào một khung hình để xem chi tiết."
+    },
+    "viewMode": {
+      "title": "Chế độ xem",
+      "description": "Chuyển đổi giữa chế độ video, carousel hoặc lưới để tối ưu trải nghiệm."
+    }
+  },
+  "pdf": {
+    "preview": {
+      "title": "Xem PDF",
+      "description": "Duyệt trang, phóng to/thu nhỏ và chuyển trang để xem chi tiết."
+    },
+    "previewMobile": {
+      "title": "Xem PDF",
+      "description": "Vuốt để chuyển trang, chạm để phóng to."
+    }
+  },
+  "model": {
+    "preview": {
+      "title": "Mô hình 3D",
+      "description": "Xoay, phóng to và điều chỉnh góc nhìn để xem mô hình."
+    },
+    "previewMobile": {
+      "title": "Mô hình 3D",
+      "description": "Chạm và kéo để xoay, véo để phóng to/thu nhỏ mô hình."
+    },
+    "interactionMode": {
+      "title": "Chế độ Tương tác",
+      "description": "Chuyển đổi giữa chế độ Xoay (Rotate) và Di chuyển (Pan)."
+    },
+    "resetView": {
+      "title": "Đặt lại góc nhìn",
+      "description": "Quay về vị trí camera mặc định."
+    },
+    "screenshot": {
+      "title": "Chụp ảnh",
+      "description": "Lưu ảnh chụp màn hình của góc nhìn hiện tại."
+    },
+    "toolbar": {
+      "title": "Thanh công cụ Chính",
+      "description": "Chứa các công cụ điều khiển hiển thị, AR và Animation."
+    },
+    "arView": {
+      "title": "Xem AR",
+      "description": "Xem mô hình trong không gian thực tế (nếu thiết bị hỗ trợ)."
+    },
+    "renderMode": {
+      "title": "Chế độ hiển thị",
+      "description": "Thay đổi giữa Standard, Wireframe hoặc Matcap."
+    },
+    "lighting": {
+      "title": "Cấu hình hiển thị",
+      "description": "Điều chỉnh ánh sáng, môi trường và Tone Mapping."
+    }
+  },
+  "fallback": {
+    "preview": {
+      "title": "Xem & Duyệt",
+      "description": "Trình xem tiêu chuẩn cho các loại tệp. Bạn có thể xem nội dung và thêm góp ý."
+    }
+  }
+}

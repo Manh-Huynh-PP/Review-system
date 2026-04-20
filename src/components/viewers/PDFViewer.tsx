@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Document, Page, pdfjs } from 'react-pdf'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCw, Maximize2 } from 'lucide-react'
@@ -27,6 +28,7 @@ export function PDFViewer({
     className = '',
     children
 }: PDFViewerProps) {
+    const { t } = useTranslation()
     const [numPages, setNumPages] = useState<number>(0)
     const [pageNumber, setPageNumber] = useState<number>(currentPage)
     const [scale, setScale] = useState<number>(1)
@@ -124,8 +126,8 @@ export function PDFViewer({
 
     const onDocumentLoadError = useCallback((err: Error) => {
         console.error('❌ PDF load error:', err)
-        setError(`Không thể tải file PDF: ${err.message}`)
-    }, [])
+        setError(t('fileView:pdf.error', { message: err.message }))
+    }, [t])
 
     const changePage = useCallback((offset: number) => {
         const newPage = Math.min(Math.max(1, pageNumber + offset), numPages)
@@ -214,30 +216,30 @@ export function PDFViewer({
                         size="sm"
                         className="h-7 text-xs gap-1.5"
                         onClick={() => setViewMode('scroll')}
-                        title="Cuộn dọc tất cả trang"
+                        title={t('fileView:pdf.toolbar.scrollDesc')}
                     >
                         <div className="flex flex-col gap-0.5"><div className="w-3 h-1.5 border border-current rounded-[1px]" /><div className="w-3 h-1.5 border border-current rounded-[1px]" /></div>
-                        Cuộn
+                        {t('fileView:pdf.toolbar.scroll')}
                     </Button>
                     <Button
                         variant={viewMode === 'single' ? 'secondary' : 'ghost'}
                         size="sm"
                         className="h-7 text-xs gap-1.5"
                         onClick={() => setViewMode('single')}
-                        title="Xem từng trang"
+                        title={t('fileView:pdf.toolbar.singleDesc')}
                     >
                         <div className="w-3 h-4 border border-current rounded-[1px]" />
-                        Trang
+                        {t('fileView:pdf.toolbar.single')}
                     </Button>
                     <Button
                         variant={viewMode === 'double' ? 'secondary' : 'ghost'}
                         size="sm"
                         className="h-7 text-xs gap-1.5"
                         onClick={() => setViewMode('double')}
-                        title="Xem 2 trang song song"
+                        title={t('fileView:pdf.toolbar.doubleDesc')}
                     >
                         <div className="flex gap-0.5"><div className="w-2 h-3 border border-current rounded-[1px]" /><div className="w-2 h-3 border border-current rounded-[1px]" /></div>
-                        Trang đôi
+                        {t('fileView:pdf.toolbar.double')}
                     </Button>
                 </div>
 
@@ -286,10 +288,10 @@ export function PDFViewer({
 
                     {/* Rotate & Fullscreen (Desktop only for rotate) */}
                     <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 hidden sm:flex" onClick={rotate} title="Xoay">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 hidden sm:flex" onClick={rotate} title={t('fileView:pdf.toolbar.rotate')}>
                             <RotateCw className="h-3 w-3" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={toggleFullscreen} title="Toàn màn hình">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={toggleFullscreen} title={t('fileView:pdf.toolbar.fullscreen')}>
                             <Maximize2 className="h-3 w-3" />
                         </Button>
                     </div>

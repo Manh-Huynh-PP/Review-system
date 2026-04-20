@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import {
@@ -134,6 +135,7 @@ export function ImageSequenceViewer({
   onToggleFullscreen,
   externalFullscreenRef
 }: ImageSequenceViewerProps) {
+  const { t } = useTranslation()
   const [currentFrame, setCurrentFrame] = useState(externalCurrentFrame !== undefined ? externalCurrentFrame : 0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLooping, setIsLooping] = useState(true)
@@ -504,17 +506,17 @@ export function ImageSequenceViewer({
       <div className="flex items-center justify-between px-4 pb-2 flex-shrink-0 sticky top-0 bg-background/95 backdrop-blur-sm z-30 border-b border-border/50">
         {isAdmin ? (
           <ToggleGroup id="grid-toggle" type="single" value={viewMode} onValueChange={handleViewModeChange}>
-            <ToggleGroupItem value="video" aria-label="Video mode" className="gap-2">
+            <ToggleGroupItem value="video" aria-label={t('fileView:sequence.modes.video')} className="gap-2">
               <Film className="w-4 h-4" />
-              <span className="text-xs">Video</span>
+              <span className="text-xs">{t('fileView:sequence.modes.video')}</span>
             </ToggleGroupItem>
-            <ToggleGroupItem value="carousel" aria-label="Carousel mode" className="gap-2">
+            <ToggleGroupItem value="carousel" aria-label={t('fileView:sequence.modes.carousel')} className="gap-2">
               <Images className="w-4 h-4" />
-              <span className="text-xs">Carousel</span>
+              <span className="text-xs">{t('fileView:sequence.modes.carousel')}</span>
             </ToggleGroupItem>
-            <ToggleGroupItem value="grid" aria-label="Grid mode" className="gap-2">
+            <ToggleGroupItem value="grid" aria-label={t('fileView:sequence.modes.grid')} className="gap-2">
               <Grid3x3 className="w-4 h-4" />
-              <span className="text-xs">Grid</span>
+              <span className="text-xs">{t('fileView:sequence.modes.grid')}</span>
             </ToggleGroupItem>
           </ToggleGroup>
         ) : (
@@ -524,17 +526,17 @@ export function ImageSequenceViewer({
                 {viewMode === 'video' ? (
                   <>
                     <Film className="w-4 h-4" />
-                    <span className="text-xs font-medium">Chế độ Video</span>
+                    <span className="text-xs font-medium">{t('fileView:sequence.modes.video')}</span>
                   </>
                 ) : viewMode === 'carousel' ? (
                   <>
                     <Images className="w-4 h-4" />
-                    <span className="text-xs font-medium">Chế độ Carousel</span>
+                    <span className="text-xs font-medium">{t('fileView:sequence.modes.carousel')}</span>
                   </>
                 ) : (
                   <>
                     <Grid3x3 className="w-4 h-4" />
-                    <span className="text-xs font-medium">Chế độ Grid</span>
+                    <span className="text-xs font-medium">{t('fileView:sequence.modes.grid')}</span>
                   </>
                 )}
               </div>
@@ -544,7 +546,7 @@ export function ImageSequenceViewer({
 
         <div className="flex items-center gap-2">
           <div className="text-xs text-muted-foreground">
-            {viewMode === 'video' ? 'Chế độ phát tự động' : viewMode === 'carousel' ? 'Chế độ xem thủ công' : 'Chế độ lưới'}
+            {viewMode === 'video' ? t('fileView:sequence.modeDesc.video') : viewMode === 'carousel' ? t('fileView:sequence.modeDesc.carousel') : t('fileView:sequence.modeDesc.grid')}
           </div>
 
           {/* Fullscreen Button in Header (Only when not fullscreen AND not in grid mode) */}
@@ -554,7 +556,7 @@ export function ImageSequenceViewer({
               variant="ghost" 
               className="h-8 w-8 hover:bg-muted" 
               onClick={toggleFullscreen} 
-              title="Toàn màn hình"
+              title={t('fileView:toolbar.fullscreen', 'Toàn màn hình')}
             >
               <Maximize2 className="h-4 w-4" />
             </Button>
@@ -623,13 +625,13 @@ export function ImageSequenceViewer({
           </div>
 
           <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm border border-border/50 px-3 py-1.5 rounded-md text-sm font-mono pointer-events-none z-10">
-            Frame {currentFrame + 1} / {frameCount}
+            {t('fileView:sequence.frame')} {currentFrame + 1} / {frameCount}
           </div>
 
           {/* Scrubbing indicator */}
           {isScrubbing && zoom === 1 && (
             <div className="absolute top-4 right-16 bg-primary/90 backdrop-blur-sm border border-primary px-3 py-1.5 rounded-md text-sm font-medium pointer-events-none z-10 text-primary-foreground">
-              Scrubbing...
+              {t('fileView:sequence.scrubbing')}
             </div>
           )}
 
@@ -660,7 +662,7 @@ export function ImageSequenceViewer({
           {!imagesLoaded && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 px-3 py-2 rounded-md">
               <div className="animate-spin h-3 w-3 border-2 border-primary border-t-transparent rounded-full" />
-              <span>Loading frames: {loadedCount} / {frameCount}</span>
+              <span>{t('fileView:sequence.loading', { loaded: loadedCount, total: frameCount })}</span>
             </div>
           )}
 
@@ -741,14 +743,14 @@ export function ImageSequenceViewer({
               variant={isLooping ? "default" : "outline"}
               size="sm"
               onClick={() => setIsLooping(!isLooping)}
-              title="Loop"
+              title={t('fileView:toolbar.loop', 'Loop')}
               disabled={!imagesLoaded}
             >
               <Repeat className="w-4 h-4" />
             </Button>
 
             <div className="flex items-center gap-2 ml-4">
-              <span className="text-xs text-muted-foreground">FPS:</span>
+              <span className="text-xs text-muted-foreground">{t('fileView:video.speed')}:</span>
               <span className="text-sm font-mono font-medium">{fps}</span>
             </div>
           </div>
@@ -758,8 +760,8 @@ export function ImageSequenceViewer({
         <div className="space-y-3 px-4 flex-shrink-0 bg-background/95 backdrop-blur-sm border-t">
           {/* Info Bar */}
           <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/30 px-3 py-2 rounded-md">
-            <span>Tổng số frames: {frameCount}</span>
-            <span>Dùng ← → để điều hướng</span>
+            <span>{t('fileView:sequence.totalFrames')}: {frameCount}</span>
+            <span>{t('fileView:sequence.navigationHint')}</span>
           </div>
 
           {/* Thumbnail Grid */}
@@ -801,7 +803,7 @@ export function ImageSequenceViewer({
               className="flex-1"
             >
               <SkipBack className="w-4 h-4 mr-2" />
-              Đầu
+              {t('fileView:toolbar.first')}
             </Button>
 
             <Button
@@ -811,7 +813,7 @@ export function ImageSequenceViewer({
               className="flex-1"
             >
               <SkipBack className="w-3 h-3 mr-2" />
-              Trước
+              {t('fileView:toolbar.previous')}
             </Button>
 
             <div className="px-4 py-2 bg-muted rounded-md font-mono text-sm min-w-[100px] text-center">
@@ -824,7 +826,7 @@ export function ImageSequenceViewer({
               disabled={currentFrame === frameCount - 1}
               className="flex-1"
             >
-              Sau
+              {t('fileView:toolbar.next')}
               <SkipForward className="w-3 h-3 ml-2" />
             </Button>
 
@@ -834,7 +836,7 @@ export function ImageSequenceViewer({
               disabled={currentFrame === frameCount - 1}
               className="flex-1"
             >
-              Cuối
+              {t('fileView:toolbar.last')}
               <SkipForward className="w-4 h-4 ml-2" />
             </Button>
           </div>
@@ -855,11 +857,11 @@ export function ImageSequenceViewer({
                   }}
                 >
                   <Settings className="w-4 h-4 mr-2" />
-                  {isEditMode ? 'Thoát chỉnh sửa' : 'Chỉnh sửa'}
+                  {isEditMode ? t('fileView:toolbar.exitEdit') : t('fileView:toolbar.edit')}
                 </Button>
                 {isEditMode && (
                   <span className="text-xs text-muted-foreground">
-                    Kéo thả để sắp xếp lại • Click để chọn xoá
+                    {t('fileView:toolbar.reorderHint')} • {t('fileView:toolbar.deleteHint')}
                   </span>
                 )}
               </div>
@@ -870,7 +872,7 @@ export function ImageSequenceViewer({
                   onClick={handleDeleteSelected}
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
-                  Xoá {selectedForDelete.size} hình
+                  {t('fileView:toolbar.deleteCount', { count: selectedForDelete.size })}
                 </Button>
               )}
               {isEditMode && selectedForDelete.size === 0 && (
@@ -883,12 +885,12 @@ export function ImageSequenceViewer({
                   {isUploading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Đang tải...
+                      {t('fileView:toolbar.loading')}
                     </>
                   ) : (
                     <>
                       <Plus className="w-4 h-4 mr-2" />
-                      Thêm frames
+                      {t('fileView:toolbar.addFrames')}
                     </>
                   )}
                 </Button>
@@ -1021,6 +1023,7 @@ function GridFrameCard({
   onCaptionChange?: (caption: string) => void
   renderOverlay?: (frameIndex: number) => React.ReactNode
 }) {
+  const { t } = useTranslation()
   const [isEditingCaption, setIsEditingCaption] = useState(false)
   const [editedCaption, setEditedCaption] = useState(caption || '')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -1105,7 +1108,7 @@ function GridFrameCard({
               }}
             >
               <Edit2 className="w-3 h-3" />
-              Thêm chú thích
+              {t('fileView:toolbar.addCaption')}
             </div>
           )}
         </div>
@@ -1126,13 +1129,13 @@ function GridFrameCard({
                 }}
                 onKeyDown={handleKeyDown}
                 onBlur={handleSaveCaption}
-                placeholder="Nhập chú thích..."
+                placeholder={t('fileView:toolbar.addCaption') + '...'}
                 className="w-full text-xs p-2 bg-muted/50 text-foreground placeholder:text-muted-foreground/50 border border-transparent rounded resize-none focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-all"
                 rows={1}
                 maxLength={500}
               />
               <div className="flex justify-between items-center mt-1 px-1">
-                <span className="text-[10px] text-muted-foreground">Enter để lưu</span>
+                <span className="text-[10px] text-muted-foreground">{t('fileView:toolbar.enterToSave')}</span>
                 <span className="text-[10px] text-muted-foreground">{editedCaption.length}/500</span>
               </div>
             </div>
@@ -1147,7 +1150,7 @@ function GridFrameCard({
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground/50 italic py-1">
-                  {isAdmin ? 'Thêm chú thích...' : 'Chưa có chú thích'}
+                  {isAdmin ? t('fileView:toolbar.addCaption') + '...' : t('fileView:toolbar.noCaption')}
                 </p>
               )}
 
@@ -1196,6 +1199,7 @@ function SortableGridFrameCard({
   onToggleDelete: () => void
   renderOverlay?: (frameIndex: number) => React.ReactNode
 }) {
+  const { t } = useTranslation()
   const {
     attributes,
     listeners,
@@ -1294,7 +1298,7 @@ function SortableGridFrameCard({
               }}
             >
               <Edit2 className="w-3 h-3" />
-              Thêm chú thích
+              {t('fileView:toolbar.addCaption')}
             </div>
           )}
         </div>

@@ -11,6 +11,8 @@ import {
 import { AlertTriangle, Info, AlertCircle, HelpCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+import { useTranslation } from 'react-i18next'
+
 interface ConfirmDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -27,11 +29,14 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  cancelText = "Hủy",
-  confirmText = "Xác nhận",
+  cancelText,
+  confirmText,
   onConfirm,
   variant = 'default'
 }: ConfirmDialogProps) {
+  const { t } = useTranslation('common')
+  const finalCancelText = cancelText || t('actions.cancel')
+  const finalConfirmText = confirmText || t('actions.confirm')
   
   const getIcon = () => {
     switch (variant) {
@@ -54,8 +59,9 @@ export function ConfirmDialog({
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent 
-        overlayClassName="z-[100001]"
-        className="sm:max-w-[425px] overflow-hidden border-none shadow-2xl z-[100002]"
+        overlayClassName="!z-[2147483646] pointer-events-auto!"
+        className="sm:max-w-[425px] overflow-hidden border-none shadow-2xl !z-[2147483647] pointer-events-auto!"
+        style={{ zIndex: 2147483647 }}
       >
         {/* Subtle background glow */}
         <div className={cn(
@@ -87,7 +93,7 @@ export function ConfirmDialog({
             onClick={() => onOpenChange(false)}
             className="flex-1 sm:flex-none border-muted-foreground/20 hover:bg-muted/50 transition-colors"
           >
-            {cancelText}
+            {finalCancelText}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
@@ -97,7 +103,7 @@ export function ConfirmDialog({
             }}
             className={cn("flex-1 sm:flex-none font-semibold shadow-lg transition-all active:scale-95", getActionButtonClass())}
           >
-            {confirmText}
+            {finalConfirmText}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

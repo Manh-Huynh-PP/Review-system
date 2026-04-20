@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, forwardRef, useImperativeHandle, useCallback, memo, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Play, Pause, Volume2, VolumeX, Maximize, StickyNote, Camera, Repeat, PictureInPicture2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import type { Comment } from '@/types'
@@ -53,6 +54,7 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
     muted = false,
     loop = false
 }, ref) => {
+    const { t } = useTranslation()
     // Resolve source URL (Drive vs Direct)
     const effectiveSrc = useMemo(() => {
         const driveInfo = parseDriveUrl(src)
@@ -120,7 +122,7 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
             } catch (error: any) {
                 console.error('Play/Pause error:', error)
                 if (error.name === 'NotSupportedError') {
-                    toast.error('Không thể phát video này. Nếu là link Google Drive, hãy đảm bảo file < 100MB và đã được chia sẻ công khai.')
+                    toast.error(t('fileView:video.errors.playback'))
                 }
             }
         }
@@ -182,7 +184,7 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
             }
         } catch (error) {
             console.error('PiP error:', error)
-            toast.error('Picture-in-Picture không khả dụng')
+            toast.error(t('fileView:video.errors.pip'))
         }
     }, [])
 
@@ -426,7 +428,7 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
         // Handle Google Drive CORS limitation for Canvas
         const driveInfo = parseDriveUrl(src)
         if (driveInfo) {
-            toast.error('Không thể xuất frame cho video từ Google Drive do hạn chế bảo mật (CORS).')
+            toast.error(t('fileView:video.errors.cors'))
             return
         }
 
@@ -460,7 +462,7 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
             // Convert to blob
             canvas.toBlob(async (blob) => {
                 if (!blob) {
-                    toast.error('Không thể xuất frame. Vui lòng thử lại.')
+                    toast.error(t('fileView:video.errors.export'))
                     return
                 }
 
@@ -478,15 +480,15 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
                 try {
                     const item = new ClipboardItem({ 'image/png': blob })
                     await navigator.clipboard.write([item])
-                    toast.success('Đã lưu frame vào clipboard')
+                    toast.success(t('fileView:video.success.copied'))
                 } catch (err) {
                     console.error('Clipboard write failed:', err)
-                    toast.error('Không thể lưu vào clipboard')
+                    toast.error(t('fileView:video.errors.clipboard'))
                 }
             }, 'image/png')
         } catch (error) {
             console.error('Failed to export frame:', error)
-            toast.error('Không thể xuất frame. Vui lòng thử lại.')
+            toast.error(t('fileView:video.errors.export'))
         }
     }, [onExportFrame])
 
@@ -604,7 +606,7 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
                                                 <div className="tooltip-content">{comment.content.substring(0, 100)}</div>
                                                 {comment.annotationData && (
                                                     <div className="tooltip-annotation">
-                                                        📝 Có ghi chú đính kèm
+                                                        📝 {t('fileView:video.markers.annotation')}
                                                     </div>
                                                 )}
                                                 <div className="tooltip-time">{formatTime(comment.timestamp!)}</div>
@@ -618,12 +620,12 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
                     {/* Control buttons */}
                     <div className="controls-bar">
                         <div className="controls-left">
-                            <button onClick={togglePlayPause} className="control-btn" title={isPlaying ? 'Pause' : 'Play'}>
+                            <button onClick={togglePlayPause} className="control-btn" title={isPlaying ? t('common:pause') : t('common:play')}>
                                 {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
                             </button>
 
                             <div className="volume-control">
-                                <button onClick={toggleMute} className="control-btn" title={isMuted ? 'Unmute' : 'Mute'}>
+                                <button onClick={toggleMute} className="control-btn" title={isMuted ? t('common:unmute') : t('common:mute')}>
                                     {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                                 </button>
                                 {!isMobile && (
@@ -648,11 +650,11 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
 
                             {!isMobile && (
                                 <>
-                                    <button onClick={toggleLoop} className={`control-btn ${isLooping ? 'active' : ''}`} title={isLooping ? 'Tắt lặp (L)' : 'Bật lặp (L)'}>
+                                    <button onClick={toggleLoop} className={`control-btn ${isLooping ? 'active' : ''}`} title={isLooping ? t('fileView:video.loop.off') + ' (L)' : t('fileView:video.loop.on') + ' (L)'}>
                                         <Repeat className="w-5 h-5" />
                                     </button>
 
-                                    <button onClick={togglePiP} className="control-btn" title="Picture-in-Picture (P)">
+                                    <button onClick={togglePiP} className="control-btn" title={t('fileView:video.pip') + ' (P)'}>
                                         <PictureInPicture2 className="w-5 h-5" />
                                     </button>
                                 </>
@@ -665,13 +667,13 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
                                     value={playbackRate}
                                     onChange={(e) => handlePlaybackRateChange(Number(e.target.value))}
                                     className="speed-select"
-                                    aria-label="Playback speed"
-                                    title="Playback speed"
+                                    aria-label={t('fileView:video.speed')}
+                                    title={t('fileView:video.speed')}
                                 >
                                     <option value={0.25}>0.25x</option>
                                     <option value={0.5}>0.5x</option>
                                     <option value={0.75}>0.75x</option>
-                                    <option value={1}>Normal</option>
+                                    <option value={1}>{t('fileView:video.normal')}</option>
                                     <option value={1.25}>1.25x</option>
                                     <option value={1.5}>1.5x</option>
                                     <option value={2}>2x</option>
@@ -692,10 +694,10 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
                             />
 
 
-                            <button id="video-controls-export" onClick={handleExportFrame} className="control-btn" title="Xuất frame hiện tại">
+                            <button id="video-controls-export" onClick={handleExportFrame} className="control-btn" title={t('fileView:video.exportFrame')}>
                                 <Camera className="w-5 h-5" />
                             </button>
-                            <button id="video-controls-fullscreen" onClick={toggleFullscreen} className="control-btn" title="Fullscreen">
+                            <button id="video-controls-fullscreen" onClick={toggleFullscreen} className="control-btn" title={t('fileView:toolbar.fullscreen')}>
                                 <Maximize className="w-5 h-5" />
                             </button>
                         </div>

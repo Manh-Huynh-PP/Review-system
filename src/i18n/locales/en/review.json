@@ -1,0 +1,55 @@
+{
+  "access": {
+    "denied": "Invalid or expired link",
+    "required": "This project requires a valid access link (with token).",
+    "tokenInvalid": "Token is invalid or has expired.",
+    "projectDeleted": "This project has been deleted and is no longer available.",
+    "noPermission": "You only have access to the shared file, not this one.",
+    "projectNotFound": "Project not found",
+    "projectNotFoundDesc": "Review link is invalid or the project has been deleted",
+    "archivedDesc": "This project has been archived",
+    "archivedLock": "Comments are locked. Only thumbnails are displayed."
+  },
+  "verification": {
+    "title": "Device Verification",
+    "firstTime": "This is your first time accessing. Please verify your email to link this device.",
+    "notLinked": "This device is not linked. Please enter the OTP code sent to your email.",
+    "sendOtp": "Send verification code",
+    "verify": "Verify",
+    "resend": "Resend code",
+    "failed": "Verification failed",
+    "otpPlaceholder": "Enter OTP code (6 digits)"
+  },
+  "recovery": {
+    "title": "Invited before?",
+    "prompt": "Enter your email to receive a new access code.",
+    "sent": "Enter the verification code sent to {{email}}",
+    "sending": "Sending...",
+    "checking": "Checking...",
+    "access": "Access",
+    "backToEmail": "Back to Email input"
+  },
+  "onboarding": {
+    "welcome": "Welcome to Review",
+    "settings": "Profile Settings",
+    "descNew": "Please enter your name and select an avatar to continue viewing and commenting",
+    "descUpdate": "Update your display name and image",
+    "namePlaceholder": "Enter your name...",
+    "displayName": "Display Name",
+    "selectAvatar": "Select Avatar",
+    "avatarColor": "Avatar Background Color",
+    "continue": "Continue"
+  },
+  "header": {
+    "archived": "Archived",
+    "publicReview": "Public Review",
+    "fileCount": "{{count}} files",
+    "downloadAll": "Download All",
+    "getNotifications": "Get Notifications",
+    "guide": "Guide",
+    "tourReset": "Guided tour status reset. Open any file to see the guide again.",
+    "themeLight": "Light theme",
+    "themeDark": "Dark theme",
+    "language": "Language"
+  }
+}

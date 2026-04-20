@@ -2,7 +2,7 @@ import { useState, useRef, lazy, Suspense, useEffect, useCallback, useMemo } fro
 import { createPortal } from 'react-dom'
 import type { File as FileType } from '@/types'
 import { formatFileSize } from '@/lib/utils'
-import { FileImage, Video, Box, Film, FileText } from 'lucide-react'
+import { FileImage, Video, Box, Film, FileText, ShieldAlert } from 'lucide-react'
 import { startFileTour, hasSeenTour } from '@/lib/fileTours'
 import { UploadDialog } from '@/components/files/UploadDialog'
 import { useZoomPan } from '@/hooks/useZoomPan'
@@ -12,6 +12,7 @@ import { useFileStore } from '@/stores/files'
 import { useVideoComparison } from '@/hooks/useVideoComparison'
 import { useFullscreen } from '@/hooks/useFullscreen'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { MobileFileViewLayout } from './mobile/MobileFileViewLayout'
 import { DragDropUpdateOverlay } from './DragDropUpdateOverlay'
@@ -70,12 +71,17 @@ const getFileTypeIcon = (type: string) => {
   return <FileImage className="w-5 h-5 text-gray-500" />
 }
 
-const getFileTypeLabel = (type: string) => {
-  if (type === 'image') return 'Hình ảnh'; if (type === 'video') return 'Video'; if (type === 'model') return 'Mô hình 3D'; if (type === 'sequence') return 'Image Sequence'; if (type === 'pdf' || type.endsWith('.pdf')) return 'PDF'
-  return 'Tệp tin'
-}
-
 export function FileViewDialogShared(props: Props) {
+  const { t } = useTranslation(['fileView', 'common'])
+  
+  const getFileTypeLabel = (type: string) => {
+    if (type === 'image') return t('types.image')
+    if (type === 'video') return t('types.video')
+    if (type === 'model') return t('types.model')
+    if (type === 'sequence') return t('types.sequence')
+    if (type === 'pdf' || type.endsWith('.pdf')) return t('types.pdf')
+    return t('types.file')
+  }
   const { file, projectId: _projectId, resolvedUrl, open, onOpenChange, onSwitchVersion, onSequenceViewModeChange, comments, currentUserName, onUserNameChange, onAddComment, onResolveToggle, onEditComment, onDeleteComment, isAdmin = false, onCaptionChange, sequenceContext, project, isArchived = false, initialFullscreen = false, onFullscreenChange, portalContainer } = props
 
   const [showComments, setShowComments] = useState(true)
@@ -125,14 +131,13 @@ export function FileViewDialogShared(props: Props) {
   const [droppedFiles, setDroppedFiles] = useState<File[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
   const [confirmClearOpen, setConfirmClearOpen] = useState(false)
-  const [confirmStopTourOpen, setConfirmStopTourOpen] = useState(false)
   const isMobile = useIsMobile()
   const resizingState = useRef({ startX: 0, startWidth: 350 })
   const getShareLink = useCallback(() => `${window.location.origin}/share/p/${_projectId}/file/${file?.id}`, [_projectId, file?.id])
   const copyShareLink = useCallback(async () => {
-    try { await navigator.clipboard.writeText(getShareLink()); setCopied(true); toast.success('Đã sao chép link!'); setTimeout(() => setCopied(false), 2000) } 
-    catch (err) { toast.error('Lỗi sao chép') }
-  }, [getShareLink])
+    try { await navigator.clipboard.writeText(getShareLink()); setCopied(true); toast.success(t('common:actions.copied')); setTimeout(() => setCopied(false), 2000) } 
+    catch (err) { toast.error(t('common:status.error')) }
+  }, [getShareLink, t])
 
   const filesFromStore = useFileStore(state => state.files)
   const currentVersionData = file ? filesFromStore.find(f => f.id === file.id)?.versions.find(v => v.version === currentVersion) : null
@@ -140,13 +145,12 @@ export function FileViewDialogShared(props: Props) {
 
   const handleStartTour = () => { 
     if (file) {
-      // Pass a way to trigger confirmation from non-react driver.js
-      (window as any).triggerTourStopConfirmation = () => setConfirmStopTourOpen(true)
       startFileTour({ 
         fileType: file.type as any, 
         isMobile, 
         isAdmin, 
-        sequenceViewMode: file.sequenceViewMode 
+        sequenceViewMode: sequenceViewMode || 'video',
+        t
       }) 
     } 
   }
@@ -209,13 +213,13 @@ export function FileViewDialogShared(props: Props) {
 
   const handleDownload = async (e: React.MouseEvent<any>, mu?: string, mv?: any) => {
     e.preventDefault(); const u = mu || latestUrl; const v = mv || latestVersion; if (!u) return
-    const tid = toast.loading('Đang tải... 0%')
+    const tid = toast.loading(`${t('common:status.loading')} 0%`)
     try {
       const xhr = new XMLHttpRequest(); xhr.open('GET', u, true); xhr.responseType = 'blob'
-      xhr.onprogress = (ev) => { if (ev.lengthComputable) toast.loading(`Đang tải... ${Math.round((ev.loaded / ev.total) * 100)}%`, { id: tid }) }
-      xhr.onload = () => { if (xhr.status === 200) { const b = xhr.response; const url = window.URL.createObjectURL(b); const l = document.createElement('a'); l.href = url; l.download = ensureFileExtension(file.name, u, v?.metadata?.type, file.type); document.body.appendChild(l); l.click(); l.remove(); window.URL.revokeObjectURL(url); toast.success('Xong!', { id: tid }) } else { toast.error('Lỗi', { id: tid }); window.open(u, '_blank') } }
-      xhr.onerror = () => { toast.error('Lỗi', { id: tid }); window.open(u, '_blank') }; xhr.send()
-    } catch { toast.error('Lỗi', { id: tid }); window.open(u, '_blank') }
+      xhr.onprogress = (ev) => { if (ev.lengthComputable) toast.loading(`${t('common:status.loading')} ${Math.round((ev.loaded / ev.total) * 100)}%`, { id: tid }) }
+      xhr.onload = () => { if (xhr.status === 200) { const b = xhr.response; const url = window.URL.createObjectURL(b); const l = document.createElement('a'); l.href = url; l.download = ensureFileExtension(file.name, u, v?.metadata?.type, file.type); document.body.appendChild(l); l.click(); l.remove(); window.URL.revokeObjectURL(url); toast.success(t('common:status.success'), { id: tid }) } else { toast.error(t('common:status.error'), { id: tid }); window.open(u, '_blank') } }
+      xhr.onerror = () => { toast.error(t('common:status.error'), { id: tid }); window.open(u, '_blank') }; xhr.send()
+    } catch { toast.error(t('common:status.error'), { id: tid }); window.open(u, '_blank') }
   }
 
   const fileComments = showOnlyCurrentTimeComments && ['video','sequence','pdf'].includes(file.type) ? allFileComments.filter(c => {
@@ -305,8 +309,14 @@ export function FileViewDialogShared(props: Props) {
   const renderAnnotationOverlay = () => (!isAnnotating || sequenceViewMode === 'grid') ? null : <AnnotationCanvasKonva mode={isReadOnly ? 'read' : 'edit'} data={annotationData || []} tool={annotationTool} color={annotationColor} strokeWidth={annotationStrokeWidth} onChange={d => !isReadOnly && handleAnnotationChange(d)} />
 
   const renderFilePreview = () => {
-    if (!effectiveUrl) return <div>Không thể tải file</div>
-    if (current?.validationStatus === 'infected') return <div>FILE CÓ MÃ ĐỘC</div>
+    if (!effectiveUrl) return <div className="p-8 text-center text-muted-foreground">{t('errors.loadFailed')}</div>
+    if (current?.validationStatus === 'infected') return (
+      <div className="p-12 text-center max-w-lg mx-auto space-y-4">
+        <ShieldAlert className="w-16 h-16 text-destructive mx-auto" />
+        <h3 className="text-xl font-bold text-destructive uppercase tracking-tight">{t('security.infected')}</h3>
+        <p className="text-muted-foreground leading-relaxed">{t('security.infectedDesc')}</p>
+      </div>
+    )
     const isPdf = file.type === 'pdf' || file.name.toLowerCase().endsWith('.pdf') || current?.metadata?.type === 'application/pdf'
     if (isPdf) return <PDFPreviewMode url={effectiveUrl} currentPage={pdfPage} onPageChange={p => { setPdfPage(p); setCurrentFrame(p) }} annotationOverlay={renderAnnotationOverlay()} />
     if (file.type === 'image') {
@@ -323,8 +333,8 @@ export function FileViewDialogShared(props: Props) {
       const parseDriveUrl = (u:string) => { const mt = u.match(/drive\.google\.com\/file\/d\/([^/]+)/); return mt ? { id: mt[1] } : null }
       return <StandardVideoPreview file={file} effectiveUrl={effectiveUrl} allFileComments={allFileComments} currentTime={currentTime} videoFps={videoFps} videoDuration={videoDuration} navMode={navMode} setNavMode={setNavMode} isPlaying={isPlaying} driveInfo={parseDriveUrl(effectiveUrl)} handleTimeUpdate={handleTimeUpdate} handleCommentMarkerClick={c => { setCurrentTime(c.timestamp || 0); if (c.annotationData) handleViewAnnotation(c.annotationData, c) }} handleFullscreenChange={handleFullscreenChange} handleLoadedMetadata={handleLoadedMetadata} handleVideoPlay={handleVideoPlay} handleVideoPause={handleVideoPause} renderAnnotationOverlay={renderAnnotationOverlay} handleNextFrame={() => setCurrentTime(p => Math.min(videoDuration, p + 1/videoFps))} handlePrevFrame={() => setCurrentTime(p => Math.max(0, p - 1/videoFps))} handleSkipForward={() => setCurrentTime(p => Math.min(videoDuration, p+5))} handleSkipBackward={() => setCurrentTime(p => Math.max(0, p-5))} handleNextMarker={() => { const n = m.find(x => x.timestamp! > currentTime); if (n) setCurrentTime(n.timestamp!) }} handlePrevMarker={() => { const p = [...m].reverse().find(x => x.timestamp! < currentTime); if (p) setCurrentTime(p.timestamp!) }} handleFirstMarker={() => m.length > 0 && setCurrentTime(m[0].timestamp!)} handleLastMarker={() => m.length > 0 && setCurrentTime(m[m.length-1].timestamp!)} />
     }
-    if (file.type === 'model') return <div className="relative h-[70vh] w-full"><Suspense fallback={<div>Loading...</div>}><GLBViewer ref={glbViewerRef} url={effectiveUrl} className="w-full h-full" initialCameraState={current?.cameraState} isAdmin={isAdmin} initialRenderSettings={current?.renderSettings} onSaveSettings={handleSaveRenderSettings} /></Suspense>{renderAnnotationOverlay()}{isAdmin && <div className="absolute top-4 right-4"><Button disabled={savingThumbnail} onClick={async () => { const cam = glbViewerRef.current?.getCameraState(); const snap = glbViewerRef.current?.captureScreenshot(); if (cam && snap) { setSavingThumbnail(true); try { await useFileStore.getState().setModelThumbnail(_projectId, file.id, currentVersion, snap, cam) } finally { setSavingThumbnail(false) } } }}>{savingThumbnail ? 'Đang lưu...' : 'Set Thumbnail'}</Button></div>}</div>
-    return <div>Không hỗ trợ xem loại file này</div>
+    if (file.type === 'model') return <div className="relative h-[70vh] w-full"><Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground">{t('common:status.loading')}</div>}><GLBViewer ref={glbViewerRef} url={effectiveUrl} className="w-full h-full" initialCameraState={current?.cameraState} isAdmin={isAdmin} initialRenderSettings={current?.renderSettings} onSaveSettings={handleSaveRenderSettings} /></Suspense>{renderAnnotationOverlay()}{isAdmin && <div className="absolute top-4 right-4"><Button disabled={savingThumbnail} onClick={async () => { const cam = glbViewerRef.current?.getCameraState(); const snap = glbViewerRef.current?.captureScreenshot(); if (cam && snap) { setSavingThumbnail(true); try { await useFileStore.getState().setModelThumbnail(_projectId, file.id, currentVersion, snap, cam) } finally { setSavingThumbnail(false) } } }}>{savingThumbnail ? t('common:status.loading') : 'Set Thumbnail'}</Button></div>}</div>
+    return <div className="p-8 text-center text-muted-foreground">Không hỗ trợ xem loại file này</div>
   }
 
 
@@ -433,32 +443,13 @@ export function FileViewDialogShared(props: Props) {
       <ConfirmDialog
         open={confirmClearOpen}
         onOpenChange={setConfirmClearOpen}
-        title="Xóa tất cả ghi chú?"
-        description="Hành động này sẽ xóa toàn bộ các nét vẽ hiện tại trên file này. Bạn có chắc chắn muốn tiếp tục?"
-        confirmText="Xóa ngay"
+        title={t('comments.resolve') + "?"}
+        description={t('fileView:tour.stopDesc')}
+        confirmText={t('common:actions.delete')}
         variant="destructive"
         onConfirm={handleActualClearAnnotations}
       />
 
-      <ConfirmDialog
-        open={confirmStopTourOpen}
-        onOpenChange={setConfirmStopTourOpen}
-        title="Dừng hướng dẫn?"
-        description="Bạn có chắc chắn muốn ngắt quá trình hướng dẫn sử dụng này không?"
-        confirmText="Dừng hướng dẫn"
-        variant="warning"
-        onConfirm={() => {
-          setConfirmStopTourOpen(false)
-          // Look for driver.js close button and click it to properly destroy tour
-          const closeBtn = document.querySelector('.driver-popover-close-btn') as HTMLElement
-          if (closeBtn) closeBtn.click()
-          else {
-            // Fallback if button not found
-            const destroyEvent = new CustomEvent('tour:destroy')
-            window.dispatchEvent(destroyEvent)
-          }
-        }}
-      />
     </>
   )
 }

@@ -1,0 +1,259 @@
+{
+  "types": {
+    "image": "Hình ảnh",
+    "video": "Video",
+    "model": "Mô hình 3D",
+    "sequence": "Image Sequence",
+    "pdf": "PDF",
+    "file": "Tệp tin"
+  },
+  "toolbar": {
+    "download": "Tải xuống",
+    "share": "Chia sẻ",
+    "version": "Phiên bản",
+    "current": "hiện tại",
+    "compare": "So sánh",
+    "annotate": "Ghi chú",
+    "resetZoom": "Reset Zoom",
+    "uploadNew": "Tải lên bản mới",
+    "first": "Đầu",
+    "last": "Cuối",
+    "previous": "Trước",
+    "next": "Sau",
+    "edit": "Chỉnh sửa",
+    "exitEdit": "Thoát chỉnh sửa",
+    "saving": "Đang lưu...",
+    "loading": "Đang tải...",
+    "details": "Chi tiết",
+    "viewDetails": "Xem chi tiết",
+    "addCaption": "Thêm chú thích",
+    "noCaption": "Chưa có chú thích",
+    "enterToSave": "Enter để lưu",
+    "reorderHint": "Kéo thả để sắp xếp lại",
+    "deleteHint": "Click để chọn xoá",
+    "deleteCount": "Xoá {{count}} hình",
+    "addFrames": "Thêm frames",
+    "fileDetails": "Chi tiết file: {{name}}",
+    "addAnnotation": "Thêm ghi chú",
+    "drawing": "Đang vẽ...",
+    "filtering": "Đang lọc",
+    "filterTime": "Lọc thời gian"
+  },
+  "comments": {
+    "title": "Góp ý",
+    "hide": "Ẩn",
+    "show": "Hiện",
+    "empty": "Chưa có góp ý nào. Hãy là người đầu tiên!",
+    "addComment": "Thêm góp ý...",
+    "reply": "Trả lời",
+    "resolve": "Giải quyết",
+    "resolved": "Đã giải quyết",
+    "unresolve": "Chưa giải quyết",
+    "reopen": "Mở lại",
+    "timestamp": "Mốc thời gian",
+    "deleteVersion": "Xóa phiên bản",
+    "deleteVersionConfirm": "Bạn có chắc chắn muốn xóa phiên bản này? Hành động này không thể hoàn tác và tất cả bình luận liên quan đến phiên bản này sẽ bị mất.",
+    "allVersions": "Tất cả phiên bản",
+    "currentVersionOnly": "Phiên bản hiện tại",
+    "filteringByTime": "(Đang lọc theo thời gian hiện tại)",
+    "allVersionsEnabled": "(Đã bật xem tất cả phiên bản)",
+    "archivedLocked": "Dự án đã lưu trữ. Không thể bình luận.",
+    "featureLocked": "Tính năng bình luận đang tạm khóa.",
+    "placeholder": "Viết bình luận...",
+    "placeholderTimestamp": "Viết bình luận (có gắn thời gian)...",
+    "placeholderReply": "Trả lời {{name}}...",
+    "send": "Gửi",
+    "sending": "Đang gửi...",
+    "cancel": "Hủy",
+    "save": "Lưu",
+    "saving": "Đang lưu...",
+    "edit": "Sửa",
+    "delete": "Xóa",
+    "pin": "Ghim",
+    "unpin": "Bỏ ghim",
+    "edited": "(đã sửa)",
+    "deleteConfirmTitle": "Xóa bình luận?",
+    "deleteConfirmDesc": "Bạn có chắc chắn muốn xóa bình luận này? Hành động này không thể hoàn tác.",
+    "deleteConfirmButton": "Xóa",
+    "tooShort": "Bình luận quá ngắn (tối thiểu 5 ký tự)",
+    "tooLong": "Bình luận quá dài (tối đa 2000 ký tự)",
+    "nameTooLong": "Tên quá dài (tối đa 100 ký tự)",
+    "antiSpam": "Vui lòng đợi một lát trước khi gửi lại",
+    "namePlaceholder": "Tên của bạn",
+    "displayName": "Tên hiển thị",
+    "enterDisplayName": "Nhập tên hiển thị",
+    "enterContent": "Nhập nội dung",
+    "attachTitle": "Đính kèm file",
+    "attachAria": "Chọn file đính kèm",
+    "linkTitle": "Chèn liên kết",
+    "cameraSave": "Lưu góc nhìn hiện tại",
+    "cameraSaved": "Đã lưu",
+    "drawTitle": "Thêm ghi chú vẽ",
+    "drawn": "Đã vẽ",
+    "infected": "File nhiễm virus - Bị chặn",
+    "scannerError": "Lỗi quét virus",
+    "frame": "Khung hình {{number}}",
+    "download": "Tải xuống"
+  },
+  "security": {
+    "infected": "FILE CÓ MÃ ĐỘC",
+    "infectedDesc": "Hệ thống phát hiện file này có chứa mã độc hoặc vi phạm chính sách bảo mật. Để đảm bảo an toàn, file này đã bị chặn và không thể xem.",
+    "pending": "Đang kiểm tra bảo mật...",
+    "pendingDesc": "Hệ thống đang quét virus và kiểm tra định dạng file. Vui lòng đợi trong giây lát."
+  },
+  "errors": {
+    "loadFailed": "Không thể tải file"
+  },
+  "tour": {
+    "stopTitle": "Dừng hướng dẫn?",
+    "stopDesc": "Bạn có chắc chắn muốn ngắt quá trình hướng dẫn sử dụng này không?",
+    "stopConfirm": "Dừng hướng dẫn"
+  },
+  "sharing": {
+    "title": "Chia sẻ dự án",
+    "anyoneWithLink": "Bất kỳ ai có link đều có thể xem",
+    "copied": "Đã sao chép link!"
+  },
+  "sequence": {
+    "modes": {
+      "video": "Chế độ Video",
+      "carousel": "Chế độ Carousel",
+      "grid": "Chế độ Lưới"
+    },
+    "modeDesc": {
+      "video": "Chế độ phát tự động",
+      "carousel": "Chế độ xem thủ công",
+      "grid": "Chế độ lưới"
+    },
+    "totalFrames": "Tổng số frames",
+    "navigationHint": "Dùng ← → để điều hướng",
+    "scrubbing": "Đang duyệt...",
+    "loading": "Đang tải các frame: {{loaded}} / {{total}}",
+    "frame": "Khung hình"
+  },
+  "video": {
+    "speed": "Tốc độ",
+    "normal": "Bình thường",
+    "loop": {
+      "on": "Bật lặp",
+      "off": "Tắt lặp"
+    },
+    "pip": "Ảnh trong ảnh",
+    "exportFrame": "Xuất khung hình",
+    "settings": {
+      "title": "Cài đặt Overlay",
+      "appearance": "Hiển thị",
+      "color": "Màu sắc",
+      "opacity": "Độ mờ",
+      "safeZone": "Vùng an toàn",
+      "none": "Không hiển thị",
+      "upload": "Tải lên Safe Zone",
+      "noSafeZones": "Không có safe zone cho định dạng này",
+      "guides": "Bố cục mẫu",
+      "groups": {
+        "center": "Tâm",
+        "golden": "Tỷ lệ vàng",
+        "harmony": "Cân bằng",
+        "other": "Khác"
+      },
+      "labels": {
+        "center": "Tâm",
+        "thirds": "1/3",
+        "diagonal": "Chéo",
+        "ratio": "Tỷ lệ",
+        "triangleA": "Tam giác A",
+        "triangleB": "Tam giác B"
+      }
+    },
+    "errors": {
+      "playback": "Không thể phát video này. Hãy kiểm tra lại file hoặc quyền truy cập.",
+      "pip": "Picture-in-Picture không khả dụng",
+      "cors": "Không thể xuất hình do hạn chế bảo mật (CORS)",
+      "export": "Lỗi khi xuất hình. Vui lòng thử lại.",
+      "clipboard": "Không thể lưu vào clipboard",
+      "pngOnly": "Chỉ chấp nhận file PNG"
+    },
+    "success": {
+      "copied": "Đã lưu vào clipboard"
+    },
+    "markers": {
+      "annotation": "Có ghi chú đính kèm"
+    }
+  },
+  "glb": {
+    "loading": "Đang tải mô hình...",
+    "errors": {
+      "webgl": "Lỗi khi truy cập ngữ cảnh WebGL (CORS/Tainted).",
+      "screenshot": "Lỗi khi chụp ảnh. Vui lòng thử lại.",
+      "processing": "Lỗi khi xử lý ảnh.",
+      "shareCancelled": "Đã hủy chia sẻ"
+    },
+    "success": {
+      "shareOpened": "Đã mở chia sẻ ảnh",
+      "copied": "đã sao chép",
+      "downloaded": "đã tải xuống",
+      "generic": "Thành công"
+    },
+    "processing": "Đang xử lý ảnh...",
+    "toolbar": {
+      "reset": "Đặt lại Camera",
+      "resetDesc": "Đặt lại góc nhìn về ban đầu",
+      "screenshot": "Chụp ảnh màn hình",
+      "screenshotDesc": "Chụp ảnh màn hình 3D và tải về",
+      "ar": "Xem thực tế ảo (AR)",
+      "render": "Chế độ hiển thị",
+      "lighting": "Cài đặt ánh sáng & Môi trường",
+      "advanced": "Tùy chỉnh nâng cao",
+      "environment": "Môi trường",
+      "exposure": "Độ phơi sáng",
+      "shadows": "Độ đổ bóng",
+      "tonemapping": "Tone Mapping",
+      "autoRotate": "Tự động xoay",
+      "contactShadow": "Đổ bóng bề mặt",
+      "screenshotSuccess": "Đã chụp ảnh màn hình",
+      "screenshotError": "Lỗi khi chụp ảnh",
+      "setThumbnail": "Đặt làm ảnh nền",
+      "showAr": "Xem AR trên thiết bị di động",
+      "wireframe": "Dây (Wireframe)",
+      "standard": "Mặc định (Standard)",
+      "matcap": "Đổ bóng (Matcap)",
+      "lightingSettings": "Cài đặt ánh sáng",
+      "envSettings": "Cài đặt môi trường",
+      "lightIntensity": "Cường độ sáng",
+      "lightColor": "Màu sắc ánh sáng",
+      "envIntensity": "Cường độ môi trường",
+      "envBlur": "Độ nhòe môi trường",
+      "showBackground": "Hiển thị nền",
+      "lightBg": "Nền sáng",
+      "darkBg": "Nền tối",
+      "collapse": "Thu gọn",
+      "expand": "Mở rộng",
+      "rotate": "Xoay",
+      "pan": "Di chuyển",
+      "rotateDesc": "Kéo chuột để xoay mô hình 3D",
+      "panDesc": "Kéo chuột để di chuyển mô hình",
+      "envBrightness": "Độ sáng MT",
+      "lightBrightness": "Độ sáng đèn",
+      "bloom": "Hiệu ứng Bloom",
+      "playing": "Đang chạy",
+      "paused": "Tạm dừng",
+      "defaultView": "Góc nhìn mặc định",
+      "chooseCamera": "Chọn camera",
+      "displayMode": "Chế độ hiển thị",
+      "config": "Cấu hình hiển thị"
+    }
+  },
+  "pdf": {
+    "error": "Không thể tải file PDF: {{message}}",
+    "toolbar": {
+      "scroll": "Cuộn",
+      "scrollDesc": "Cuộn dọc tất cả trang",
+      "single": "Trang",
+      "singleDesc": "Xem từng trang",
+      "double": "Trang đôi",
+      "doubleDesc": "Xem 2 trang song song",
+      "rotate": "Xoay",
+      "fullscreen": "Toàn màn hình"
+    }
+  }
+}

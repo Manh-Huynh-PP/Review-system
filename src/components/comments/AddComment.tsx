@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { RichTextarea, type RichTextareaRef } from '@/components/ui/rich-textarea'
@@ -41,6 +42,7 @@ export function AddComment({
     canCaptureView,
     isMobile = false
 }: AddCommentProps) {
+    const { t } = useTranslation(['fileView', 'common'])
     const [userName, setUserName] = useState(initialUserName || '')
     const [content, setContent] = useState('')
     const [submitting, setSubmitting] = useState(false)
@@ -120,23 +122,23 @@ export function AddComment({
 
         // Minimum time check (human users take time to type)
         if (timeSpent < 3000) {
-            toast.error('Vui lòng đợi một chút trước khi gửi bình luận')
+            toast.error(t('fileView:comments.antiSpam'))
             return
         }
 
         // Content length validation
         if (content.trim().length < 5) {
-            toast.error('Bình luận quá ngắn (tối thiểu 5 ký tự)')
+            toast.error(t('fileView:comments.tooShort'))
             return
         }
 
         if (content.trim().length > 2000) {
-            toast.error('Bình luận quá dài (tối đa 2000 ký tự)')
+            toast.error(t('fileView:comments.tooLong'))
             return
         }
 
         if (userName.trim().length > 100) {
-            toast.error('Tên quá dài (tối đa 100 ký tự)')
+            toast.error(t('fileView:comments.nameTooLong'))
             return
         }
 
@@ -289,7 +291,7 @@ export function AddComment({
 
             {!initialUserName && (
                 <Input
-                    placeholder="Tên của bạn"
+                    placeholder={t('fileView:comments.namePlaceholder')}
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}
                     required
@@ -301,8 +303,8 @@ export function AddComment({
                 <RichTextarea
                     ref={textareaRef}
                     placeholder={showTimestamp
-                        ? 'Viết bình luận (sẽ gắn thẻ thời gian hiện tại)...'
-                        : 'Viết bình luận...'}
+                        ? t('fileView:comments.placeholderTimestamp')
+                        : t('fileView:comments.placeholder')}
                     value={content}
                     onChange={async (val) => {
                         // Attempt to wrap URL when user types a space after it
@@ -377,7 +379,7 @@ export function AddComment({
                             accept="image/*,.pdf,.txt,.doc,.docx"
                             onChange={handleFileSelect}
                             className="hidden"
-                            aria-label="Chọn file đính kèm"
+                            aria-label={t('fileView:comments.attachAria', { defaultValue: 'Chọn file đính kèm' })}
                         />
 
                         <Button
@@ -387,7 +389,7 @@ export function AddComment({
                             variant="ghost"
                             onClick={() => fileInputRef.current?.click()}
                             className="h-8 px-2 text-muted-foreground hover:text-foreground"
-                            title="Đính kèm file"
+                            title={t('fileView:comments.attachTitle')}
                         >
                             <Image className="w-4 h-4" />
                         </Button>
@@ -400,7 +402,7 @@ export function AddComment({
                             variant="ghost"
                             onClick={() => setShowLinkDialog(true)}
                             className="h-8 px-2 text-muted-foreground hover:text-foreground"
-                            title="Chèn liên kết"
+                            title={t('fileView:comments.linkTitle')}
                         >
                             <LinkIcon className="w-4 h-4" />
                         </Button>
@@ -412,10 +414,10 @@ export function AddComment({
                                 variant={captureView ? 'secondary' : 'ghost'}
                                 onClick={() => setCaptureView(!captureView)}
                                 className={`h - 8 px - 2 ${!captureView ? 'text-muted-foreground hover:text-foreground' : ''} `}
-                                title={captureView ? 'Đã lưu góc nhìn' : 'Lưu góc nhìn hiện tại'}
+                                title={captureView ? t('fileView:comments.cameraSaved') : t('fileView:comments.cameraSave')}
                             >
                                 <Camera className="w-4 h-4 mr-1" />
-                                {captureView && <span className="text-xs">Đã lưu</span>}
+                                {captureView && <span className="text-xs">{t('fileView:comments.cameraSaved')}</span>}
                             </Button>
                         )}
 
@@ -427,10 +429,10 @@ export function AddComment({
                                 variant={hasAnnotations ? 'secondary' : 'ghost'}
                                 onClick={onAnnotationClick}
                                 className={`h - 8 px - 2 ${!hasAnnotations ? 'text-muted-foreground hover:text-foreground' : ''} `}
-                                title={hasAnnotations ? `${annotationData.length} annotations` : 'Add annotation'}
+                                title={hasAnnotations ? t('fileView:comments.drawn') : t('fileView:comments.drawTitle')}
                             >
                                 <PenTool className="w-4 h-4 mr-1" />
-                                {hasAnnotations && <span className="text-xs">Đã vẽ</span>}
+                                {hasAnnotations && <span className="text-xs">{t('fileView:comments.drawn')}</span>}
                             </Button>
                         )}
                     </div>
@@ -445,12 +447,12 @@ export function AddComment({
                             <span className="flex items-center">
                                 {/* Simple spinner using animate-spin */}
                                 <span className="mr-2 inline-block h-3 w-3 rounded-full border border-current border-t-transparent animate-spin" aria-hidden="true" />
-                                Đang gửi...
+                                {t('fileView:comments.sending')}
                             </span>
                         ) : (
                             <span className="flex items-center">
                                 <Send className="w-3 h-3 mr-2" />
-                                Gửi
+                                {t('fileView:comments.send')}
                             </span>
                         )}
                     </Button>

@@ -1,4 +1,5 @@
 import { useState, useRef, Suspense, forwardRef, useImperativeHandle, useLayoutEffect, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls, Environment, Html, useGLTF, Center, useMatcapTexture, useAnimations, useProgress } from '@react-three/drei'
 import { Button } from '@/components/ui/button'
@@ -60,6 +61,7 @@ const MATCAP_TEXTURES: Record<MatcapType, string> = {
 
 // Loading progress component inside Canvas
 function Loader() {
+  const { t } = useTranslation()
   const { progress, active } = useProgress()
   const [visible, setVisible] = useState(false)
   const [displayProgress, setDisplayProgress] = useState(0)
@@ -90,7 +92,7 @@ function Loader() {
   return (
     <Html center>
       <div className="flex flex-col items-center gap-2 bg-background/90 backdrop-blur px-6 py-4 rounded-lg shadow-lg border min-w-[200px]">
-        <div className="text-sm font-medium text-foreground">Đang tải mô hình...</div>
+        <div className="text-sm font-medium text-foreground">{t('fileView:glb.loading')}</div>
         <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
           <div
             className="h-full bg-primary transition-all duration-300 ease-out"
@@ -407,6 +409,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
   initialRenderSettings,
   onSaveSettings
 }, ref) => {
+  const { t } = useTranslation()
   // Initialize state with defaults or provided settings
   const [gamma, setGamma] = useState(initialRenderSettings?.gamma ?? 1)
   const [autoRotate, setAutoRotate] = useState(initialAutoRotate)
@@ -499,12 +502,12 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
       dataUrl = internalRef.current?.captureScreenshot() ?? null
     } catch (e) {
       console.error(e)
-      toast.error('Lỗi khi truy cập ngữ cảnh WebGL (CORS/Tainted).')
+      toast.error(t('fileView:glb.errors.webgl'))
       return
     }
 
     if (!dataUrl) {
-      toast.error('Không thể chụp ảnh. Vui lòng thử lại.')
+      toast.error(t('fileView:glb.errors.screenshot'))
       return
     }
 
@@ -555,9 +558,9 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                 files: [file],
                 title: '3D View Screenshot',
               })
-              return 'Đã mở chia sẻ ảnh'
+              return t('fileView:glb.success.shareOpened')
             } catch (err) {
-              if ((err as Error).name === 'AbortError') throw new Error('Đã hủy chia sẻ')
+              if ((err as Error).name === 'AbortError') throw new Error(t('fileView:glb.errors.shareCancelled'))
             }
           }
         }
@@ -573,7 +576,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                 [blob.type]: blob
               })
             ])
-            results.push('đã sao chép')
+            results.push(t('fileView:glb.success.copied'))
           }
         } catch (err) {
           console.warn('Clipboard write failed', err)
@@ -585,15 +588,15 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
         link.download = `3d-view-${timestamp}.png`
         link.href = finalDataUrl!
         link.click()
-        results.push('đã tải xuống')
+        results.push(t('fileView:glb.success.downloaded'))
 
-        return 'Thành công: ' + results.join(' & ')
+        return t('fileView:glb.success.generic') + ': ' + results.join(' & ')
 
       })(),
       {
-        loading: 'Đang xử lý ảnh...',
+        loading: t('fileView:glb.processing'),
         success: (msg) => msg,
-        error: (err) => err.message || 'Lỗi chụp ảnh'
+        error: (err) => err.message || t('fileView:glb.errors.screenshot')
       }
     )
   }
@@ -675,7 +678,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
               size="icon"
               className="h-6 w-6 rounded-full opacity-50 hover:opacity-100"
               onClick={() => setIsExpanded(!isExpanded)}
-              title={isExpanded ? "Thu gọn" : "Mở rộng"}
+              title={isExpanded ? t('fileView:glb.toolbar.collapse') : t('fileView:glb.toolbar.expand')}
             >
               {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </Button>
@@ -692,12 +695,12 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
             )}
             onClick={() => {
               setInteractionMode('rotate');
-              if (!isExpanded) toast('Chế độ Xoay', { icon: '🔄', duration: 1500 });
+              if (!isExpanded) toast(t('fileView:glb.toolbar.rotate'), { icon: '🔄', duration: 1500 });
             }}
-            title="Kéo chuột để xoay mô hình 3D"
+            title={t('fileView:glb.toolbar.rotateDesc')}
           >
             <Hand className="h-4 w-4 shrink-0" />
-            {isExpanded && <span className="text-xs font-medium truncate">Xoay</span>}
+            {isExpanded && <span className="text-xs font-medium truncate">{t('fileView:glb.toolbar.rotate')}</span>}
           </Button>
 
           <Button
@@ -710,12 +713,12 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
             )}
             onClick={() => {
               setInteractionMode('pan');
-              if (!isExpanded) toast('Chế độ Di chuyển', { icon: '↔️', duration: 1500 });
+              if (!isExpanded) toast(t('fileView:glb.toolbar.pan'), { icon: '↔️', duration: 1500 });
             }}
-            title="Kéo chuột để di chuyển mô hình"
+            title={t('fileView:glb.toolbar.panDesc')}
           >
             <Move className="h-4 w-4 shrink-0" />
-            {isExpanded && <span className="text-xs font-medium truncate">Di chuyển</span>}
+            {isExpanded && <span className="text-xs font-medium truncate">{t('fileView:glb.toolbar.pan')}</span>}
           </Button>
 
           <div className="h-px bg-border my-1" />
@@ -729,10 +732,10 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
               isExpanded ? "justify-start px-3 gap-2" : "justify-center w-full px-0"
             )}
             onClick={handleReset}
-            title="Đặt lại góc nhìn về ban đầu"
+            title={t('fileView:glb.toolbar.resetDesc')}
           >
             <RefreshCcw className="h-4 w-4 shrink-0" />
-            {isExpanded && <span className="text-xs font-medium truncate">Đặt lại</span>}
+            {isExpanded && <span className="text-xs font-medium truncate">{t('fileView:glb.toolbar.reset')}</span>}
           </Button>
 
           <Button
@@ -744,10 +747,10 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
               isExpanded ? "justify-start px-3 gap-2" : "justify-center w-full px-0"
             )}
             onClick={handleScreenshot}
-            title="Chụp ảnh màn hình 3D và tải về"
+            title={t('fileView:glb.toolbar.screenshotDesc')}
           >
             <Camera className="h-4 w-4 shrink-0" />
-            {isExpanded && <span className="text-xs font-medium truncate">Chụp ảnh</span>}
+            {isExpanded && <span className="text-xs font-medium truncate">{t('fileView:glb.toolbar.screenshot')}</span>}
           </Button>
         </div>
       </div>
@@ -763,7 +766,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
             size="icon"
             className="h-8 w-8 rounded-full"
             onClick={() => setAutoRotate(!autoRotate)}
-            title="Tự động xoay"
+            title={t('fileView:glb.toolbar.autoRotate')}
           >
             <Rotate3d className="h-4 w-4" />
           </Button>
@@ -778,20 +781,20 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                 variant={renderMode !== 'standard' ? "secondary" : "ghost"}
                 size="icon"
                 className="h-8 w-8 rounded-full"
-                title="Chế độ hiển thị"
+                title={t('fileView:glb.toolbar.displayMode')}
               >
                 {renderMode === 'matcap' ? <Circle className="h-4 w-4" /> : <Box className="h-4 w-4" />}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="center">
               <DropdownMenuItem onClick={() => setRenderMode('standard')}>
-                <span className={renderMode === 'standard' ? 'font-semibold' : ''}>Standard</span>
+                <span className={renderMode === 'standard' ? 'font-semibold' : ''}>{t('fileView:glb.toolbar.standard')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setRenderMode('wireframe')}>
-                <span className={renderMode === 'wireframe' ? 'font-semibold' : ''}>Wireframe</span>
+                <span className={renderMode === 'wireframe' ? 'font-semibold' : ''}>{t('fileView:glb.toolbar.wireframe')}</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuLabel>Matcap</DropdownMenuLabel>
+              <DropdownMenuLabel>{t('fileView:glb.toolbar.matcap')}</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => { setRenderMode('matcap'); setMatcapType('clay') }}>
                 <span className={renderMode === 'matcap' && matcapType === 'clay' ? 'font-semibold' : ''}>Clay</span>
               </DropdownMenuItem>
@@ -819,7 +822,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                     variant={isPlaying ? "secondary" : "ghost"}
                     size="icon"
                     className="h-8 w-8 rounded-full"
-                    title="Animation"
+                    title={t('fileView:glb.toolbar.displayMode')}
                   >
                     <Film className="h-4 w-4" />
                   </Button>
@@ -835,7 +838,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                       {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                     </Button>
                     <span className="text-xs font-medium flex-1 text-center">
-                      {isPlaying ? 'Playing' : 'Paused'}
+                      {isPlaying ? t('fileView:glb.toolbar.playing') : t('fileView:glb.toolbar.paused')}
                     </span>
                   </div>
                   <DropdownMenuSeparator />
@@ -866,7 +869,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 rounded-full"
-                title="Cấu hình hiển thị"
+                title={t('fileView:glb.toolbar.config')}
               >
                 <Lightbulb className="h-4 w-4" />
               </Button>
@@ -874,7 +877,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
             <DropdownMenuContent align="center" className="w-72 p-3">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-sm">Cài đặt ánh sáng</h4>
+                  <h4 className="font-medium text-sm">{t('fileView:glb.toolbar.lighting')}</h4>
                   {isAdmin && onSaveSettings && (
                     <Button
                       size="sm"
@@ -890,7 +893,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                         gamma
                       })}
                     >
-                      <Save className="h-3 w-3" /> Lưu
+                      <Save className="h-3 w-3" /> {t('common:actions.save')}
                     </Button>
                   )}
                 </div>
@@ -899,7 +902,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
 
                 {/* Environment Settings */}
                 <div>
-                  <label className="text-xs font-medium mb-1 block">Môi trường (HDR)</label>
+                  <label className="text-xs font-medium mb-1 block">{t('fileView:glb.toolbar.environment')}</label>
                   <select
                     className="w-full text-sm border border-border rounded px-2 py-1 bg-background"
                     value={envPreset}
@@ -913,7 +916,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">Độ sáng MT</label>
+                    <label className="text-xs text-muted-foreground mb-1 block">{t('fileView:glb.toolbar.envBrightness')}</label>
                     <Slider
                       value={[envIntensity]}
                       onValueChange={([v]) => setEnvIntensity(v)}
@@ -923,7 +926,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">Độ sáng đèn</label>
+                    <label className="text-xs text-muted-foreground mb-1 block">{t('fileView:glb.toolbar.lightBrightness')}</label>
                     <Slider
                       value={[lightIntensity]}
                       onValueChange={([v]) => setLightIntensity(v)}
@@ -942,7 +945,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
 
                     <div className="mt-3">
                       <div className="flex justify-between mb-1">
-                        <label className="text-xs font-medium">Exposure</label>
+                        <label className="text-xs font-medium">{t('fileView:glb.toolbar.exposure')}</label>
                         <span className="text-xs text-muted-foreground">{exposure.toFixed(2)}</span>
                       </div>
                       <Slider
@@ -971,7 +974,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
 
 
                     <div className="flex items-center justify-between pt-1">
-                      <label htmlFor="hq-mode-toggle" className="text-xs font-medium">Bật Bloom Effect</label>
+                      <label htmlFor="hq-mode-toggle" className="text-xs font-medium">{t('fileView:glb.toolbar.bloom')}</label>
                       <input
                         type="checkbox"
                         id="hq-mode-toggle"
@@ -1007,7 +1010,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
             size="icon"
             className="h-8 w-8 rounded-full"
             onClick={() => setBgMode(prev => prev === 'light' ? 'transparent' : 'light')}
-            title="Nền sáng"
+            title={t('fileView:glb.toolbar.lightBg')}
           >
             <Sun className="h-4 w-4" />
           </Button>
@@ -1017,7 +1020,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
             size="icon"
             className="h-8 w-8 rounded-full"
             onClick={() => setBgMode(prev => prev === 'dark' ? 'transparent' : 'dark')}
-            title="Nền tối"
+            title={t('fileView:glb.toolbar.darkBg')}
           >
             <Moon className="h-4 w-4" />
           </Button>
@@ -1035,7 +1038,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                 size="icon"
                 className="h-8 w-8 shrink-0 rounded-full"
                 onClick={() => setAutoRotate(!autoRotate)}
-                title="Tự động xoay"
+                title={t('fileView:glb.toolbar.autoRotate')}
               >
                 <Rotate3d className="h-4 w-4" />
               </Button>
@@ -1049,20 +1052,20 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                     variant={renderMode !== 'standard' ? "secondary" : "ghost"}
                     size="icon"
                     className="h-8 w-8 shrink-0 rounded-full"
-                    title="Chế độ hiển thị"
+                    title={t('fileView:glb.toolbar.displayMode')}
                   >
                     {renderMode === 'matcap' ? <Circle className="h-4 w-4" /> : <Box className="h-4 w-4" />}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" side="top">
                   <DropdownMenuItem onClick={() => setRenderMode('standard')}>
-                    <span className={renderMode === 'standard' ? 'font-semibold' : ''}>Standard</span>
+                    <span className={renderMode === 'standard' ? 'font-semibold' : ''}>{t('fileView:glb.toolbar.standard')}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setRenderMode('wireframe')}>
-                    <span className={renderMode === 'wireframe' ? 'font-semibold' : ''}>Wireframe</span>
+                    <span className={renderMode === 'wireframe' ? 'font-semibold' : ''}>{t('fileView:glb.toolbar.wireframe')}</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel>Matcap</DropdownMenuLabel>
+                  <DropdownMenuLabel>{t('fileView:glb.toolbar.matcap')}</DropdownMenuLabel>
                   <DropdownMenuItem onClick={() => { setRenderMode('matcap'); setMatcapType('clay') }}>
                     <span className={renderMode === 'matcap' && matcapType === 'clay' ? 'font-semibold' : ''}>Clay</span>
                   </DropdownMenuItem>
@@ -1085,14 +1088,14 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                       variant={selectedCamera !== 'default' ? "secondary" : "ghost"}
                       size="icon"
                       className="h-8 w-8 shrink-0 rounded-full"
-                      title="Chọn camera"
+                      title={t('fileView:glb.toolbar.chooseCamera')}
                     >
                       <Camera className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" side="top">
                     <DropdownMenuItem onClick={() => setSelectedCamera('default')}>
-                      <span className={selectedCamera === 'default' ? 'font-semibold' : ''}>Default View</span>
+                      <span className={selectedCamera === 'default' ? 'font-semibold' : ''}>{t('fileView:glb.toolbar.defaultView')}</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {fileCameras.map((cam, idx) => (
@@ -1112,7 +1115,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 shrink-0 rounded-full"
-                    title="Ánh sáng"
+                    title={t('fileView:glb.toolbar.lighting')}
                   >
                     <Lightbulb className="h-4 w-4" />
                   </Button>
@@ -1120,7 +1123,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                 <DropdownMenuContent align="end" side="top" className="w-64 p-3">
                   <div className="space-y-4">
                     <div>
-                      <label className="text-xs font-medium mb-2 block">Environment</label>
+                      <label className="text-xs font-medium mb-2 block">{t('fileView:glb.toolbar.environment')}</label>
                       <select
                         aria-label="Environment preset"
                         className="w-full text-sm border border-border rounded px-2 py-1 bg-background text-foreground"
@@ -1133,7 +1136,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs font-medium mb-2 block">Env Intensity: {envIntensity.toFixed(1)}</label>
+                      <label className="text-xs font-medium mb-2 block">{t('fileView:glb.toolbar.envBrightness')}: {envIntensity.toFixed(1)}</label>
                       <Slider
                         value={[envIntensity]}
                         onValueChange={([v]) => setEnvIntensity(v)}
@@ -1143,7 +1146,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium mb-2 block">Light Intensity: {lightIntensity.toFixed(1)}</label>
+                      <label className="text-xs font-medium mb-2 block">{t('fileView:glb.toolbar.lightBrightness')}: {lightIntensity.toFixed(1)}</label>
                       <Slider
                         value={[lightIntensity]}
                         onValueChange={([v]) => setLightIntensity(v)}
@@ -1161,7 +1164,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                 size="icon"
                 className="h-8 w-8 shrink-0 rounded-full"
                 onClick={() => setBgMode(prev => prev === 'light' ? 'transparent' : 'light')}
-                title="Nền sáng"
+                title={t('fileView:glb.toolbar.lightBg')}
               >
                 <Sun className="h-4 w-4" />
               </Button>
@@ -1171,7 +1174,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                 size="icon"
                 className="h-8 w-8 shrink-0 rounded-full"
                 onClick={() => setBgMode(prev => prev === 'dark' ? 'transparent' : 'dark')}
-                title="Nền tối"
+                title={t('fileView:glb.toolbar.darkBg')}
               >
                 <Moon className="h-4 w-4" />
               </Button>
@@ -1182,7 +1185,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                 size="icon"
                 className="h-8 w-8 shrink-0 rounded-full"
                 onClick={handleScreenshot}
-                title="Chụp ảnh"
+                title={t('fileView:glb.toolbar.screenshot')}
               >
                 <Camera className="h-4 w-4" />
               </Button>
@@ -1193,7 +1196,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
                 size="icon"
                 className="h-8 w-8 shrink-0 rounded-full hover:bg-destructive/10 hover:text-destructive"
                 onClick={handleReset}
-                title="Đặt lại"
+                title={t('fileView:glb.toolbar.reset')}
               >
                 <RefreshCcw className="h-4 w-4" />
               </Button>

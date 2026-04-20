@@ -8,6 +8,7 @@ interface TourOptions {
   isMobile: boolean
   isAdmin?: boolean
   sequenceViewMode?: string
+  t: any
 }
 
 /**
@@ -32,15 +33,15 @@ async function getClientIp(): Promise<string | null> {
   return null
 }
 
-export async function startFileTour({ fileType, isMobile, isAdmin = false, sequenceViewMode = 'video' }: TourOptions) {
+export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'video', t }: TourOptions) {
   let steps: any[] = []
 
   // Common comment step for desktop
   const commentStep = {
     element: '#comments-sidebar',
     popover: {
-      title: 'Bình luận & Thảo luận',
-      description: 'Xem các bình luận, thêm phản hồi hoặc đánh dấu đã giải quyết tại đây.',
+      title: t('tours:common.comments.title'),
+      description: t('tours:common.comments.description'),
       side: 'left',
       align: 'start'
     }
@@ -49,8 +50,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
   const versionToggleStep = {
     element: '#comments-version-toggle',
     popover: {
-      title: 'Lọc phiên bản bình luận',
-      description: 'Chuyển đổi giữa xem tất cả bình luận hoặc chỉ xem bình luận của phiên bản hiện tại.',
+      title: t('tours:common.versionToggle.title'),
+      description: t('tours:common.versionToggle.description'),
       side: 'left',
       align: 'start'
     }
@@ -59,8 +60,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
   const compareStep = {
     element: '#header-compare-btn',
     popover: {
-      title: 'So sánh phiên bản',
-      description: 'So sánh trực quan giữa hai phiên bản ảnh khác nhau.',
+      title: t('tours:common.compare.title'),
+      description: t('tours:common.compare.description'),
       side: 'bottom',
       align: 'start'
     }
@@ -69,8 +70,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
   const attachStep = {
     element: '#comment-attach-button',
     popover: {
-      title: 'Đính kèm File',
-      description: 'Đính kèm ảnh hoặc tài liệu vào bình luận của bạn.',
+      title: t('tours:common.attach.title'),
+      description: t('tours:common.attach.description'),
       side: 'left',
       align: 'start'
     }
@@ -79,8 +80,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
   const linkStep = {
     element: '#comment-link-button',
     popover: {
-      title: 'Chèn liên kết',
-      description: 'Thêm đường dẫn (link) vào bình luận.',
+      title: t('tours:common.link.title'),
+      description: t('tours:common.link.description'),
       side: 'left',
       align: 'start'
     }
@@ -89,8 +90,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
   const drawStep = {
     element: '#comment-draw-button',
     popover: {
-      title: 'Vẽ/Ghi chú',
-      description: 'Vẽ trực tiếp lên hình ảnh để minh họa ý kiến của bạn.',
+      title: t('tours:common.draw.title'),
+      description: t('tours:common.draw.description'),
       side: 'left',
       align: 'start'
     }
@@ -101,8 +102,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
     {
       element: '#header-version-dropdown',
       popover: {
-        title: 'Quản lý phiên bản',
-        description: 'Xem lịch sử, chuyển đổi phiên bản hoặc tải lên phiên bản mới tại đây.',
+        title: t('tours:common.headerVersion.title'),
+        description: t('tours:common.headerVersion.description'),
         side: 'bottom',
         align: 'start'
       }
@@ -110,8 +111,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
     {
       element: '#header-share-download-group',
       popover: {
-        title: 'Chia sẻ & Tải xuống',
-        description: 'Chia sẻ link file hoặc tải xuống trực tiếp về máy.',
+        title: t('tours:common.headerShare.title'),
+        description: t('tours:common.headerShare.description'),
         side: 'bottom',
         align: 'start'
       }
@@ -125,8 +126,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#preview-container',
           popover: {
-            title: 'Xem hình ảnh',
-            description: 'Chạm để phóng to/thu nhỏ và kéo để di chuyển ảnh.',
+            title: t('tours:image.previewMobile.title'),
+            description: t('tours:image.previewMobile.description'),
             side: 'bottom',
             align: 'center'
           }
@@ -134,8 +135,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-add-comment',
           popover: {
-            title: 'Thêm bình luận',
-            description: 'Nhập bình luận, đính kèm file hoặc vẽ ghi chú tại đây.',
+            title: t('tours:image.addCommentMobile.title'),
+            description: t('tours:image.addCommentMobile.description'),
             side: 'top',
             align: 'center'
           }
@@ -143,8 +144,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-comment-attach-button',
           popover: {
-            title: 'Đính kèm file',
-            description: 'Chọn ảnh hoặc file để đính kèm.',
+            title: t('tours:common.attach.title'),
+            description: t('tours:common.attach.description'),
             side: 'top',
             align: 'start'
           }
@@ -152,8 +153,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-comment-link-button',
           popover: {
-            title: 'Chèn liên kết',
-            description: 'Thêm đường dẫn vào bình luận.',
+            title: t('tours:common.link.title'),
+            description: t('tours:common.link.description'),
             side: 'top',
             align: 'start'
           }
@@ -161,8 +162,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-comment-draw-button',
           popover: {
-            title: 'Vẽ ghi chú',
-            description: 'Mở công cụ vẽ để đánh dấu trên ảnh.',
+            title: t('tours:common.draw.title'),
+            description: t('tours:common.draw.description'),
             side: 'top',
             align: 'start'
           }
@@ -175,8 +176,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#preview-container',
           popover: {
-            title: 'Xem hình ảnh',
-            description: 'Bạn có thể phóng to, thu nhỏ và di chuyển hình ảnh để xem chi tiết.',
+            title: t('tours:image.preview.title'),
+            description: t('tours:image.preview.description'),
             side: 'bottom',
             align: 'center'
           }
@@ -197,8 +198,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#preview-container',
           popover: {
-            title: 'Video player',
-            description: 'Chạm để phát/dừng video.',
+            title: t('tours:video.playerMobile.title'),
+            description: t('tours:video.playerMobile.description'),
             side: 'bottom',
             align: 'center'
           }
@@ -206,8 +207,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#video-timeline-container',
           popover: {
-            title: 'Timeline',
-            description: 'Chạm vào timeline để nhảy tới thời điểm đó. Các điểm đỏ là vị trí có bình luận.',
+            title: t('tours:video.timelineMobile.title'),
+            description: t('tours:video.timelineMobile.description'),
             side: 'bottom',
             align: 'center'
           }
@@ -215,8 +216,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#video-controls-settings',
           popover: {
-            title: 'Cài đặt Overlay',
-            description: 'Mở menu để chọn Safe Zone và Composition Guides. Tùy chỉnh màu sắc và độ trong suốt của các đường hướng dẫn.',
+            title: t('tours:video.settings.title'),
+            description: t('tours:video.settings.description'),
             side: 'top',
             align: 'center'
           }
@@ -224,8 +225,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-nav-toggle',
           popover: {
-            title: 'Chế độ điều hướng',
-            description: 'Chuyển đổi giữa điều khiển theo frame (F) hoặc marker (M).',
+            title: t('tours:video.navToggleMobile.title'),
+            description: t('tours:video.navToggleMobile.description'),
             side: 'bottom',
             align: 'start'
           }
@@ -233,8 +234,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-filter-toggle',
           popover: {
-            title: 'Lọc bình luận',
-            description: 'Bật để chỉ hiển thị bình luận tại thời điểm hiện tại.',
+            title: t('tours:video.filterTime.title'),
+            description: t('tours:video.filterTime.description'),
             side: 'bottom',
             align: 'start'
           }
@@ -242,8 +243,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-add-comment',
           popover: {
-            title: 'Thêm bình luận',
-            description: 'Nhập bình luận cho video tại thời điểm hiện tại.',
+            title: t('tours:image.addCommentMobile.title'),
+            description: t('tours:image.addCommentMobile.description'),
             side: 'top',
             align: 'center'
           }
@@ -251,8 +252,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-comment-attach-button',
           popover: {
-            title: 'Đính kèm',
-            description: 'Đính kèm ảnh hoặc file.',
+            title: t('tours:common.attach.title'),
+            description: t('tours:common.attach.description'),
             side: 'top',
             align: 'start'
           }
@@ -260,8 +261,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-comment-link-button',
           popover: {
-            title: 'Chèn liên kết',
-            description: 'Thêm đường dẫn vào bình luận.',
+            title: t('tours:common.link.title'),
+            description: t('tours:common.link.description'),
             side: 'top',
             align: 'start'
           }
@@ -269,8 +270,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-comment-draw-button',
           popover: {
-            title: 'Vẽ ghi chú',
-            description: 'Vẽ ghi chú trên frame video.',
+            title: t('tours:common.draw.title'),
+            description: t('tours:common.draw.description'),
             side: 'top',
             align: 'start'
           }
@@ -282,8 +283,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#header-video-compare-btn',
           popover: {
-            title: 'So sánh phiên bản',
-            description: 'Bật chế độ so sánh để xem hai phiên bản video cạnh nhau với playback đồng bộ.',
+            title: t('tours:common.compare.title'),
+            description: t('tours:common.compare.description'),
             side: 'bottom',
             align: 'start'
           }
@@ -291,8 +292,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#preview-container',
           popover: {
-            title: 'Trình phát Video',
-            description: 'Sử dụng các phím tắt (Space để phát/dừng, Mũi tên để tua) để điều khiển.',
+            title: t('tours:video.player.title'),
+            description: t('tours:video.player.description'),
             side: 'bottom',
             align: 'center'
           }
@@ -300,8 +301,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#video-controls-export',
           popover: {
-            title: 'Sao chép Frame',
-            description: 'Nhấn vào đây để lưu ảnh frame hiện tại vào bộ nhớ tạm (clipboard).',
+            title: t('tours:video.exportFrame.title'),
+            description: t('tours:video.exportFrame.description'),
             side: 'top',
             align: 'center'
           }
@@ -309,8 +310,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#video-controls-settings',
           popover: {
-            title: 'Overlay Settings',
-            description: 'Mở menu để chọn Safe Zone (vùng an toàn) và Composition Guides (đường hướng dẫn bố cục). Điều chỉnh màu sắc và độ trong suốt để phù hợp với công việc của bạn.',
+            title: t('tours:video.settings.title'),
+            description: t('tours:video.settings.description'),
             side: 'top',
             align: 'center'
           }
@@ -318,8 +319,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#video-controls-fullscreen',
           popover: {
-            title: 'Toàn màn hình',
-            description: 'Bật chế độ toàn màn hình để xem video rõ hơn.',
+            title: t('tours:video.fullscreen.title'),
+            description: t('tours:video.fullscreen.description'),
             side: 'top',
             align: 'center'
           }
@@ -327,8 +328,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#filter-time-toggle',
           popover: {
-            title: 'Lọc theo thời gian',
-            description: 'Bật tùy chọn này để chỉ hiển thị bình luận tại thời điểm hiện tại.',
+            title: t('tours:video.filterTime.title'),
+            description: t('tours:video.filterTime.description'),
             side: 'bottom',
             align: 'center'
           }
@@ -336,8 +337,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#video-timeline-container',
           popover: {
-            title: 'Timeline & Markers',
-            description: 'Điểm đánh dấu trên timeline hiển thị vị trí các bình luận và ghi chú.',
+            title: t('tours:video.timeline.title'),
+            description: t('tours:video.timeline.description'),
             side: 'top',
             align: 'center'
           }
@@ -345,8 +346,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#comments-resize-handle',
           popover: {
-            title: 'Thay đổi kích thước khung bình luận',
-            description: 'Kéo thanh này sang trái hoặc phải để thay đổi chiều rộng khung bình luận.',
+            title: t('tours:common.resizeHandle.title'),
+            description: t('tours:common.resizeHandle.description'),
             side: 'left',
             align: 'center'
           }
@@ -367,10 +368,10 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#preview-container',
           popover: {
-            title: 'Chuỗi hình ảnh',
+            title: t('tours:sequence.preview.title'),
             description: sequenceViewMode === 'grid'
-              ? 'Chạm vào một frame để xem chi tiết.'
-              : 'Vuốt hoặc chạm để xem từng frame.',
+              ? t('tours:sequence.previewGrid.description')
+              : t('tours:sequence.preview.description'),
             side: 'bottom',
             align: 'center'
           }
@@ -378,10 +379,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#grid-toggle',
           popover: {
-            title: isAdmin ? 'Chỉnh sửa chế độ xem' : 'Chế độ xem',
-            description: isAdmin
-              ? 'Chuyển đổi giữa chế độ video, carousel hoặc lưới để tối ưu trải nghiệm kiểm duyệt.'
-              : `Admin đã chọn xem ở chế độ ${sequenceViewMode === 'video' ? 'Video' : sequenceViewMode === 'carousel' ? 'Carousel' : 'Lưới'}.`,
+            title: t('tours:sequence.viewMode.title'),
+            description: t('tours:sequence.viewMode.description'),
             side: 'bottom',
             align: 'center'
           }
@@ -389,8 +388,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-add-comment',
           popover: {
-            title: 'Thêm bình luận',
-            description: 'Nhập bình luận cho frame hiện tại.',
+            title: t('tours:image.addCommentMobile.title'),
+            description: t('tours:image.addCommentMobile.description'),
             side: 'top',
             align: 'center'
           }
@@ -398,8 +397,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-comment-attach-button',
           popover: {
-            title: 'Đính kèm',
-            description: 'Đính kèm file vào bình luận.',
+            title: t('tours:common.attach.title'),
+            description: t('tours:common.attach.description'),
             side: 'top',
             align: 'start'
           }
@@ -407,8 +406,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-comment-link-button',
           popover: {
-            title: 'Chèn liên kết',
-            description: 'Thêm đường dẫn vào bình luận.',
+            title: t('tours:common.link.title'),
+            description: t('tours:common.link.description'),
             side: 'top',
             align: 'start'
           }
@@ -416,8 +415,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-comment-draw-button',
           popover: {
-            title: 'Vẽ ghi chú',
-            description: 'Vẽ ghi chú trên frame.',
+            title: t('tours:common.draw.title'),
+            description: t('tours:common.draw.description'),
             side: 'top',
             align: 'start'
           }
@@ -429,12 +428,12 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#preview-container',
           popover: {
-            title: 'Chuỗi hình ảnh',
+            title: t('tours:sequence.preview.title'),
             description: sequenceViewMode === 'video'
-              ? 'Di chuột hoặc kéo để xem chuỗi hình ảnh nhanh. Nhấn phím cách để phát tự động. Bạn cũng có thể chuyển đổi giữa các chế độ Video, Carousel hoặc Lưới bằng thanh điều khiển phía trên.'
+              ? t('tours:sequence.previewVideo.description')
               : sequenceViewMode === 'carousel'
-                ? 'Duyệt qua từng khung hình bằng các nút điều hướng hoặc phím mũi tên. Bạn cũng có thể chuyển đổi giữa các chế độ Video, Carousel hoặc Lưới bằng thanh điều khiển phía trên.'
-                : 'Xem tổng quan tất cả khung hình trong chuỗi. Click vào một khung hình để xem chi tiết. Bạn cũng có thể chuyển đổi giữa các chế độ Video, Carousel hoặc Lưới bằng thanh điều khiển phía trên.',
+                ? t('tours:sequence.preview.description')
+                : t('tours:sequence.previewGrid.description'),
             side: 'bottom',
             align: 'center'
           }
@@ -442,8 +441,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#filter-time-toggle',
           popover: {
-            title: 'Lọc theo thời gian',
-            description: 'Bật tùy chọn này để chỉ hiển thị bình luận ở frame đang xem.',
+            title: t('tours:video.filterTime.title'),
+            description: t('tours:video.filterTime.description'),
             side: 'bottom',
             align: 'center'
           }
@@ -451,8 +450,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#comments-resize-handle',
           popover: {
-            title: 'Thay đổi kích thước khung bình luận',
-            description: 'Kéo thanh này sang trái hoặc phải để thay đổi chiều rộng khung bình luận.',
+            title: t('tours:common.resizeHandle.title'),
+            description: t('tours:common.resizeHandle.description'),
             side: 'left',
             align: 'center'
           }
@@ -473,8 +472,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#preview-container',
           popover: {
-            title: 'Xem PDF',
-            description: 'Vuốt để chuyển trang, chạm để phóng to.',
+            title: t('tours:pdf.previewMobile.title'),
+            description: t('tours:pdf.previewMobile.description'),
             side: 'bottom',
             align: 'center'
           }
@@ -482,8 +481,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-add-comment',
           popover: {
-            title: 'Thêm bình luận',
-            description: 'Nhập bình luận cho trang hiện tại.',
+            title: t('tours:image.addCommentMobile.title'),
+            description: t('tours:image.addCommentMobile.description'),
             side: 'top',
             align: 'center'
           }
@@ -491,8 +490,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-comment-attach-button',
           popover: {
-            title: 'Đính kèm',
-            description: 'Đính kèm tài liệu hoặc ảnh.',
+            title: t('tours:common.attach.title'),
+            description: t('tours:common.attach.description'),
             side: 'top',
             align: 'start'
           }
@@ -500,8 +499,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-comment-link-button',
           popover: {
-            title: 'Chèn liên kết',
-            description: 'Thêm đường dẫn vào bình luận.',
+            title: t('tours:common.link.title'),
+            description: t('tours:common.link.description'),
             side: 'top',
             align: 'start'
           }
@@ -509,8 +508,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-comment-draw-button',
           popover: {
-            title: 'Vẽ ghi chú',
-            description: 'Vẽ ghi chú lên trang PDF.',
+            title: t('tours:common.draw.title'),
+            description: t('tours:common.draw.description'),
             side: 'top',
             align: 'start'
           }
@@ -522,8 +521,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#preview-container',
           popover: {
-            title: 'Xem PDF',
-            description: 'Duyệt trang, phóng to/thu nhỏ và chuyển trang để xem chi tiết.',
+            title: t('tours:pdf.preview.title'),
+            description: t('tours:pdf.preview.description'),
             side: 'bottom',
             align: 'center'
           }
@@ -531,8 +530,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#comments-resize-handle',
           popover: {
-            title: 'Thay đổi kích thước khung bình luận',
-            description: 'Kéo để thay đổi chiều rộng khung bình luận khi đọc tài liệu.',
+            title: t('tours:common.resizeHandle.title'),
+            description: t('tours:common.resizeHandle.description'),
             side: 'left',
             align: 'center'
           }
@@ -553,8 +552,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#preview-container',
           popover: {
-            title: 'Mô hình 3D',
-            description: 'Chạm và kéo để xoay, véo để phóng to/thu nhỏ mô hình.',
+            title: t('tours:model.previewMobile.title'),
+            description: t('tours:model.previewMobile.description'),
             side: 'bottom',
             align: 'center'
           }
@@ -562,8 +561,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-3d-toolbar',
           popover: {
-            title: 'Thanh công cụ 3D',
-            description: 'Các nút điều khiển hiển thị mô hình 3D.',
+            title: t('tours:model.toolbar.title'),
+            description: t('tours:model.toolbar.description'),
             side: 'top',
             align: 'center'
           }
@@ -571,8 +570,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-model-auto-rotate',
           popover: {
-            title: 'Tự động xoay',
-            description: 'Bật/tắt tự động xoay mô hình.',
+            title: t('tours:model.lighting.title'), // Using lighting or just generic title
+            description: t('tours:model.lighting.description'),
             side: 'top',
             align: 'center'
           }
@@ -580,8 +579,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-model-render-mode',
           popover: {
-            title: 'Chế độ hiển thị',
-            description: 'Chuyển đổi Standard, Wireframe hoặc Matcap.',
+            title: t('tours:model.renderMode.title'),
+            description: t('tours:model.renderMode.description'),
             side: 'top',
             align: 'center'
           }
@@ -589,8 +588,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-model-screenshot',
           popover: {
-            title: 'Chụp ảnh',
-            description: 'Lưu ảnh PNG của góc nhìn hiện tại.',
+            title: t('tours:model.screenshot.title'),
+            description: t('tours:model.screenshot.description'),
             side: 'top',
             align: 'center'
           }
@@ -598,8 +597,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-model-reset',
           popover: {
-            title: 'Đặt lại góc nhìn',
-            description: 'Quay về góc nhìn mặc định.',
+            title: t('tours:model.resetView.title'),
+            description: t('tours:model.resetView.description'),
             side: 'top',
             align: 'center'
           }
@@ -607,8 +606,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-add-comment',
           popover: {
-            title: 'Thêm bình luận',
-            description: 'Nhập bình luận cho mô hình.',
+            title: t('tours:image.addCommentMobile.title'),
+            description: t('tours:image.addCommentMobile.description'),
             side: 'top',
             align: 'center'
           }
@@ -616,8 +615,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-comment-attach-button',
           popover: {
-            title: 'Đính kèm',
-            description: 'Đính kèm ảnh hoặc file.',
+            title: t('tours:common.attach.title'),
+            description: t('tours:common.attach.description'),
             side: 'top',
             align: 'start'
           }
@@ -625,8 +624,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-comment-link-button',
           popover: {
-            title: 'Chèn liên kết',
-            description: 'Thêm đường dẫn vào bình luận.',
+            title: t('tours:common.link.title'),
+            description: t('tours:common.link.description'),
             side: 'top',
             align: 'start'
           }
@@ -634,8 +633,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#mobile-comment-draw-button',
           popover: {
-            title: 'Vẽ ghi chú',
-            description: 'Vẽ ghi chú trên mô hình.',
+            title: t('tours:common.draw.title'),
+            description: t('tours:common.draw.description'),
             side: 'top',
             align: 'start'
           }
@@ -647,8 +646,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#preview-container',
           popover: {
-            title: 'Mô hình 3D',
-            description: 'Xoay, phóng to và điều chỉnh góc nhìn để xem mô hình.',
+            title: t('tours:model.preview.title'),
+            description: t('tours:model.preview.description'),
             side: 'bottom',
             align: 'center'
           }
@@ -656,8 +655,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#model-interaction-mode',
           popover: {
-            title: 'Chế độ Tương tác',
-            description: 'Chuyển đổi giữa chế độ Xoay (Rotate) và Di chuyển (Pan).',
+            title: t('tours:model.interactionMode.title'),
+            description: t('tours:model.interactionMode.description'),
             side: 'right',
             align: 'center'
           }
@@ -665,8 +664,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#model-reset-view',
           popover: {
-            title: 'Đặt lại góc nhìn',
-            description: 'Quay về vị trí camera mặc định.',
+            title: t('tours:model.resetView.title'),
+            description: t('tours:model.resetView.description'),
             side: 'right',
             align: 'center'
           }
@@ -674,8 +673,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#model-screenshot',
           popover: {
-            title: 'Chụp ảnh',
-            description: 'Lưu ảnh chụp màn hình của góc nhìn hiện tại.',
+            title: t('tours:model.screenshot.title'),
+            description: t('tours:model.screenshot.description'),
             side: 'right',
             align: 'center'
           }
@@ -683,8 +682,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '.glb-toolbar',
           popover: {
-            title: 'Thanh công cụ Chính',
-            description: 'Chứa các công cụ điều khiển hiển thị, AR và Animation.',
+            title: t('tours:model.toolbar.title'),
+            description: t('tours:model.toolbar.description'),
             side: 'top',
             align: 'center'
           }
@@ -692,8 +691,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#model-ar-view',
           popover: {
-            title: 'Xem AR',
-            description: 'Xem mô hình trong không gian thực tế (nếu thiết bị hỗ trợ).',
+            title: t('tours:model.arView.title'),
+            description: t('tours:model.arView.description'),
             side: 'top',
             align: 'center'
           }
@@ -701,8 +700,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#model-render-mode',
           popover: {
-            title: 'Chế độ hiển thị',
-            description: 'Thay đổi giữa Standard, Wireframe hoặc Matcap.',
+            title: t('tours:model.renderMode.title'),
+            description: t('tours:model.renderMode.description'),
             side: 'top',
             align: 'center'
           }
@@ -710,8 +709,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#model-lighting',
           popover: {
-            title: 'Cấu hình hiển thị',
-            description: 'Điều chỉnh ánh sáng, môi trường và Tone Mapping.',
+            title: t('tours:model.lighting.title'),
+            description: t('tours:model.lighting.description'),
             side: 'top',
             align: 'center'
           }
@@ -719,8 +718,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
         {
           element: '#comments-resize-handle',
           popover: {
-            title: 'Thay đổi kích thước khung bình luận',
-            description: 'Kéo để thay đổi chiều rộng khung bình luận khi xem mô hình.',
+            title: t('tours:common.resizeHandle.title'),
+            description: t('tours:common.resizeHandle.description'),
             side: 'left',
             align: 'center'
           }
@@ -740,8 +739,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
       {
         element: '#preview-container',
         popover: {
-          title: 'Xem và Duyệt',
-          description: 'Xem nội dung file và sử dụng các công cụ có sẵn.',
+          title: t('tours:fallback.preview.title', 'View & Browse'),
+          description: t('tours:fallback.preview.description', 'View file content and use available tools.'),
           side: 'bottom',
           align: 'center'
         }
@@ -749,8 +748,8 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
       {
         element: '#comments-resize-handle',
         popover: {
-          title: 'Thay đổi kích thước khung bình luận',
-          description: 'Kéo để thay đổi chiều rộng khung bình luận.',
+          title: t('tours:common.resizeHandle.title'),
+          description: t('tours:common.resizeHandle.description'),
           side: 'left',
           align: 'center'
         }
@@ -766,17 +765,6 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
   const driverObj = driver({
     showProgress: true,
     steps: steps,
-    onDestroyStarted: () => {
-      // Cho phép đóng tour ngay lập tức khi người dùng yêu cầu thoát
-      driverObj.destroy()
-    },
-    onCloseClick: () => {
-      if ((window as any).triggerTourStopConfirmation) {
-        (window as any).triggerTourStopConfirmation()
-      } else {
-        driverObj.destroy()
-      }
-    },
     onDestroyed: async () => {
       try {
         const ip = await getClientIp()
@@ -803,12 +791,6 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
     /* ignore */
   }
 
-  // Listen for the custom destroy event from React ConfirmDialog
-  const handleTourDestroy = () => {
-    driverObj.destroy()
-    window.removeEventListener('tour:destroy', handleTourDestroy)
-  }
-  window.addEventListener('tour:destroy', handleTourDestroy)
 
   driverObj.drive()
 }

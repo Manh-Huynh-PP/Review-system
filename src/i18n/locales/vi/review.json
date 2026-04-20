@@ -1,0 +1,55 @@
+{
+  "access": {
+    "denied": "Đường dẫn không hợp lệ hoặc đã hết hạn",
+    "required": "Dự án này yêu cầu link truy cập hợp lệ (kèm token).",
+    "tokenInvalid": "Token không hợp lệ hoặc đã hết hạn.",
+    "projectDeleted": "Dự án này đã bị xóa và không còn khả dụng.",
+    "noPermission": "Bạn chỉ có quyền truy cập vào file được chia sẻ, không phải file này.",
+    "projectNotFound": "Không tìm thấy dự án",
+    "projectNotFoundDesc": "Link review không hợp lệ hoặc dự án đã bị xóa",
+    "archivedDesc": "Dự án này đã được lưu trữ",
+    "archivedLock": "Bình luận đã bị khóa. Chỉ hiển thị ảnh thumbnail còn lại."
+  },
+  "verification": {
+    "title": "Xác thực thiết bị",
+    "firstTime": "Đây là lần đầu tiên bạn truy cập. Vui lòng xác thực email để liên kết thiết bị này.",
+    "notLinked": "Thiết bị này chưa được liên kết. Vui lòng nhập mã OTP đã gửi đến email của bạn.",
+    "sendOtp": "Gửi mã xác thực",
+    "verify": "Xác nhận",
+    "resend": "Gửi lại mã",
+    "failed": "Xác thực thất bại",
+    "otpPlaceholder": "Nhập mã OTP (6 số)"
+  },
+  "recovery": {
+    "title": "Bạn đã có lời mời trước đó?",
+    "prompt": "Nhập email của bạn để nhận mã truy cập mới.",
+    "sent": "Nhập mã xác thực đã được gửi đến {{email}}",
+    "sending": "Đang gửi...",
+    "checking": "Đang kiểm tra...",
+    "access": "Truy cập",
+    "backToEmail": "Quay lại nhập Email"
+  },
+  "onboarding": {
+    "welcome": "Chào mừng đến với Review",
+    "settings": "Cài đặt thông tin",
+    "descNew": "Vui lòng nhập tên và chọn avatar để tiếp tục xem và bình luận",
+    "descUpdate": "Cập nhật tên và hình ảnh hiển thị của bạn",
+    "namePlaceholder": "Nhập tên của bạn...",
+    "displayName": "Tên hiển thị",
+    "selectAvatar": "Chọn Avatar",
+    "avatarColor": "Màu nền Avatar",
+    "continue": "Tiếp tục"
+  },
+  "header": {
+    "archived": "Đã lưu trữ",
+    "publicReview": "Review công khai",
+    "fileCount": "{{count}} tệp tin",
+    "downloadAll": "Tải tất cả",
+    "getNotifications": "Nhận thông báo",
+    "guide": "Hướng dẫn",
+    "tourReset": "Đã reset trạng thái hướng dẫn. Mở file bất kỳ để xem hướng dẫn lại.",
+    "themeLight": "Giao diện sáng",
+    "themeDark": "Giao diện tối",
+    "language": "Ngôn ngữ"
+  }
+}

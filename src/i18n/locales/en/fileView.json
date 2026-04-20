@@ -1,0 +1,252 @@
+{
+  "types": {
+    "image": "Image",
+    "video": "Video",
+    "model": "3D Model",
+    "sequence": "Image Sequence",
+    "pdf": "PDF",
+    "file": "File"
+  },
+  "toolbar": {
+    "uploadNew": "Upload new version",
+    "first": "First",
+    "last": "Last",
+    "previous": "Previous",
+    "next": "Next",
+    "edit": "Edit",
+    "exitEdit": "Exit Edit",
+    "saving": "Saving...",
+    "loading": "Loading...",
+    "details": "Details",
+    "viewDetails": "View Details",
+    "addCaption": "Add Caption",
+    "noCaption": "No caption",
+    "enterToSave": "Enter to save",
+    "reorderHint": "Drag to reorder",
+    "deleteHint": "Click to select for delete",
+    "deleteCount": "Delete {{count}} items",
+    "addFrames": "Add frames",
+    "fileDetails": "File details: {{name}}",
+    "addAnnotation": "Add annotation",
+    "drawing": "Drawing...",
+    "filtering": "Filtering",
+    "filterTime": "Filter time"
+  },
+  "comments": {
+    "title": "Feedback",
+    "hide": "Hide",
+    "show": "Show",
+    "empty": "No feedback yet. Be the first one!",
+    "addComment": "Add feedback...",
+    "reply": "Reply",
+    "resolve": "Resolve",
+    "resolved": "Resolved",
+    "unresolve": "Unresolved",
+    "reopen": "Reopen",
+    "timestamp": "Timestamp",
+    "deleteVersion": "Delete version",
+    "deleteVersionConfirm": "Are you sure you want to delete this version? This action cannot be undone and all comments linked to this version will be lost.",
+    "allVersions": "All versions",
+    "currentVersionOnly": "Current version",
+    "filteringByTime": "(Filtering by current time)",
+    "allVersionsEnabled": "(All versions view enabled)",
+    "archivedLocked": "Project archived. Commenting is disabled.",
+    "featureLocked": "Comments are currently locked.",
+    "placeholder": "Write a comment...",
+    "placeholderTimestamp": "Write a comment (time-tagged)...",
+    "placeholderReply": "Reply to {{name}}...",
+    "send": "Send",
+    "sending": "Sending...",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving...",
+    "edit": "Edit",
+    "delete": "Delete",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "edited": "(edited)",
+    "deleteConfirmTitle": "Delete comment?",
+    "deleteConfirmDesc": "Are you sure you want to delete this comment? This action cannot be undone.",
+    "deleteConfirmButton": "Delete",
+    "tooShort": "Comment too short (min 5 characters)",
+    "tooLong": "Comment too long (max 2000 characters)",
+    "nameTooLong": "Name too long (max 100 characters)",
+    "antiSpam": "Please wait a moment before sending again",
+    "namePlaceholder": "Your name",
+    "displayName": "Display name",
+    "enterDisplayName": "Enter display name",
+    "enterContent": "Enter content",
+    "attachTitle": "Attach file",
+    "attachAria": "Choose attachment",
+    "linkTitle": "Insert link",
+    "cameraSave": "Save current view",
+    "cameraSaved": "Saved",
+    "drawTitle": "Add draw note",
+    "drawn": "Drawn",
+    "infected": "File infected - Blocked",
+    "scannerError": "Virus scan error",
+    "frame": "Frame {{number}}",
+    "download": "Download"
+  },
+  "security": {
+    "infected": "INFECTED FILE",
+    "infectedDesc": "The system detected that this file contains malware or violates security policies. For safety, this file has been blocked and cannot be viewed.",
+    "pending": "Checking security...",
+    "pendingDesc": "The system is scanning for viruses and checking file format. Please wait a moment."
+  },
+  "errors": {
+    "loadFailed": "Unable to load file"
+  },
+  "tour": {
+    "stopTitle": "Stop tour?",
+    "stopDesc": "Are you sure you want to stop the guided tour?",
+    "stopConfirm": "Stop Tour"
+  },
+  "sharing": {
+    "title": "Share project",
+    "anyoneWithLink": "Anyone with the link can view",
+    "copied": "Link copied!"
+  },
+  "sequence": {
+    "modes": {
+      "video": "Video Mode",
+      "carousel": "Carousel Mode",
+      "grid": "Grid Mode"
+    },
+    "modeDesc": {
+      "video": "Auto-play mode",
+      "carousel": "Manual browse mode",
+      "grid": "Grid overview mode"
+    },
+    "totalFrames": "Total frames",
+    "navigationHint": "Use ← → to navigate",
+    "scrubbing": "Scrubbing...",
+    "loading": "Loading frames: {{loaded}} / {{total}}",
+    "frame": "Frame"
+  },
+  "video": {
+    "speed": "Speed",
+    "normal": "Normal",
+    "loop": {
+      "on": "Enable loop",
+      "off": "Disable loop"
+    },
+    "pip": "Picture-in-Picture",
+    "exportFrame": "Export Frame",
+    "settings": {
+      "title": "Overlay Settings",
+      "appearance": "Appearance",
+      "color": "Color",
+      "opacity": "Opacity",
+      "safeZone": "Safe Zone",
+      "none": "Hidden",
+      "upload": "Upload Safe Zone",
+      "noSafeZones": "No safe zones for this format",
+      "guides": "Composition Guides",
+      "groups": {
+        "center": "Center",
+        "golden": "Golden",
+        "harmony": "Harmony",
+        "other": "Other"
+      },
+      "labels": {
+        "center": "Center",
+        "thirds": "Thirds",
+        "diagonal": "Diag",
+        "ratio": "Ratio",
+        "triangleA": "Triangle A",
+        "triangleB": "Triangle B"
+      }
+    },
+    "errors": {
+      "playback": "Unable to play this video. Please check the file or access permissions.",
+      "pip": "Picture-in-Picture not available",
+      "cors": "Cannot export frame due to security restrictions (CORS)",
+      "export": "Failed to export frame. Please try again.",
+      "clipboard": "Could not save to clipboard",
+      "pngOnly": "Only PNG files are accepted"
+    },
+    "success": {
+      "copied": "Saved to clipboard"
+    },
+    "markers": {
+      "annotation": "Has annotation attached"
+    }
+  },
+  "glb": {
+    "loading": "Loading model...",
+    "errors": {
+      "webgl": "Error accessing WebGL context (CORS/Tainted).",
+      "screenshot": "Unable to capture screenshot. Please try again.",
+      "processing": "Error processing image.",
+      "shareCancelled": "Share cancelled"
+    },
+    "success": {
+      "shareOpened": "Share sheet opened",
+      "copied": "copied",
+      "downloaded": "downloaded",
+      "generic": "Success"
+    },
+    "processing": "Processing image...",
+    "toolbar": {
+      "collapse": "Collapse",
+      "expand": "Expand",
+      "rotate": "Rotate",
+      "pan": "Pan",
+      "rotateDesc": "Drag to rotate the 3D model",
+      "panDesc": "Drag to move the 3D model",
+      "reset": "Reset Camera",
+      "resetDesc": "Reset camera to initial state",
+      "screenshot": "Capture Screenshot",
+      "screenshotDesc": "Capture 3D view and download",
+      "ar": "View in AR",
+      "render": "Render Mode",
+      "lighting": "Lighting & Environment",
+      "advanced": "Advanced Settings",
+      "environment": "Environment",
+      "exposure": "Exposure",
+      "shadows": "Shadows",
+      "tonemapping": "Tone Mapping",
+      "autoRotate": "Auto Rotate",
+      "contactShadow": "Contact Shadows",
+      "screenshotSuccess": "Screenshot captured",
+      "screenshotError": "Failed to capture screenshot",
+      "setThumbnail": "Set Thumbnail",
+      "showAr": "View AR on mobile",
+      "wireframe": "Wireframe",
+      "standard": "Standard",
+      "matcap": "Matcap",
+      "lightingSettings": "Lighting",
+      "envSettings": "Environment",
+      "lightIntensity": "Light Intensity",
+      "lightColor": "Light Color",
+      "envIntensity": "Env Intensity",
+      "envBlur": "Env Blur",
+      "showBackground": "Show Background",
+      "lightBg": "Light Background",
+      "darkBg": "Dark Background",
+      "envBrightness": "Env Brightness",
+      "lightBrightness": "Light Brightness",
+      "bloom": "Bloom Effect",
+      "playing": "Playing",
+      "paused": "Paused",
+      "defaultView": "Default View",
+      "chooseCamera": "Choose Camera",
+      "displayMode": "Display Mode",
+      "config": "Display Config"
+    }
+  },
+  "pdf": {
+    "error": "Unable to load PDF file: {{message}}",
+    "toolbar": {
+      "scroll": "Scroll",
+      "scrollDesc": "Vertical scroll all pages",
+      "single": "Page",
+      "singleDesc": "Single page view",
+      "double": "Double",
+      "doubleDesc": "Two pages side-by-side",
+      "rotate": "Rotate",
+      "fullscreen": "Fullscreen"
+    }
+  }
+}

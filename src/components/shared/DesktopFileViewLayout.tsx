@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Filter } from 'lucide-react'
 import { FileViewHeader } from './FileViewHeader'
 import { DesktopCommentsSidebar } from './DesktopCommentsSidebar'
+import { useTranslation } from 'react-i18next'
 import { AnnotationToolbar } from '@/components/annotations/AnnotationToolbar'
 
 interface DesktopFileViewLayoutProps {
@@ -113,6 +114,8 @@ export const DesktopFileViewLayout: React.FC<DesktopFileViewLayoutProps> = (prop
     annotationHistory, portalContainer, fullscreenPortalTarget
   } = props
 
+  const { t } = useTranslation(['fileView', 'common'])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
@@ -122,7 +125,7 @@ export const DesktopFileViewLayout: React.FC<DesktopFileViewLayoutProps> = (prop
         onDragLeave={handleDragLeave} 
         onDrop={handleDrop}
       >
-        <DialogTitle className="sr-only">Chi tiết file: {file?.name}</DialogTitle>
+        <DialogTitle className="sr-only">{t('fileView:toolbar.fileDetails', { name: file?.name })}</DialogTitle>
         <FileViewHeader 
           file={file} current={current} projectId={_projectId} currentVersion={currentVersion} 
           uniqueVersions={uniqueVersions} isAdmin={isAdmin} onOpenChange={onOpenChange} 
@@ -142,10 +145,10 @@ export const DesktopFileViewLayout: React.FC<DesktopFileViewLayoutProps> = (prop
             <div className="p-2 border-b flex items-center justify-between sticky top-0 z-10 bg-background/95">
               <div className="flex items-center gap-2">
                 {!isAnnotating ? (
-                  <Button onClick={handleStartAnnotating} variant="outline" size="sm">Thêm ghi chú</Button>
+                  <Button onClick={handleStartAnnotating} variant="outline" size="sm">{t('fileView:toolbar.addAnnotation')}</Button>
                 ) : (
                   <Button onClick={handleDoneAnnotating} variant="ghost" size="sm">
-                    {isReadOnly ? 'Đóng' : 'Đang vẽ...'}
+                    {isReadOnly ? t('common:actions.close') : t('fileView:toolbar.drawing')}
                   </Button>
                 )}
               </div>
@@ -157,7 +160,7 @@ export const DesktopFileViewLayout: React.FC<DesktopFileViewLayoutProps> = (prop
                   onClick={() => setShowOnlyCurrentTimeComments(!showOnlyCurrentTimeComments)}
                 >
                   <Filter className="w-4 h-4 mr-2" />
-                  {showOnlyCurrentTimeComments ? 'Đang lọc' : 'Lọc thời gian'}
+                  {showOnlyCurrentTimeComments ? t('fileView:toolbar.filtering') : t('fileView:toolbar.filterTime')}
                 </Button>
               )}
             </div>

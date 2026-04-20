@@ -1,0 +1,164 @@
+{
+  "common": {
+    "comments": {
+      "title": "Comments & Discussion",
+      "description": "View comments, add feedback, or mark as resolved here."
+    },
+    "versionToggle": {
+      "title": "Filter Comment Versions",
+      "description": "Switch between viewing all comments or only those for the current version."
+    },
+    "compare": {
+      "title": "Version Comparison",
+      "description": "Visual comparison between two different versions."
+    },
+    "attach": {
+      "title": "Attach File",
+      "description": "Attach images or documents to your comment."
+    },
+    "link": {
+      "title": "Insert Link",
+      "description": "Add a link to your comment."
+    },
+    "draw": {
+      "title": "Draw/Annotate",
+      "description": "Draw directly on the image to illustrate your ideas."
+    },
+    "headerVersion": {
+      "title": "Version Management",
+      "description": "View history, switch versions, or upload a new version here."
+    },
+    "headerShare": {
+      "title": "Share & Download",
+      "description": "Share the file link or download it directly to your device."
+    },
+    "resizeHandle": {
+      "title": "Resize Handle",
+      "description": "Drag this bar left or right to change the comment pane width."
+    }
+  },
+  "image": {
+    "preview": {
+      "title": "View Image",
+      "description": "You can zoom in, zoom out, and move the image to see details."
+    },
+    "previewMobile": {
+      "title": "View Image",
+      "description": "Tap to zoom in/out and drag to move the image."
+    },
+    "addCommentMobile": {
+      "title": "Add Comment",
+      "description": "Enter your comment for the image here."
+    }
+  },
+  "video": {
+    "player": {
+      "title": "Video Player",
+      "description": "Use keyboard shortcuts (Space to play/pause, Arrows to seek) to control."
+    },
+    "playerMobile": {
+      "title": "Video Player",
+      "description": "Tap to play/pause the video."
+    },
+    "timeline": {
+      "title": "Timeline & Markers",
+      "description": "Markers on the timeline show the positions of comments and annotations."
+    },
+    "timelineMobile": {
+      "title": "Timeline",
+      "description": "Tap the timeline to jump to that time. Red dots indicate comment positions."
+    },
+    "exportFrame": {
+      "title": "Copy Frame",
+      "description": "Click here to save the current frame image to your clipboard."
+    },
+    "settings": {
+      "title": "Overlay Settings",
+      "description": "Open the menu to select Safe Zones and Composition Guides. Adjust colors and transparency."
+    },
+    "fullscreen": {
+      "title": "Fullscreen",
+      "description": "Enable fullscreen mode to see the video more clearly."
+    },
+    "filterTime": {
+      "title": "Filter by Time",
+      "description": "Enable this to only show comments at the current timestamp."
+    },
+    "navToggleMobile": {
+      "title": "Navigation Mode",
+      "description": "Switch between controlling by frame (F) or marker (M)."
+    }
+  },
+  "sequence": {
+    "preview": {
+      "title": "Image Sequence",
+      "description": "Browse through each frame using navigation buttons or arrow keys."
+    },
+    "previewVideo": {
+      "title": "Image Sequence",
+      "description": "Hover or drag to see the sequence quickly. Press Space for auto-play."
+    },
+    "previewGrid": {
+      "title": "Image Sequence",
+      "description": "Overview of all frames in the sequence. Click a frame for details."
+    },
+    "viewMode": {
+      "title": "View Mode",
+      "description": "Switch between video, carousel, or grid modes to optimize your experience."
+    }
+  },
+  "pdf": {
+    "preview": {
+      "title": "View PDF",
+      "description": "Browse pages, zoom in/out, and switch pages to see details."
+    },
+    "previewMobile": {
+      "title": "View PDF",
+      "description": "Swipe to switch pages, tap to zoom."
+    }
+  },
+  "model": {
+    "preview": {
+      "title": "3D Model",
+      "description": "Rotate, zoom, and adjust the view to see the model."
+    },
+    "previewMobile": {
+      "title": "3D Model",
+      "description": "Tap and drag to rotate, pinch to zoom the model."
+    },
+    "interactionMode": {
+      "title": "Interaction Mode",
+      "description": "Switch between Rotate and Pan modes."
+    },
+    "resetView": {
+      "title": "Reset View",
+      "description": "Return to the default camera position."
+    },
+    "screenshot": {
+      "title": "Screenshot",
+      "description": "Save a screenshot of the current view."
+    },
+    "toolbar": {
+      "title": "Main Toolbar",
+      "description": "Contains controls for display, AR, and Animation."
+    },
+    "arView": {
+      "title": "View AR",
+      "description": "View the model in real space (if supported by device)."
+    },
+    "renderMode": {
+      "title": "Render Mode",
+      "description": "Switch between Standard, Wireframe, or Matcap."
+    },
+    "lighting": {
+      "title": "Display Settings",
+      "description": "Adjust lighting, environment, and Tone Mapping."
+    }
+  },
+  "fallback": {
+    "preview": {
+      "title": "View & Browse",
+      "description": "Standard viewer for files. You can see the content and add feedback."
+    }
+  }
+}

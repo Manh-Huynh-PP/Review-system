@@ -1,0 +1,30 @@
+{
+  "actions": {
+    "download": "Tải xuống",
+    "share": "Chia sẻ",
+    "copyLink": "Sao chép link",
+    "copied": "Đã sao chép!",
+    "confirm": "Xác nhận",
+    "cancel": "Hủy",
+    "save": "Lưu thay đổi",
+    "delete": "Xóa",
+    "view": "Xem",
+    "lock": "Khóa bình luận",
+    "unlock": "Mở khóa bình luận",
+    "retry": "Thử lại",
+    "close": "Đóng",
+    "back": "Quay lại"
+  },
+  "status": {
+    "loading": "Đang tải...",
+    "error": "Lỗi",
+    "success": "Thành công",
+    "noDocuments": "Chưa có tài liệu nào",
+    "noDocumentsDesc": "Dự án chưa có file nào được tải lên"
+  },
+  "labels": {
+    "version": "Phiên bản",
+    "current": "hiện tại",
+    "date": "Ngày tải lên"
+  }
+}

@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { format } from 'date-fns'
+import { useTranslation } from 'react-i18next'
+import { vi, enUS } from 'date-fns/locale'
 import {
   ChevronLeft, ChevronDown, Download, Trash2, Upload, Clock,
   HelpCircle, Columns, Share2, Check, Copy, MessageSquare, X, Pencil
@@ -60,6 +62,7 @@ export function FileViewHeader({
   handleStartTour, videoComparison, showComments, setShowComments,
   compareMode, setCompareMode, getShareLink, copyShareLink, copied
 }: FileViewHeaderProps) {
+  const { t, i18n } = useTranslation(['fileView', 'common', 'review'])
   const [isRenaming, setIsRenaming] = useState(false)
   const [renameValue, setRenameValue] = useState(file.name)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -80,7 +83,7 @@ export function FileViewHeader({
                 size="icon"
                 className="h-8 w-8 -ml-2 mr-1"
                 onClick={() => onOpenChange(false)}
-                title="Quay lại danh sách"
+                title={t('common:actions.back')}
               >
                 <ChevronLeft className="w-5 h-5" />
               </Button>
@@ -152,7 +155,7 @@ export function FileViewHeader({
                   variant="outline"
                   size="sm"
                   className="gap-1 px-2 min-w-[3.5rem] ml-2"
-                  title="Lịch sử phiên bản"
+                  title={t('toolbar.version')}
                 >
                   <span className="font-medium text-xs">v{currentVersion}</span>
                   <ChevronDown className="w-3 h-3 opacity-50" />
@@ -160,7 +163,7 @@ export function FileViewHeader({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-80">
                 <div className="p-2 border-b mb-1">
-                  <div className="font-semibold text-sm">Lịch sử phiên bản</div>
+                  <div className="font-semibold text-sm">{t('toolbar.version')}</div>
                 </div>
                 <div className="max-h-[300px] overflow-y-auto">
                   {uniqueVersions
@@ -181,10 +184,10 @@ export function FileViewHeader({
                           </div>
                           <div>
                             <div className="font-medium">
-                              {version.version === currentVersion ? 'Phiên bản hiện tại' : `Phiên bản ${version.version}`}
+                              {version.version === currentVersion ? t('toolbar.current') : `${t('common:labels.version')} ${version.version}`}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {format(version.uploadedAt?.toDate ? version.uploadedAt.toDate() : new Date(), 'dd/MM/yyyy HH:mm')}
+                              {format(version.uploadedAt?.toDate ? version.uploadedAt.toDate() : new Date(), 'dd/MM/yyyy HH:mm', { locale: i18n.language.startsWith('vi') ? vi : enUS })}
                             </div>
                           </div>
                         </div>
@@ -197,7 +200,7 @@ export function FileViewHeader({
                               e.stopPropagation()
                               handleDownload(e as any, version.url, version)
                             }}
-                            title="Tải xuống phiên bản này"
+                            title={t('common:actions.download')}
                           >
                             <Download className="w-3 h-3" />
                           </Button>
@@ -232,7 +235,7 @@ export function FileViewHeader({
                         }}
                       >
                         <Upload className="w-4 h-4 mr-2" />
-                        Tải lên phiên bản mới
+                        {t('toolbar.uploadNew')}
                       </DropdownMenuItem>
                     </div>
                   </>
@@ -247,7 +250,7 @@ export function FileViewHeader({
             <span>•</span>
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              {uploadDate && format(uploadDate, 'dd/MM/yyyy HH:mm')}
+              {uploadDate && format(uploadDate, 'dd/MM/yyyy HH:mm', { locale: i18n.language.startsWith('vi') ? vi : enUS })}
             </span>
           </div>
         </div>
@@ -263,10 +266,10 @@ export function FileViewHeader({
           size="sm"
           className="h-9 w-9 px-0 hidden sm:flex"
           onClick={handleStartTour}
-          title="Hướng dẫn sử dụng"
+          title={t('review:header.guide')}
         >
           <HelpCircle className="w-4 h-4" />
-          <span className="sr-only">Hướng dẫn</span>
+          <span className="sr-only">{t('review:header.guide')}</span>
         </Button>
 
         {file.type === 'video' && uniqueVersions.length > 1 && (
@@ -276,10 +279,10 @@ export function FileViewHeader({
             size="sm"
             className="h-9 w-9 px-0 hidden sm:flex"
             onClick={videoComparison.toggleCompare}
-            title={videoComparison.isComparing ? 'Tắt so sánh' : 'So sánh phiên bản'}
+            title={videoComparison.isComparing ? t('toolbar.compare') : t('toolbar.compare')}
           >
             <Columns className="w-4 h-4" />
-            <span className="sr-only">So sánh phiên bản</span>
+            <span className="sr-only">{t('toolbar.compare')}</span>
           </Button>
         )}
 
@@ -292,18 +295,18 @@ export function FileViewHeader({
                 variant="ghost"
                 size="sm"
                 className="h-9 w-9 px-0 hidden sm:flex"
-                title="Chia sẻ"
+                title={t('common:actions.share')}
               >
                 <Share2 className="w-4 h-4" />
-                <span className="sr-only">Chia sẻ</span>
+                <span className="sr-only">{t('common:actions.share')}</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80" align="start">
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <h4 className="font-medium text-sm">Chia sẻ file</h4>
+                  <h4 className="font-medium text-sm">{t('fileView:sharing.title')}</h4>
                   <p className="text-xs text-muted-foreground">
-                    Bất kỳ ai có link đều có thể xem file này
+                    {t('fileView:sharing.anyoneWithLink')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -323,7 +326,7 @@ export function FileViewHeader({
                 variant="ghost"
                 size="sm"
                 className="h-9 w-9 px-0 sm:hidden"
-                title="Chia sẻ"
+                title={t('common:actions.share')}
               >
                 <Share2 className="w-4 h-4" />
               </Button>
@@ -331,9 +334,9 @@ export function FileViewHeader({
             <PopoverContent className="w-80" align="end">
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <h4 className="font-medium text-sm">Chia sẻ file</h4>
+                  <h4 className="font-medium text-sm">{t('fileView:sharing.title')}</h4>
                   <p className="text-xs text-muted-foreground">
-                    Bất kỳ ai có link đều có thể xem file này
+                    {t('fileView:sharing.anyoneWithLink')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -352,7 +355,7 @@ export function FileViewHeader({
             size="sm"
             className="h-9 w-9 px-0"
             asChild
-            title="Tải xuống"
+            title={t('common:actions.download')}
           >
             <a
               href={latestUrl}
@@ -362,7 +365,7 @@ export function FileViewHeader({
               onClick={handleDownload}
             >
               <Download className="w-4 h-4" />
-              <span className="sr-only">Tải xuống</span>
+              <span className="sr-only">{t('common:actions.download')}</span>
             </a>
           </Button>
         </div>
@@ -373,10 +376,10 @@ export function FileViewHeader({
           size="sm"
           onClick={() => setShowComments(!showComments)}
           className="h-9 w-9 px-0 hidden sm:flex"
-          title={showComments ? 'Ẩn bình luận' : 'Hiện bình luận'}
+          title={showComments ? t('comments.hide') : t('comments.show')}
         >
           <MessageSquare className="w-4 h-4" />
-          <span className="sr-only">Bình luận</span>
+          <span className="sr-only">{t('comments.title')}</span>
         </Button>
 
         <div className="flex-1" />
@@ -389,10 +392,10 @@ export function FileViewHeader({
             size="sm"
             className="h-9 w-9 px-0"
             onClick={() => setCompareMode(!compareMode)}
-            title="So sánh phiên bản"
+            title={t('toolbar.compare')}
           >
             <Columns className="w-4 h-4" />
-            <span className="sr-only">So sánh</span>
+            <span className="sr-only">{t('toolbar.compare')}</span>
           </Button>
         )}
       </div>
@@ -400,9 +403,9 @@ export function FileViewHeader({
       <ConfirmDialog
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
-        title={`Xóa phiên bản ${versionToDelete?.version}?`}
-        description="Bạn có chắc chắn muốn xóa phiên bản này? Hành động này không thể hoàn tác và tất cả bình luận liên quan đến phiên bản này sẽ bị mất."
-        confirmText="Xóa phiên bản"
+        title={`${t('comments.deleteVersion')} ${versionToDelete?.version}?`}
+        description={t('comments.deleteVersionConfirm')}
+        confirmText={t('comments.deleteVersion')}
         variant="destructive"
         onConfirm={() => {
           if (versionToDelete) {

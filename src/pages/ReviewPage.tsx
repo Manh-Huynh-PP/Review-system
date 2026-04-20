@@ -12,8 +12,10 @@ import { Input } from '@/components/ui/input'
 import { FileCardShared } from '@/components/shared/FileCardShared'
 import { FileViewDialogShared } from '@/components/shared/FileViewDialogShared'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
+import { LanguageToggle } from '@/components/LanguageToggle'
 import { NotificationSubscriptionDialog } from '@/components/shared/NotificationSubscriptionDialog'
-import { HelpCircle, Download, ShieldAlert, Loader2, Mail } from 'lucide-react'
+import { HelpCircle, Download, ShieldAlert, Loader2, Mail, Globe } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { resetTourStatus } from '@/lib/fileTours'
 import {
   Dialog,
@@ -39,6 +41,7 @@ import { useThemeStore } from '@/stores/theme'
 import { Sun, Moon } from 'lucide-react'
 
 export default function ReviewPage() {
+  const { t, i18n } = useTranslation(['review', 'common'])
   const { theme, toggleTheme } = useThemeStore()
   const { projectId, fileId } = useParams<{ projectId: string; fileId?: string }>()
   const { project, fetchProject } = useProjectStore()
@@ -94,6 +97,14 @@ export default function ReviewPage() {
 
       if (!project) return // Wait for project load
 
+      // 0.5. DELETED CHECK
+      if (project.status === 'trash') {
+        setAccessStatus('denied')
+        setAccessError(t('access.projectDeleted'))
+        setLoading(false)
+        return
+      }
+
       // 0. ADMIN BYPASS
       if (user) {
         setAccessStatus('allowed')
@@ -113,7 +124,7 @@ export default function ReviewPage() {
       // 2. If private, check token
       if (!token) {
         setAccessStatus('denied')
-        setAccessError('Dự án này yêu cầu link truy cập hợp lệ (kèm token).')
+        setAccessError(t('access.required'))
         setLoading(false)
         return
       }
@@ -124,7 +135,7 @@ export default function ReviewPage() {
 
       if (!result.isValid || !result.invitation) {
         setAccessStatus('denied')
-        setAccessError(result.error || 'Token không hợp lệ hoặc đã hết hạn.')
+        setAccessError(result.error || t('review:access.tokenInvalid'))
         setLoading(false)
         return
       }
@@ -137,7 +148,7 @@ export default function ReviewPage() {
         // For now, allow access but we should filter the `files` list later
         if (fileId && result.invitation.resourceId !== fileId) {
           setAccessStatus('denied')
-          setAccessError('Bạn chỉ có quyền truy cập vào file được chia sẻ, không phải file này.')
+          setAccessError(t('review:access.noPermission'))
           setLoading(false)
           return
         }
@@ -183,7 +194,7 @@ export default function ReviewPage() {
         setAccessStatus('allowed')
       }
     } catch (e) {
-      toast.error('Xác thực thất bại')
+      toast.error(t('verification.failed'))
     } finally {
       setVerifyingOtp(false)
     }
@@ -448,7 +459,7 @@ export default function ReviewPage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground">Đang tải dự án...</p>
+          <p className="text-muted-foreground">{t('common:status.loading')}</p>
         </div>
       </div>
     )
@@ -462,17 +473,17 @@ export default function ReviewPage() {
             <ShieldAlert className="w-8 h-8 text-destructive" />
           </div>
           <div className="text-center space-y-2">
-            <h2 className="text-xl font-bold text-destructive">Đường dẫn không hợp lệ hoặc đã hết hạn</h2>
+            <h2 className="text-xl font-bold text-destructive">{t('access.denied')}</h2>
             <p className="text-muted-foreground">{accessError}</p>
           </div>
 
           <div className="pt-4 border-t space-y-4">
             <div className="text-center space-y-2">
-              <h3 className="font-semibold text-foreground">Bạn đã có lời mời trước đó?</h3>
+              <h3 className="font-semibold text-foreground">{t('recovery.title')}</h3>
               <p className="text-sm text-muted-foreground">
                 {showCodeInput
-                  ? `Nhập mã xác thực đã được gửi đến ${recoveryEmail}`
-                  : "Nhập email của bạn để nhận mã truy cập mới."}
+                  ? t('recovery.sent', { email: recoveryEmail })
+                  : t('recovery.prompt')}
               </p>
             </div>
 
@@ -493,7 +504,7 @@ export default function ReviewPage() {
                 </div>
                 <Button type="submit" className="w-full" disabled={recovering}>
                   {recovering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {recovering ? 'Đang gửi...' : 'Gửi mã xác thực'}
+                  {recovering ? t('recovery.sending') : t('review:verification.sendOtp')}
                 </Button>
               </form>
             ) : (
@@ -501,7 +512,7 @@ export default function ReviewPage() {
                 <div className="space-y-2">
                   <Input
                     type="text"
-                    placeholder="Nhập mã 6 số"
+                    placeholder={t('review:recovery.sent', { email: '' }).split(' ')[0] + " 6 số"}
                     className="text-center text-lg tracking-widest"
                     value={accessCode}
                     onChange={e => setAccessCode(e.target.value)}
@@ -511,10 +522,10 @@ export default function ReviewPage() {
                 </div>
                 <Button type="submit" className="w-full" disabled={verifyingCode}>
                   {verifyingCode ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {verifyingCode ? 'Đang kiểm tra...' : 'Truy cập'}
+                  {verifyingCode ? t('recovery.checking') : t('review:recovery.access')}
                 </Button>
                 <Button variant="ghost" className="w-full" onClick={() => setShowCodeInput(false)}>
-                  Quay lại nhập Email
+                  {t('recovery.backToEmail')}
                 </Button>
               </form>
             )}
@@ -522,7 +533,7 @@ export default function ReviewPage() {
 
           <div className="text-center">
             <Button variant="link" onClick={() => window.location.reload()}>
-              Thử lại link hiện tại
+              {t('actions.retry')}
             </Button>
           </div>
         </div>
@@ -540,11 +551,11 @@ export default function ReviewPage() {
             <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
               <HelpCircle className="w-8 h-8 text-primary" />
             </div>
-            <h2 className="text-xl font-bold">Xác thực thiết bị</h2>
+            <h2 className="text-xl font-bold">{t('verification.title')}</h2>
             <p className="text-sm text-muted-foreground">
               {isFirstTime
-                ? "Đây là lần đầu tiên bạn truy cập. Vui lòng xác thực email để liên kết thiết bị này."
-                : "Thiết bị này chưa được liên kết. Vui lòng nhập mã OTP đã gửi đến email của bạn."}
+                ? t('verification.firstTime')
+                : t('verification.notLinked')}
             </p>
           </div>
 
@@ -555,14 +566,14 @@ export default function ReviewPage() {
                 onClick={handleDeviceVerification}
                 disabled={verifyingOtp}
               >
-                {verifyingOtp ? <Loader2 className="animate-spin" /> : "Gửi mã xác thực"}
+                {verifyingOtp ? <Loader2 className="animate-spin text-primary" /> : t('verification.sendOtp')}
               </Button>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="space-y-2">
                 <Input
-                  placeholder="Nhập mã OTP (6 số)"
+                  placeholder={t('verification.otpPlaceholder')}
                   value={otpCode}
                   onChange={e => setOtpCode(e.target.value)}
                   className="text-center text-lg tracking-widest"
@@ -574,18 +585,17 @@ export default function ReviewPage() {
                 onClick={handleDeviceVerification}
                 disabled={verifyingOtp || otpCode.length < 4}
               >
-                {verifyingOtp ? <Loader2 className="animate-spin" /> : "Xác nhận"}
+                {verifyingOtp ? <Loader2 className="animate-spin" /> : t('verification.verify')}
               </Button>
               <Button
                 variant="ghost"
                 className="w-full"
                 onClick={() => {
                   setOtpCode('')
-                  // Logic to resend...
-                  requestOTP(invitation!.id)
+                  if (invitation) requestOTP(invitation.id)
                 }}
               >
-                Gửi lại mã
+                {t('verification.resend')}
               </Button>
             </div>
           )}
@@ -598,8 +608,8 @@ export default function ReviewPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
-          <p className="text-xl font-semibold">Không tìm thấy dự án</p>
-          <p className="text-muted-foreground">Link review không hợp lệ hoặc dự án đã bị xóa</p>
+          <p className="text-xl font-semibold">{t('access.projectNotFound')}</p>
+          <p className="text-muted-foreground">{t('access.projectNotFoundDesc')}</p>
         </div>
       </div>
     )
@@ -622,20 +632,20 @@ export default function ReviewPage() {
         <DialogContent className="sm:max-w-md" onInteractOutside={(e) => isInitialPrompt && e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>
-              {isInitialPrompt ? 'Chào mừng đến với Review' : 'Cài đặt thông tin'}
+              {isInitialPrompt ? t('onboarding.welcome') : t('onboarding.settings')}
             </DialogTitle>
             <DialogDescription>
               {isInitialPrompt
-                ? 'Vui lòng nhập tên và chọn avatar để tiếp tục xem và bình luận'
-                : 'Cập nhật tên và hình ảnh hiển thị của bạn'}
+                ? t('onboarding.descNew')
+                : t('onboarding.descUpdate')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleNameSubmit} className="space-y-4">
             <div className="space-y-3">
-              <label className="text-sm font-medium">Tên hiển thị</label>
+              <label className="text-sm font-medium">{t('onboarding.displayName')}</label>
               <Input
                 name="userName"
-                placeholder="Nhập tên của bạn..."
+                placeholder={t('onboarding.namePlaceholder')}
                 required
                 autoFocus
                 className="w-full"
@@ -644,7 +654,7 @@ export default function ReviewPage() {
             </div>
 
             <div className="space-y-3">
-              <label className="text-sm font-medium">Chọn Avatar</label>
+              <label className="text-sm font-medium">{t('onboarding.selectAvatar')}</label>
               <div className="grid grid-cols-4 gap-2">
                 {[
                   '/avatar/Connection.svg',
@@ -683,7 +693,7 @@ export default function ReviewPage() {
             </div>
 
             <div className="space-y-3">
-              <label className="text-sm font-medium">Màu nền Avatar</label>
+              <label className="text-sm font-medium">{t('onboarding.avatarColor')}</label>
               <div className="flex flex-wrap gap-2">
                 {[
                   '#EF4444', // Red
@@ -709,7 +719,7 @@ export default function ReviewPage() {
             </div>
 
             <Button type="submit" className="w-full">
-              {isInitialPrompt ? 'Tiếp tục' : 'Lưu thay đổi'}
+              {isInitialPrompt ? t('onboarding.continue') : t('actions.save')}
             </Button>
           </form>
         </DialogContent>
@@ -731,7 +741,7 @@ export default function ReviewPage() {
                 {isArchived && (
                   <Badge variant="secondary" className="gap-1 text-amber-600 bg-amber-100 border-amber-200">
                     <Archive className="h-3 w-3" />
-                    Đã lưu trữ
+                    {t('header.archived')}
                   </Badge>
                 )}
               </div>
@@ -739,9 +749,9 @@ export default function ReviewPage() {
                 <p className="text-muted-foreground">{project.description}</p>
               )}
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span>Review công khai</span>
+                <span>{t('header.publicReview')}</span>
                 <span>•</span>
-                <span>{projectFiles.length} tệp tin</span>
+                <span>{t('header.fileCount', { count: projectFiles.length })}</span>
               </div>
 
               {/* Archive Links Section */}
@@ -787,14 +797,16 @@ export default function ReviewPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    const filesWithProject = projectFiles.map(f => ({ ...f, projectName: project.name }))
-                    handleBulkDownload(filesWithProject, comments)
+                    if (project) {
+                      const filesWithProject = projectFiles.map(f => ({ ...f, projectName: project.name }))
+                      handleBulkDownload(filesWithProject, comments)
+                    }
                   }}
                   className="gap-2"
-                  title="Tải xuống tất cả"
+                  title={t('header.downloadAll')}
                 >
                   <Download className="w-4 h-4" />
-                  <span>Tải tất cả</span>
+                  <span>{t('header.downloadAll')}</span>
                 </Button>
 
                 <Button
@@ -802,10 +814,10 @@ export default function ReviewPage() {
                   size="sm"
                   onClick={() => setNotificationDialogOpen(true)}
                   className="gap-2 text-primary border-primary/20 hover:bg-primary/5"
-                  title="Nhận thông báo qua email"
+                  title={t('header.getNotifications')}
                 >
                   <Mail className="w-4 h-4" />
-                  <span>Nhận thông báo</span>
+                  <span>{t('header.getNotifications')}</span>
                 </Button>
 
                 <Button
@@ -813,12 +825,12 @@ export default function ReviewPage() {
                   size="sm"
                   onClick={() => {
                     resetTourStatus()
-                    toast.success('Đã reset trạng thái hướng dẫn. Mở file bất kỳ để xem hướng dẫn lại.')
+                    toast.success(t('header.tourReset'))
                   }}
                   className="gap-2"
                 >
                   <HelpCircle className="w-4 h-4" />
-                  <span>Hướng dẫn</span>
+                  <span>{t('header.guide')}</span>
                 </Button>
 
                 <Button
@@ -829,7 +841,7 @@ export default function ReviewPage() {
                     setIsInitialPrompt(false)
                     setShowNamePrompt(true)
                   }}
-                  title="Cài đặt thông tin"
+                  title={t('onboarding.settings')}
                 >
                   <div className="w-full h-full flex items-center justify-center p-1.5 bg-muted">
                     <div
@@ -848,6 +860,7 @@ export default function ReviewPage() {
                     />
                   </div>
                 </Button>
+                <LanguageToggle />
                 <ThemeToggle />
               </div>
 
@@ -862,13 +875,15 @@ export default function ReviewPage() {
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuItem
                       onClick={() => {
-                        const filesWithProject = projectFiles.map(f => ({ ...f, projectName: project.name }))
-                        handleBulkDownload(filesWithProject, comments)
+                        if (project) {
+                          const filesWithProject = projectFiles.map(f => ({ ...f, projectName: project.name }))
+                          handleBulkDownload(filesWithProject, comments)
+                        }
                       }}
                       className="gap-2"
                     >
                       <Download className="w-4 h-4" />
-                      <span>Tải tất cả</span>
+                      <span>{t('header.downloadAll')}</span>
                     </DropdownMenuItem>
 
                     <DropdownMenuItem
@@ -876,18 +891,18 @@ export default function ReviewPage() {
                       className="gap-2"
                     >
                       <Mail className="w-4 h-4" />
-                      <span>Nhận thông báo</span>
+                      <span>{t('header.getNotifications')}</span>
                     </DropdownMenuItem>
 
                     <DropdownMenuItem
                       onClick={() => {
                         resetTourStatus()
-                        toast.success('Đã reset trạng thái hướng dẫn. Mở file bất kỳ để xem hướng dẫn lại.')
+                        toast.success(t('header.tourReset'))
                       }}
                       className="gap-2"
                     >
                       <HelpCircle className="w-4 h-4" />
-                      <span>Hướng dẫn</span>
+                      <span>{t('header.guide')}</span>
                     </DropdownMenuItem>
 
                     <DropdownMenuSeparator />
@@ -915,7 +930,7 @@ export default function ReviewPage() {
                           }}
                         />
                       </div>
-                      <span>Cài đặt thông tin</span>
+                      <span>{t('onboarding.settings')}</span>
                     </DropdownMenuItem>
 
                     <DropdownMenuItem
@@ -925,14 +940,32 @@ export default function ReviewPage() {
                       {theme === 'dark' ? (
                         <>
                           <Sun className="w-4 h-4" />
-                          <span>Giao diện sáng</span>
+                          <span>{t('header.themeLight')}</span>
                         </>
                       ) : (
                         <>
                           <Moon className="w-4 h-4" />
-                          <span>Giao diện tối</span>
+                          <span>{t('header.themeDark')}</span>
                         </>
                       )}
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground flex items-center gap-2">
+                       <Globe className="w-3 h-3" />
+                       {t('header.language')}
+                    </div>
+                    <DropdownMenuItem 
+                      onClick={() => i18n.changeLanguage('vi')}
+                      className={i18n.language.startsWith('vi') ? 'bg-accent font-medium' : ''}
+                    >
+                      Tiếng Việt
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => i18n.changeLanguage('en')}
+                      className={i18n.language.startsWith('en') ? 'bg-accent font-medium' : ''}
+                    >
+                      English
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -943,7 +976,7 @@ export default function ReviewPage() {
       </div>
 
       {/* Archive Notice Banner */}
-      {isArchived && (
+      {isArchived && project && (
         <div className="bg-amber-50 border-b border-amber-200">
           <div className="container mx-auto px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -952,8 +985,8 @@ export default function ReviewPage() {
                   <Archive className="h-5 w-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-amber-900">Dự án này đã được lưu trữ</p>
-                  <p className="text-sm text-amber-700">Bình luận đã bị khóa. Chỉ hiển thị ảnh thumbnail còn lại.</p>
+                  <p className="font-medium text-amber-900">{t('access.archivedDesc')}</p>
+                  <p className="text-sm text-amber-700">{t('access.archivedLock')}</p>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -968,7 +1001,7 @@ export default function ReviewPage() {
                       className="inline-flex items-center gap-2 text-sm font-medium text-amber-700 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors"
                     >
                       <ExternalLink className="h-4 w-4" />
-                      {link.title || 'Xem file gốc'}
+                      {link.title || t('common:actions.view')}
                     </a>
                   ))}
               </div>
@@ -984,8 +1017,8 @@ export default function ReviewPage() {
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
               <span className="text-2xl">📁</span>
             </div>
-            <div className="text-lg font-medium mb-2">Chưa có tài liệu nào</div>
-            <div className="text-sm text-muted-foreground">Dự án chưa có file nào được tải lên</div>
+            <div className="text-lg font-medium mb-2">{t('common:status.noDocuments')}</div>
+            <div className="text-sm text-muted-foreground">{t('common:status.noDocumentsDesc')}</div>
           </div>
         ) : (
           <>
@@ -1026,8 +1059,8 @@ export default function ReviewPage() {
                 onEditComment={handleEditComment}
                 onDeleteComment={handleDeleteComment}
                 isAdmin={false}
-                project={project}
-                isArchived={project.status === 'archived'}
+                project={project || { isCommentsLocked: false }}
+                isArchived={project?.status === 'archived'}
               />
             )}
           </>

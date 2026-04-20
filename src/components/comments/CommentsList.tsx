@@ -1,7 +1,8 @@
 import { formatDistanceToNow } from 'date-fns'
 import { linkifyText } from '@/lib/linkify'
-import { vi } from 'date-fns/locale'
+import { vi, enUS } from 'date-fns/locale'
 import { useEffect, useState, memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Comment } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -48,6 +49,8 @@ function CommentsListComponent({
   isLocked = false,
   showVersionBadge = false,
 }: CommentsListProps) {
+  const { t, i18n } = useTranslation(['fileView', 'common'])
+  const currentLocale = i18n.language.startsWith('vi') ? vi : enUS
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState('')
@@ -253,7 +256,7 @@ function CommentsListComponent({
                 <span className="text-xs text-muted-foreground">
                   {formatDistanceToNow(comment.createdAt.toDate(), {
                     addSuffix: true,
-                    locale: vi
+                    locale: currentLocale
                   })}
                 </span>
                 {comment.isPending && (
@@ -266,7 +269,7 @@ function CommentsListComponent({
                     <span className="text-xs text-muted-foreground">•</span>
                     <Badge variant="secondary" className="text-xs h-5 px-1.5 bg-green-500/20 text-green-400 border-green-500/30">
                       <CheckCircle className="w-3 h-3 mr-1" />
-                      Resolved
+                      {t('fileView:comments.resolved')}
                     </Badge>
                   </>
                 )}
@@ -281,7 +284,7 @@ function CommentsListComponent({
                   size="sm"
                   onClick={(e) => { e.stopPropagation(); setReplyingTo(isReplying ? null : comment.id) }}
                   className="h-7 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="Trả lời"
+                  title={t('fileView:comments.reply')}
                 >
                   <Reply className="w-3.5 h-3.5" />
                 </Button>
@@ -292,7 +295,7 @@ function CommentsListComponent({
                   size="sm"
                   onClick={(e) => { e.stopPropagation(); onResolveToggle(comment.id, !comment.isResolved) }}
                   className={`h-7 px-2 ${comment.isResolved ? 'text-green-400 hover:text-green-300' : 'text-muted-foreground hover:text-foreground'}`}
-                  title={comment.isResolved ? 'Mở lại' : 'Đánh dấu resolved'}
+                  title={comment.isResolved ? t('fileView:comments.reopen') : t('fileView:comments.resolve')}
                 >
                   {comment.isResolved ? (
                     <CheckCircle className="w-3.5 h-3.5" />
@@ -301,7 +304,6 @@ function CommentsListComponent({
                   )}
                 </Button>
               )}
-              {/* Reaction Picker */}
               {/* Reaction Picker */}
               <ReactionPicker
                 onSelect={(reaction) => {
@@ -315,7 +317,7 @@ function CommentsListComponent({
                 size="sm"
                 onClick={(e) => { e.stopPropagation(); handlePin(comment) }}
                 className="h-7 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                title={comment.isPinned ? 'Unpin' : 'Pin'}
+                title={comment.isPinned ? t('fileView:comments.unpin') : t('fileView:comments.pin')}
               >
                 <Pin className="w-3.5 h-3.5" />
               </Button>
@@ -340,7 +342,7 @@ function CommentsListComponent({
                         handleEditClick(comment)
                       }}>
                         <Pencil className="w-3.5 h-3.5 mr-2" />
-                        Chỉnh sửa
+                        {t('fileView:comments.edit')}
                       </DropdownMenuItem>
                     )}
                     {onDelete && !isLocked && (
@@ -352,7 +354,7 @@ function CommentsListComponent({
                         className="text-red-500 focus:text-red-500 focus:bg-red-50"
                       >
                         <Trash className="w-3.5 h-3.5 mr-2" />
-                        Xóa
+                        {t('fileView:comments.delete')}
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -365,13 +367,13 @@ function CommentsListComponent({
           {editingCommentId === comment.id ? (
             <div className="mt-2 space-y-3" onClick={(e) => e.stopPropagation()}>
               <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">Tên hiển thị</label>
+                <label className="text-xs font-medium text-muted-foreground">{t('fileView:comments.displayName')}</label>
                 <input
                   type="text"
                   value={editDisplayName}
                   onChange={(e) => setEditDisplayName(e.target.value)}
                   className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Nhập tên hiển thị"
+                  placeholder={t('fileView:comments.enterDisplayName')}
                 />
               </div>
               <div className="space-y-2">
@@ -380,7 +382,7 @@ function CommentsListComponent({
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
                   className="min-h-[80px] text-sm"
-                  placeholder="Nhập nội dung bình luận"
+                  placeholder={t('fileView:comments.enterContent')}
                 />
               </div>
               <div className="flex justify-end gap-2">
@@ -390,14 +392,14 @@ function CommentsListComponent({
                   onClick={handleCancelEdit}
                   disabled={submittingEdit}
                 >
-                  Hủy
+                  {t('fileView:comments.cancel')}
                 </Button>
                 <Button
                   size="sm"
                   onClick={() => handleSaveEdit(comment)}
                   disabled={submittingEdit || !editContent.trim() || !editDisplayName.trim()}
                 >
-                  {submittingEdit ? 'Đang lưu...' : 'Lưu'}
+                  {submittingEdit ? t('fileView:comments.saving') : t('fileView:comments.save')}
                 </Button>
               </div>
             </div>
@@ -405,7 +407,7 @@ function CommentsListComponent({
             <div className="text-sm whitespace-pre-wrap break-words leading-relaxed">
               {linkifyText(comment.content)}
               {comment.isEdited && (
-                <span className="text-xs text-muted-foreground ml-2 italic">(đã chỉnh sửa)</span>
+                <span className="text-xs text-muted-foreground ml-2 italic">{t('fileView:comments.edited')}</span>
               )}
             </div>
           )}
@@ -454,7 +456,7 @@ function CommentsListComponent({
                           link.click()
                           document.body.removeChild(link)
                         }}
-                        title="Tải xuống"
+                        title={t('fileView:comments.download')}
                       >
                         <Download className="w-3.5 h-3.5" />
                       </Button>
@@ -502,7 +504,7 @@ function CommentsListComponent({
                     {attachment.validationStatus === 'infected' ? (
                       <div className="flex items-center gap-2 text-destructive text-sm p-1 border rounded border-destructive/20 bg-destructive/5">
                         <ShieldAlert className="w-4 h-4" />
-                        <span className="font-medium text-xs">File chứa mã độc - Đã chặn</span>
+                        <span className="font-medium text-xs">{t('fileView:comments.infected')}</span>
                       </div>
                     ) : attachment.validationStatus === 'error' ? (
                       <div className="flex items-center gap-2 text-yellow-600 text-sm p-1 border rounded border-yellow-500/20 bg-yellow-500/5">
@@ -542,7 +544,7 @@ function CommentsListComponent({
                   <Clock className="w-3.5 h-3.5" />
                   <span>
                     {isSequence
-                      ? `Frame ${Math.floor(comment.timestamp) + 1}`
+                      ? t('fileView:comments.frame', { number: Math.floor(comment.timestamp) + 1 })
                       : `${Math.floor(comment.timestamp / 60)}:${String(Math.floor(comment.timestamp % 60)).padStart(2, '0')}`
                     }
                   </span>
@@ -558,7 +560,7 @@ function CommentsListComponent({
                 <Textarea
                   value={replyContent}
                   onChange={(e) => setReplyContent(e.target.value)}
-                  placeholder={`Trả lời ${comment.userName}...`}
+                  placeholder={t('fileView:comments.placeholderReply', { name: comment.userName })}
                   className="flex-1 min-h-[70px] text-sm"
                   disabled={submittingReply}
                   autoFocus
@@ -582,7 +584,7 @@ function CommentsListComponent({
                     disabled={submittingReply}
                     className="h-8 px-3"
                   >
-                    Hủy
+                    {t('fileView:comments.cancel')}
                   </Button>
                 </div>
               </div>
@@ -727,9 +729,9 @@ function CommentsListComponent({
       <ConfirmDialog
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
-        title="Xóa bình luận?"
-        description="Bạn có chắc chắn muốn xóa bình luận này? Hành động này sẽ xóa vĩnh viễn nội dung và không thể khôi phục."
-        confirmText="Xóa bình luận"
+        title={t('fileView:comments.deleteConfirmTitle')}
+        description={t('fileView:comments.deleteConfirmDesc')}
+        confirmText={t('fileView:comments.deleteConfirmButton')}
         variant="destructive"
         onConfirm={handleActualDelete}
       />

@@ -3,6 +3,7 @@ import { Layers } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CommentsList } from '@/components/comments/CommentsList'
 import { AddComment } from '@/components/comments/AddComment'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   isFullscreen?: boolean
@@ -69,6 +70,7 @@ export function DesktopCommentsSidebar({
   handleStartAnnotating,
   commentWidth = 350
 }: Props) {
+  const { t } = useTranslation()
   const isLocked = file.isCommentsLocked || project?.isCommentsLocked || isArchived
 
   const handleSubmitComment = async (
@@ -97,7 +99,7 @@ export function DesktopCommentsSidebar({
     return (
       <div className="fixed top-0 right-0 left-[75vw] w-[25vw] h-screen flex flex-col bg-background border-l border-border z-50">
         <div className="p-3 border-b flex items-center justify-between bg-muted/10">
-          <div className="text-sm font-medium">Bình luận</div>
+          <div className="text-sm font-medium">{t('fileView:comments.title')}</div>
           <Button
             variant={viewAllVersions ? 'secondary' : 'ghost'}
             size="sm"
@@ -105,7 +107,7 @@ export function DesktopCommentsSidebar({
             className={`h-7 px-2 text-xs gap-1.5 ${viewAllVersions ? 'bg-primary/10 text-primary border-primary/20' : 'text-muted-foreground'}`}
           >
             <Layers className="w-3.5 h-3.5" />
-            <span>Tất cả phiên bản</span>
+            <span>{t('fileView:comments.allVersions')}</span>
           </Button>
         </div>
         <div className="flex-1 overflow-y-auto p-4">
@@ -127,8 +129,8 @@ export function DesktopCommentsSidebar({
           />
           {fileComments.length === 0 && (
             <div className="text-center text-muted-foreground py-8">
-              Chưa có bình luận nào
-              {showOnlyCurrentTimeComments && <div className="text-xs mt-1">(Đang lọc theo thời gian hiện tại)</div>}
+              {t('fileView:comments.empty')}
+              {showOnlyCurrentTimeComments && <div className="text-xs mt-1">{t('fileView:comments.filteringByTime')}</div>}
             </div>
           )}
         </div>
@@ -139,8 +141,8 @@ export function DesktopCommentsSidebar({
                 <span>🔒</span>
                 <span>
                   {isArchived
-                    ? 'Dự án đã lưu trữ. Không thể bình luận.'
-                    : 'Tính năng bình luận đang tạm khóa.'}
+                    ? t('fileView:comments.archivedLocked')
+                    : t('fileView:comments.featureLocked')}
                 </span>
               </div>
             </div>
@@ -171,7 +173,7 @@ export function DesktopCommentsSidebar({
       }}
     >
       <div className="p-3 border-b flex items-center justify-between bg-muted/10">
-        <div className="text-sm font-medium">Bình luận</div>
+        <div className="text-sm font-medium">{t('fileView:comments.title')}</div>
         <Button
           id="comments-version-toggle"
           variant="outline"
@@ -181,10 +183,10 @@ export function DesktopCommentsSidebar({
             ? 'bg-primary/10 text-primary border-primary/50 hover:bg-primary/20'
             : 'text-muted-foreground hover:text-foreground border-dashed hover:border-solid'
             }`}
-          title={viewAllVersions ? 'Đang hiện tất cả bình luận' : 'Chỉ hiện bình luận phiên bản này'}
+          title={viewAllVersions ? t('fileView:comments.allVersions') : t('fileView:comments.currentVersionOnly')}
         >
           <Layers className="w-3.5 h-3.5" />
-          <span>{viewAllVersions ? 'Tất cả bình luận' : 'Phiên bản hiện tại'}</span>
+          <span>{viewAllVersions ? t('fileView:comments.allVersions') : t('fileView:comments.currentVersionOnly')}</span>
         </Button>
       </div>
 
@@ -207,9 +209,9 @@ export function DesktopCommentsSidebar({
         />
         {fileComments.length === 0 && (
           <div className="text-center text-muted-foreground py-8">
-            Chưa có bình luận nào
-            {showOnlyCurrentTimeComments && <div className="text-xs mt-1">(Đang lọc theo thời gian hiện tại)</div>}
-            {viewAllVersions && <div className="text-xs mt-1">(Đã bật xem tất cả phiên bản)</div>}
+            {t('fileView:comments.empty')}
+            {showOnlyCurrentTimeComments && <div className="text-xs mt-1">{t('fileView:comments.filteringByTime')}</div>}
+            {viewAllVersions && <div className="text-xs mt-1">{t('fileView:comments.allVersionsEnabled')}</div>}
           </div>
         )}
       </div>
@@ -222,8 +224,8 @@ export function DesktopCommentsSidebar({
               <span>🔒</span>
               <span>
                 {isArchived
-                  ? 'Dự án đã được lưu trữ. Không thể bình luận.'
-                  : 'Tính năng bình luận đang tạm khóa.'}
+                  ? t('fileView:comments.archivedLocked')
+                  : t('fileView:comments.featureLocked')}
               </span>
             </div>
           </div>
@@ -249,8 +251,8 @@ export function DesktopCommentsSidebar({
               <span>🔒</span>
               <span>
                 {isArchived
-                  ? 'Dự án đã lưu trữ. Không thể bình luận.'
-                  : 'Bình luận đang tạm khóa.'}
+                  ? t('fileView:comments.archivedLocked')
+                  : t('fileView:comments.featureLocked')}
               </span>
             </div>
           </div>

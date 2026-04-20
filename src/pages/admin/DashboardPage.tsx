@@ -186,6 +186,9 @@ export default function DashboardPage() {
 
     // Calculate statistics from existing store data
     const statistics = useMemo(() => {
+        const visibleProjects = projects.filter(p => p.status !== 'trash')
+        const projectMap = new Map(visibleProjects.map(p => [p.id, p]))
+
         // Storage stats
         const totalSize = calculateTotalSize(files)
 
@@ -211,9 +214,6 @@ export default function DashboardPage() {
                 byType[file.type as keyof typeof byType] += fileTotalSize
             }
         })
-
-        // Project stats
-        const projectMap = new Map(projects.map(p => [p.id, p]))
         const projectStatsMap = new Map<string, {
             projectId: string
             projectName: string
@@ -566,7 +566,7 @@ export default function DashboardPage() {
     // but the logic is now in the hook.
     // The previous implementation block is removed.
 
-    const totalProjects = projects.length
+    const totalProjects = projects.filter(p => p.status !== 'trash').length
     const activeProjects = projects.filter(p => p.status === 'active').length
     const archivedProjects = projects.filter(p => p.status === 'archived').length
 

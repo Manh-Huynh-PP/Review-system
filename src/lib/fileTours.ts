@@ -431,23 +431,12 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
           popover: {
             title: 'Chuỗi hình ảnh',
             description: sequenceViewMode === 'video'
-              ? 'Di chuột hoặc kéo để xem chuỗi hình ảnh nhanh. Nhấn phím cách để phát tự động.'
+              ? 'Di chuột hoặc kéo để xem chuỗi hình ảnh nhanh. Nhấn phím cách để phát tự động. Bạn cũng có thể chuyển đổi giữa các chế độ Video, Carousel hoặc Lưới bằng thanh điều khiển phía trên.'
               : sequenceViewMode === 'carousel'
-                ? 'Duyệt qua từng khung hình bằng các nút điều hướng hoặc phím mũi tên.'
-                : 'Xem tổng quan tất cả khung hình trong chuỗi. Click vào một khung hình để xem chi tiết.',
+                ? 'Duyệt qua từng khung hình bằng các nút điều hướng hoặc phím mũi tên. Bạn cũng có thể chuyển đổi giữa các chế độ Video, Carousel hoặc Lưới bằng thanh điều khiển phía trên.'
+                : 'Xem tổng quan tất cả khung hình trong chuỗi. Click vào một khung hình để xem chi tiết. Bạn cũng có thể chuyển đổi giữa các chế độ Video, Carousel hoặc Lưới bằng thanh điều khiển phía trên.',
             side: 'bottom',
             align: 'center'
-          }
-        },
-        {
-          element: '#grid-toggle',
-          popover: {
-            title: isAdmin ? 'Quản lý chế độ xem' : 'Chế độ hiển thị',
-            description: isAdmin
-              ? 'Chuyển đổi giữa các chế độ phát Video, duyệt Carousel hoặc xem Lưới để thuận tiện cho việc đánh giá.'
-              : `Bạn đang xem ở chế độ ${sequenceViewMode === 'video' ? 'Video tự động' : sequenceViewMode === 'carousel' ? 'Duyệt thủ công' : 'Lưới tổng quan'} theo cài đặt của Admin.`,
-            side: 'bottom',
-            align: 'end'
           }
         },
         {
@@ -781,22 +770,11 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
       // Cho phép đóng tour ngay lập tức khi người dùng yêu cầu thoát
       driverObj.destroy()
     },
-    onCloseClick: async () => {
-      try {
-        const ip = await getClientIp()
-        if (ip) {
-          localStorage.setItem(`hasSeenTour_${fileType}_${ip}`, 'true')
-        } else {
-          localStorage.setItem(`hasSeenTour_${fileType}`, 'true')
-        }
-      } catch (e) {
-        localStorage.setItem(`hasSeenTour_${fileType}`, 'true')
-      }
-      driverObj.destroy()
-      try {
-        document.body.classList.remove('tour-running')
-      } catch (e) {
-        /* ignore */
+    onCloseClick: () => {
+      if ((window as any).triggerTourStopConfirmation) {
+        (window as any).triggerTourStopConfirmation()
+      } else {
+        driverObj.destroy()
       }
     },
     onDestroyed: async () => {
@@ -824,6 +802,13 @@ export async function startFileTour({ fileType, isMobile, isAdmin = false, seque
   } catch (e) {
     /* ignore */
   }
+
+  // Listen for the custom destroy event from React ConfirmDialog
+  const handleTourDestroy = () => {
+    driverObj.destroy()
+    window.removeEventListener('tour:destroy', handleTourDestroy)
+  }
+  window.addEventListener('tour:destroy', handleTourDestroy)
 
   driverObj.drive()
 }

@@ -45,5 +45,16 @@ export function useFullscreen(targetRef: RefObject<HTMLElement | null>) {
     }
   }, [targetRef])
 
-  return { isFullscreen, toggle, exit }
+  const enter = useCallback(async () => {
+    if (!targetRef.current) return
+    try {
+      if (!document.fullscreenElement) {
+        await targetRef.current.requestFullscreen()
+      }
+    } catch (err) {
+      console.error(`Error attempting to enter fullscreen:`, err)
+    }
+  }, [targetRef])
+
+  return { isFullscreen, toggle, enter, exit }
 }

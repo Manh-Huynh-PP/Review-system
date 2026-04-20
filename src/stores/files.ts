@@ -62,6 +62,7 @@ interface FileState {
   addDriveFolderAsSequence: (projectId: string, folderId: string, name: string) => Promise<void>
   cleanupProjectFiles: (projectId: string) => Promise<void>,
   togglePickedFrame: (projectId: string, fileId: string, version: number, frameIndex: number, isPicked: boolean) => Promise<void>,
+  updateFileBackgroundColor: (projectId: string, fileId: string, color?: string) => Promise<void>,
   cleanup: () => void
 }
 
@@ -1460,6 +1461,28 @@ export const useFileStore = create<FileState>((set, get) => ({
     } catch (error: any) {
       console.error('Failed to toggle picked frame:', error)
       toast.error('Lỗi khi chọn ảnh')
+    }
+  },
+
+  updateFileBackgroundColor: async (projectId: string, fileId: string, color?: string) => {
+    try {
+      const fileRef = doc(db, 'projects', projectId, 'files', fileId)
+      await updateDoc(fileRef, {
+        cardBackgroundColor: color,
+        updatedAt: Timestamp.now()
+      })
+
+      set(state => ({
+        files: state.files.map(f =>
+          f.id === fileId ? { ...f, cardBackgroundColor: color } : f
+        )
+      }))
+
+      // toast.success('Đã cập nhật màu nền')
+    } catch (error) {
+      console.error('Error updating card background color:', error)
+      toast.error('Lỗi khi cập nhật màu nền')
+      throw error
     }
   },
 

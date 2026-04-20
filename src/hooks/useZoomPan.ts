@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback } from 'react'
 
 interface ZoomPanOptions {
     minZoom?: number
@@ -36,7 +36,11 @@ export function useZoomPan(options: ZoomPanOptions = {}) {
     }, [maxZoom, zoomStep])
 
     const handleZoomOut = useCallback(() => {
-        setZoom(prev => Math.max(minZoom, prev - zoomStep))
+        setZoom(prev => {
+            const next = Math.max(minZoom, prev - zoomStep)
+            if (next <= 1) setPanOffset({ x: 0, y: 0 })
+            return next
+        })
     }, [minZoom, zoomStep])
 
     // Utility to calculate distance between two points
@@ -118,16 +122,12 @@ export function useZoomPan(options: ZoomPanOptions = {}) {
         if (e.ctrlKey) {
             e.preventDefault()
             const delta = e.deltaY > 0 ? -0.1 : 0.1
-            setZoom(prev => Math.min(maxZoom, Math.max(minZoom, prev + delta)))
+            const nextZoom = Math.min(maxZoom, Math.max(minZoom, zoom + delta))
+            setZoom(nextZoom)
+            if (nextZoom <= 1) setPanOffset({ x: 0, y: 0 })
         }
-    }, [maxZoom, minZoom])
+    }, [maxZoom, minZoom, zoom])
 
-    // Auto-center when zoom is reset
-    useEffect(() => {
-        if (zoom <= 1) {
-            setPanOffset({ x: 0, y: 0 })
-        }
-    }, [zoom])
 
     return {
         zoom,

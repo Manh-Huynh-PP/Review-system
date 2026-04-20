@@ -3,12 +3,15 @@ import type { File as FileType } from '@/types'
 import { format } from 'date-fns'
 import { formatFileSize } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { FileImage, Video, Box, MessageSquare, Clock, ShieldAlert, Loader2, MoreHorizontal, Share2, HardDrive, Play } from 'lucide-react'
+import { FileImage, Video, Box, MessageSquare, Clock, ShieldAlert, MoreHorizontal, Share2, HardDrive, Play } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { ProjectShareDialog } from '@/components/dashboard/ProjectShareDialog'
 import { CustomVideoPlayer } from '../viewers/CustomVideoPlayer'
 import { parseDriveUrl } from '@/utils/googleDrive'
+import { CardColorPicker } from '../shared/CardColorPicker'
+import { useFileStore } from '@/stores/files'
+import { cn } from '@/lib/utils'
 
 interface Props {
   file: FileType
@@ -37,9 +40,9 @@ export function FileCard({ file, resolvedUrl, commentCount, onClick }: Props) {
   const uploadDate = current?.uploadedAt?.toDate ? current.uploadedAt.toDate() : new Date()
   const [imageError, setImageError] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const { updateFileBackgroundColor } = useFileStore()
 
   const renderThumbnail = () => {
-    // Hide thumbnail if infected
     if (current?.validationStatus === 'infected') {
       return (
         <div className="w-full h-full flex items-center justify-center bg-destructive/10">
@@ -61,7 +64,6 @@ export function FileCard({ file, resolvedUrl, commentCount, onClick }: Props) {
 
     if (file.type === 'video' && effectiveUrl) {
       const driveInfo = parseDriveUrl(effectiveUrl)
-      
       if (driveInfo) {
         return (
           <div className="w-full h-full relative">
@@ -81,7 +83,6 @@ export function FileCard({ file, resolvedUrl, commentCount, onClick }: Props) {
           </div>
         )
       }
-
       return (
         <CustomVideoPlayer
           src={effectiveUrl}
@@ -95,110 +96,99 @@ export function FileCard({ file, resolvedUrl, commentCount, onClick }: Props) {
       )
     }
 
-    // Fallback icon
     return (
-      <div className="w-full h-full flex items-center justify-center bg-muted/50">
+      <div className="w-full h-full flex items-center justify-center opacity-40">
         {getFileTypeIcon(file.type, 'w-16 h-16')}
       </div>
     )
   }
+
+  // Adaptive styles
+  const cardStyle = file.cardBackgroundColor ? {
+    backgroundColor: `color-mix(in srgb, ${file.cardBackgroundColor}, transparent 90%)`,
+    borderColor: `color-mix(in srgb, ${file.cardBackgroundColor}, transparent 60%)`,
+  } : {};
 
   return (
     <div
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="group rounded-lg border bg-card overflow-hidden hover:shadow-lg hover:border-primary/50 transition-all duration-200 cursor-pointer"
+      className={cn(
+        "group relative rounded-xl border bg-card overflow-hidden transition-all duration-300 cursor-pointer flex flex-col hover:shadow-2xl hover:-translate-y-1",
+        file.cardBackgroundColor ? "border-opacity-50" : "hover:border-primary/50"
+      )}
+      style={cardStyle}
     >
+      {/* Accent Bar */}
+      {file.cardBackgroundColor && (
+        <div 
+          className="absolute top-0 left-0 right-0 h-1.5 z-30 transition-all group-hover:h-2" 
+          style={{ backgroundColor: file.cardBackgroundColor }} 
+        />
+      )}
+
       {/* Thumbnail */}
-      <div className="aspect-video bg-muted/20 relative overflow-hidden">
+      <div className="aspect-video relative overflow-hidden bg-muted/10">
         {renderThumbnail()}
-        {/* Play icon overlay for videos when not hovered */}
+        
         {file.type === 'video' && (
-          <div className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${isHovered ? 'opacity-0' : 'opacity-100'}`}>
-            <div className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm">
+          <div className={cn("absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300", isHovered ? 'opacity-0' : 'opacity-100')}>
+            <div className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm shadow-xl">
               <Play className="w-5 h-5 text-white fill-current ml-0.5" />
             </div>
           </div>
         )}
 
-        {/* Overlay on hover */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-center justify-center">
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white text-sm font-medium">
-            Nhấn để xem chi tiết
-          </div>
-        </div>
+        {/* Hover overlay */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
 
-        {/* Type badge */}
-        <div className="absolute top-2 left-2">
-          <Badge variant="secondary" className="text-xs backdrop-blur-sm bg-background/80">
+        {/* Badges */}
+        <div className="absolute top-3 left-3 flex gap-2">
+          <Badge variant="secondary" className="text-[10px] font-bold backdrop-blur-md bg-black/40 text-white border-0 px-2">
             {getFileTypeLabel(file.type)}
           </Badge>
-        </div>
-
-        {/* Version badge - positioned at bottom-left to avoid selection checkbox */}
-        <div className="absolute bottom-2 left-2">
-          <Badge
-            variant="outline"
-            className="text-xs backdrop-blur-sm bg-background/90 border-primary/30"
-            title={`Phiên bản ${current?.version}${current?.versionLabel ? ` (${current.versionLabel})` : ''} - ${format(uploadDate, 'dd/MM/yy HH:mm')}`}
-          >
-            {current?.versionLabel || `v${current?.version}`}
+          <Badge variant="outline" className="text-[10px] font-bold backdrop-blur-md bg-white/90 text-black border-0 px-2">
+            v{current?.version}
           </Badge>
         </div>
 
-        {/* Comment count badge */}
         {commentCount > 0 && (
-          <div className="absolute bottom-2 right-2">
-            <Badge variant="default" className="text-xs backdrop-blur-sm gap-1">
-              <MessageSquare className="w-3 h-3" />
-              {commentCount}
-            </Badge>
+          <div className="absolute bottom-3 right-3 text-[10px] font-bold backdrop-blur-md bg-primary/90 text-white px-2 py-0.5 rounded-full flex items-center gap-1 shadow-lg border-0">
+            <MessageSquare className="w-3 h-3" />
+            {commentCount}
           </div>
         )}
 
         {/* Validation Status Overlay */}
         {current?.validationStatus === 'infected' && (
           <div className="absolute inset-0 bg-destructive/80 flex items-center justify-center backdrop-blur-sm z-20">
-            <div className="text-center text-white p-2">
+            <div className="text-center text-white">
               <ShieldAlert className="w-8 h-8 mx-auto mb-1" />
-              <div className="text-xs font-bold">NGUY HIỂM</div>
-              <div className="text-[10px]">Phát hiện mã độc</div>
-            </div>
-          </div>
-        )}
-
-        {current?.validationStatus === 'pending' && (
-          <div className="absolute inset-0 bg-background/60 flex items-center justify-center backdrop-blur-sm z-10">
-            <div className="text-center">
-              <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
-              <div className="text-[10px] font-medium mt-1">Đang kiểm tra...</div>
+              <div className="text-xs font-bold uppercase">Nguy hiểm</div>
             </div>
           </div>
         )}
       </div>
 
       {/* Info */}
-      <div className="p-3">
-        <h3 className="font-medium text-sm truncate mb-2">{file.name}</h3>
-
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="p-4 flex-1 flex flex-col justify-center min-w-0">
+        <h3 className="font-bold text-sm truncate group-hover:text-primary transition-colors mb-2">{file.name}</h3>
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground/60 font-medium">
           <span>{formatFileSize(current?.metadata?.size || 0)}</span>
-          <span className="flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            {format(uploadDate, 'dd/MM/yy')}
-          </span>
+          <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {format(uploadDate, 'dd/MM/yy')}</span>
         </div>
       </div>
 
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+      {/* Admin Quick Actions */}
+      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0 flex flex-col gap-1.5 p-1 backdrop-blur-md bg-black/10 rounded-full border border-white/10" onClick={e => e.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="secondary" size="icon" className="h-6 w-6 rounded-full bg-white/90 hover:bg-white text-black shadow-sm">
-              <MoreHorizontal className="h-3 w-3" />
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full bg-white/20 hover:bg-white text-white hover:text-black transition-colors shadow-xl">
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="w-40">
             <ProjectShareDialog
               projectId={file.projectId}
               resourceType="file"
@@ -206,13 +196,17 @@ export function FileCard({ file, resolvedUrl, commentCount, onClick }: Props) {
               resourceName={file.name}
               trigger={
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Chia sẻ
+                  <Share2 className="w-4 h-4 mr-2" /> Chia sẻ
                 </DropdownMenuItem>
               }
             />
           </DropdownMenuContent>
         </DropdownMenu>
+        
+        <CardColorPicker
+          currentColor={file.cardBackgroundColor}
+          onColorChange={(color) => updateFileBackgroundColor(file.projectId, file.id, color)}
+        />
       </div>
     </div>
   )

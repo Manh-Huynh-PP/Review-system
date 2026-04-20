@@ -813,7 +813,7 @@ export default function ReviewPage() {
                   size="sm"
                   onClick={() => {
                     resetTourStatus()
-                    alert('Đã reset trạng thái hướng dẫn. Mở file bất kỳ để xem hướng dẫn lại.')
+                    toast.success('Đã reset trạng thái hướng dẫn. Mở file bất kỳ để xem hướng dẫn lại.')
                   }}
                   className="gap-2"
                 >
@@ -882,7 +882,7 @@ export default function ReviewPage() {
                     <DropdownMenuItem
                       onClick={() => {
                         resetTourStatus()
-                        alert('Đã reset trạng thái hướng dẫn. Mở file bất kỳ để xem hướng dẫn lại.')
+                        toast.success('Đã reset trạng thái hướng dẫn. Mở file bất kỳ để xem hướng dẫn lại.')
                       }}
                       className="gap-2"
                     >

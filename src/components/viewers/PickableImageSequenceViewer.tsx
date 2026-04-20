@@ -37,6 +37,10 @@ interface PickableImageSequenceViewerProps {
   onDeleteFrames?: (indices: number[]) => void
   onAddFrames?: (files: File[]) => void
   isUploading?: boolean
+  // External fullscreen control
+  externalIsFullscreen?: boolean
+  onToggleFullscreen?: () => void
+  externalFullscreenRef?: React.RefObject<HTMLDivElement | null>
 }
 
 export function PickableImageSequenceViewer(props: PickableImageSequenceViewerProps) {
@@ -70,6 +74,8 @@ export function PickableImageSequenceViewer(props: PickableImageSequenceViewerPr
     <ImageSequenceViewer 
       {...props} 
       renderFrameOverlay={renderFrameOverlay}
+      externalIsFullscreen={props.externalIsFullscreen}
+      onToggleFullscreen={props.onToggleFullscreen}
     />
   )
 }

@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ReactionPicker, REACTION_TYPES } from './ReactionPicker'
+import { ConfirmDialog } from '../shared/ConfirmDialog'
 
 interface CommentsListProps {
   comments: Comment[]
@@ -57,6 +58,8 @@ function CommentsListComponent({
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null)
   const [touchStartX, setTouchStartX] = useState<number | null>(null)
   const [touchDeltaX, setTouchDeltaX] = useState<number>(0)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [commentToDelete, setCommentToDelete] = useState<string | null>(null)
 
   const openLightbox = (images: string[], index: number) => {
     console.log('openLightbox called:', { images, index, total: images.length })
@@ -173,14 +176,20 @@ function CommentsListComponent({
     }
   }
 
-  const handleDeleteClick = async (commentId: string) => {
+  const handleDeleteClick = (commentId: string) => {
     if (!onDelete) return
-    if (confirm('Bạn có chắc chắn muốn xóa bình luận này?')) {
-      try {
-        await onDelete(commentId)
-      } catch (error) {
-        console.error('Failed to delete comment:', error)
-      }
+    setCommentToDelete(commentId)
+    setDeleteConfirmOpen(true)
+  }
+
+  const handleActualDelete = async () => {
+    if (!commentToDelete || !onDelete) return
+    try {
+      await onDelete(commentToDelete)
+      setDeleteConfirmOpen(false)
+      setCommentToDelete(null)
+    } catch (error) {
+      console.error('Failed to delete comment:', error)
     }
   }
 
@@ -714,6 +723,16 @@ function CommentsListComponent({
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Xóa bình luận?"
+        description="Bạn có chắc chắn muốn xóa bình luận này? Hành động này sẽ xóa vĩnh viễn nội dung và không thể khôi phục."
+        confirmText="Xóa bình luận"
+        variant="destructive"
+        onConfirm={handleActualDelete}
+      />
     </>
   )
 }

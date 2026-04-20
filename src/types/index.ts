@@ -141,6 +141,7 @@ export interface File {
   isTrashed?: boolean
   trashedAt?: Timestamp
   isCommentsLocked?: boolean
+  cardBackgroundColor?: string
 }
 
 export interface Comment {

@@ -89,6 +89,9 @@ interface ImageSequenceViewerProps {
   onAddFrames?: (files: File[]) => void
   isUploading?: boolean
   renderFrameOverlay?: (frameIndex: number) => React.ReactNode
+  externalIsFullscreen?: boolean
+  onToggleFullscreen?: () => void
+  externalFullscreenRef?: React.RefObject<HTMLDivElement | null>
 }
 
 type ViewMode = 'video' | 'carousel' | 'grid'
@@ -126,7 +129,10 @@ export function ImageSequenceViewer({
   onDeleteFrames,
   onAddFrames,
   isUploading = false,
-  renderFrameOverlay
+  renderFrameOverlay,
+  externalIsFullscreen,
+  onToggleFullscreen,
+  externalFullscreenRef
 }: ImageSequenceViewerProps) {
   const [currentFrame, setCurrentFrame] = useState(externalCurrentFrame !== undefined ? externalCurrentFrame : 0)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -449,8 +455,20 @@ export function ImageSequenceViewer({
 
   // Fullscreen & Scrubbing Hooks
   const imageContainerRef = useRef<HTMLDivElement>(null)
-  const viewerFullRef = useRef<HTMLDivElement>(null)
-  const { isFullscreen, toggle: toggleFullscreen } = useFullscreen(viewerFullRef)
+  const viewerFullRefInternal = useRef<HTMLDivElement>(null)
+  const viewerFullRef = externalFullscreenRef || viewerFullRefInternal
+  const internalFullscreen = useFullscreen(viewerFullRef)
+
+  // Use external fullscreen state/toggle if provided, otherwise fallback to internal
+  const isFullscreen = externalIsFullscreen !== undefined ? externalIsFullscreen : internalFullscreen.isFullscreen
+  const toggleFullscreen = onToggleFullscreen !== undefined ? onToggleFullscreen : internalFullscreen.toggle
+
+  // Auto-exit fullscreen when switching to grid mode
+  useEffect(() => {
+    if (viewMode === 'grid' && isFullscreen) {
+      toggleFullscreen()
+    }
+  }, [viewMode, isFullscreen, toggleFullscreen])
 
   const { isScrubbing, bind: bindScrub } = useSequenceScrubber({
     totalFrames: frameCount,
@@ -480,10 +498,10 @@ export function ImageSequenceViewer({
   return (
     <div 
       ref={viewerFullRef}
-      className={`flex flex-col h-full gap-4 ${isFullscreen ? 'fixed inset-0 z-50 bg-background p-6' : 'max-h-[calc(100%-2rem)]'} ${className || ''}`}
+      className={`flex flex-col h-full w-full relative overflow-hidden ${isFullscreen ? 'bg-background' : ''} ${className || ''}`}
     >
-      {/* View Mode Toggle */}
-      <div className="flex items-center justify-between px-4 flex-shrink-0">
+      {/* View Mode Toggle & Global Controls Header */}
+      <div className="flex items-center justify-between px-4 pb-2 flex-shrink-0 sticky top-0 bg-background/95 backdrop-blur-sm z-30 border-b border-border/50">
         {isAdmin ? (
           <ToggleGroup id="grid-toggle" type="single" value={viewMode} onValueChange={handleViewModeChange}>
             <ToggleGroupItem value="video" aria-label="Video mode" className="gap-2">
@@ -500,28 +518,47 @@ export function ImageSequenceViewer({
             </ToggleGroupItem>
           </ToggleGroup>
         ) : (
-          <div id="grid-toggle" className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-md">
-            {viewMode === 'video' ? (
-              <>
-                <Film className="w-4 h-4" />
-                <span className="text-xs font-medium">Chế độ Video</span>
-              </>
-            ) : viewMode === 'carousel' ? (
-              <>
-                <Images className="w-4 h-4" />
-                <span className="text-xs font-medium">Chế độ Carousel</span>
-              </>
-            ) : (
-              <>
-                <Grid3x3 className="w-4 h-4" />
-                <span className="text-xs font-medium">Chế độ Grid</span>
-              </>
+          <div className="flex items-center gap-2">
+            {!isAdmin && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-md">
+                {viewMode === 'video' ? (
+                  <>
+                    <Film className="w-4 h-4" />
+                    <span className="text-xs font-medium">Chế độ Video</span>
+                  </>
+                ) : viewMode === 'carousel' ? (
+                  <>
+                    <Images className="w-4 h-4" />
+                    <span className="text-xs font-medium">Chế độ Carousel</span>
+                  </>
+                ) : (
+                  <>
+                    <Grid3x3 className="w-4 h-4" />
+                    <span className="text-xs font-medium">Chế độ Grid</span>
+                  </>
+                )}
+              </div>
             )}
           </div>
         )}
 
-        <div className="text-xs text-muted-foreground">
-          {viewMode === 'video' ? 'Chế độ phát tự động' : viewMode === 'carousel' ? 'Chế độ xem thủ công' : 'Chế độ lưới'}
+        <div className="flex items-center gap-2">
+          <div className="text-xs text-muted-foreground">
+            {viewMode === 'video' ? 'Chế độ phát tự động' : viewMode === 'carousel' ? 'Chế độ xem thủ công' : 'Chế độ lưới'}
+          </div>
+
+          {/* Fullscreen Button in Header (Only when not fullscreen AND not in grid mode) */}
+          {!isFullscreen && viewMode !== 'grid' && (
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              className="h-8 w-8 hover:bg-muted" 
+              onClick={toggleFullscreen} 
+              title="Toàn màn hình"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -536,24 +573,6 @@ export function ImageSequenceViewer({
           onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onDragStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
         >
-          {/* Zoom Controls */}
-          <div className="absolute top-2 right-2 z-20 bg-background/80 backdrop-blur-sm border border-border/50 rounded-md shadow-sm flex items-center gap-1 p-1">
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleZoomOut}>
-              <Minus className="h-3 w-3" />
-            </Button>
-            <div className="text-xs text-muted-foreground w-10 text-center">{Math.round(zoom * 100)}%</div>
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleZoomIn}>
-              <Plus className="h-3 w-3" />
-            </Button>
-            <Button size="sm" variant="outline" className="h-7 px-2" onClick={resetZoomPan}>
-              <RotateCcw className="w-3 h-3 mr-1" />
-              Reset
-            </Button>
-            <div className="w-px h-4 bg-border mx-1" />
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={toggleFullscreen} title={isFullscreen ? "Thoát toàn màn hình" : "Toàn màn hình"}>
-              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </Button>
-          </div>
 
           {/* Zoomed Content Wrapper */}
           <div
@@ -823,9 +842,9 @@ export function ImageSequenceViewer({
       ) : (
         /* Grid Mode */
         <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 relative viewport">
-          {/* Edit Mode Toggle (Admin only) */}
+          {/* Edit Mode Toggle (Admin only) - Sub-header */}
           {isAdmin && (
-            <div className="flex items-center justify-between mb-4 sticky top-0 bg-background/95 backdrop-blur-sm py-2 z-10">
+            <div className="flex items-center justify-between mb-4 sticky top-[3.5rem] bg-background/95 backdrop-blur-sm py-2 z-20">
               <div className="flex items-center gap-2">
                 <Button
                   variant={isEditMode ? "default" : "outline"}
@@ -895,7 +914,7 @@ export function ImageSequenceViewer({
               onDragEnd={handleDragEnd}
             >
               <SortableContext items={frameOrder} strategy={rectSortingStrategy}>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-6 w-full">
                   {frameOrder.map((originalIndex) => (
                     <SortableGridFrameCard
                       key={originalIndex}
@@ -924,7 +943,7 @@ export function ImageSequenceViewer({
               </SortableContext>
             </DndContext>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-6 w-full">
               {normalizedUrls.map((url, index) => (
                 <GridFrameCard
                   key={index}
@@ -947,6 +966,31 @@ export function ImageSequenceViewer({
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Floating Controls (Only when fullscreen) */}
+      {isFullscreen && (
+        <div className="absolute top-4 right-4 z-[70] bg-background/80 backdrop-blur-sm border border-border/50 rounded-md shadow-sm flex items-center gap-1 p-1">
+          {viewMode !== 'grid' && (
+            <>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleZoomOut} title="Thu nhỏ">
+                <Minus className="h-3 w-3" />
+              </Button>
+              <div className="text-xs text-muted-foreground w-10 text-center select-none">{Math.round(zoom * 100)}%</div>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleZoomIn} title="Phóng to">
+                <Plus className="h-3 w-3" />
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 px-2" onClick={resetZoomPan}>
+                <RotateCcw className="w-3 h-3 mr-1" />
+                Reset
+              </Button>
+              <div className="w-px h-4 bg-border mx-1" />
+            </>
+          )}
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={toggleFullscreen} title="Thoát toàn màn hình">
+            <Minimize2 className="h-4 w-4" />
+          </Button>
         </div>
       )}
     </div>
@@ -1014,20 +1058,20 @@ function GridFrameCard({
 
   return (
     <div
-      className={`group relative rounded-lg overflow-hidden border-2 transition-all bg-card ${isSelected
+      className={`group relative rounded-lg overflow-hidden border-2 transition-all bg-card w-full ${isSelected
         ? 'border-primary ring-2 ring-primary/20 shadow-lg'
         : 'border-border hover:border-primary/50 hover:shadow-md'
         }`}
     >
       {/* Image */}
-      <button
+      <div
         onClick={onSelect}
-        className="w-full aspect-square relative overflow-hidden bg-muted/30 group/image"
+        className="w-full relative overflow-hidden bg-muted/30 group/image cursor-pointer"
       >
         <img
           src={url}
           alt={`Frame ${frameNumber + 1}`}
-          className="w-full h-full object-contain transition-transform group-hover/image:scale-105"
+          className="w-full h-auto transition-transform group-hover/image:scale-105"
         />
         <div className="absolute top-2 left-2 bg-background/90 backdrop-blur-sm border border-border/50 px-2 py-1 rounded text-xs font-mono">
           {String(frameNumber + 1).padStart(3, '0')} / {String(frameCount).padStart(3, '0')}
@@ -1040,68 +1084,82 @@ function GridFrameCard({
           </div>
         )}
 
-        {/* View Detail Button Overlay */}
+        {/* View Detail & Add Caption Overlay */}
         <div
-          className="absolute inset-0 bg-background/60 opacity-0 group-hover/image:opacity-100 transition-opacity flex items-center justify-center"
+          className="absolute inset-0 bg-background/60 opacity-0 group-hover/image:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2"
           onClick={(e) => {
             e.stopPropagation()
             onViewDetail()
           }}
         >
-          <div className="bg-background/90 text-foreground px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 hover:bg-background transition-colors transform scale-90 group-hover/image:scale-100 transition-transform shadow-sm cursor-pointer">
+          <div className="bg-background/90 text-foreground px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 hover:bg-background transition-colors transform scale-90 group-hover/image:scale-100 transition-transform shadow-sm cursor-pointer pointer-events-auto">
             <Maximize2 className="w-3 h-3" />
             Xem chi tiết
           </div>
+          {isAdmin && !caption && (
+            <div 
+              className="bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 hover:bg-primary/90 transition-colors transform scale-90 group-hover/image:scale-100 transition-transform shadow-sm cursor-pointer pointer-events-auto"
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsEditingCaption(true)
+              }}
+            >
+              <Edit2 className="w-3 h-3" />
+              Thêm chú thích
+            </div>
+          )}
         </div>
-      </button>
+      </div>
 
       {/* Caption Section */}
-      <div className="min-h-[60px] border-t bg-card">
-        {isEditingCaption ? (
-          <div className="p-2">
-            <textarea
-              ref={textareaRef}
-              value={editedCaption}
-              onChange={(e) => {
-                setEditedCaption(e.target.value)
-                e.target.style.height = 'auto'
-                e.target.style.height = e.target.scrollHeight + 'px'
-              }}
-              onKeyDown={handleKeyDown}
-              onBlur={handleSaveCaption}
-              placeholder="Nhập chú thích..."
-              className="w-full text-xs p-2 bg-muted/50 text-foreground placeholder:text-muted-foreground/50 border border-transparent rounded resize-none focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-all"
-              rows={1}
-              maxLength={500}
-            />
-            <div className="flex justify-between items-center mt-1 px-1">
-              <span className="text-[10px] text-muted-foreground">Enter để lưu</span>
-              <span className="text-[10px] text-muted-foreground">{editedCaption.length}/500</span>
+      {(caption || isEditingCaption) && (
+        <div className="min-h-[60px] border-t bg-card">
+          {isEditingCaption ? (
+            <div className="p-2">
+              <textarea
+                ref={textareaRef}
+                value={editedCaption}
+                onChange={(e) => {
+                  setEditedCaption(e.target.value)
+                  e.target.style.height = 'auto'
+                  e.target.style.height = e.target.scrollHeight + 'px'
+                }}
+                onKeyDown={handleKeyDown}
+                onBlur={handleSaveCaption}
+                placeholder="Nhập chú thích..."
+                className="w-full text-xs p-2 bg-muted/50 text-foreground placeholder:text-muted-foreground/50 border border-transparent rounded resize-none focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-all"
+                rows={1}
+                maxLength={500}
+              />
+              <div className="flex justify-between items-center mt-1 px-1">
+                <span className="text-[10px] text-muted-foreground">Enter để lưu</span>
+                <span className="text-[10px] text-muted-foreground">{editedCaption.length}/500</span>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div
-            className="relative group/caption p-2 h-full cursor-text"
-            onClick={() => isAdmin && setIsEditingCaption(true)}
-          >
-            {caption ? (
-              <div className="text-xs text-foreground/90 break-words whitespace-pre-wrap line-clamp-3">
-                {linkifyText(caption)}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground/50 italic py-1">
-                {isAdmin ? 'Thêm chú thích...' : 'Chưa có chú thích'}
-              </p>
-            )}
+          ) : (
+            <div
+              className="relative group/caption p-2 h-full cursor-text"
+              onClick={() => isAdmin && setIsEditingCaption(true)}
+            >
+              {caption ? (
+                <div className="text-xs text-foreground/90 break-words whitespace-pre-wrap line-clamp-3">
+                  {linkifyText(caption)}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground/50 italic py-1">
+                  {isAdmin ? 'Thêm chú thích...' : 'Chưa có chú thích'}
+                </p>
+              )}
 
-            {isAdmin && (
-              <div className="absolute top-1 right-1 opacity-0 group-hover/caption:opacity-100 transition-opacity">
-                <Edit2 className="w-3 h-3 text-muted-foreground hover:text-foreground" />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+              {isAdmin && (
+                <div className="absolute top-1 right-1 opacity-0 group-hover/caption:opacity-100 transition-opacity">
+                  <Edit2 className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -1158,7 +1216,7 @@ function SortableGridFrameCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative rounded-lg overflow-hidden border-2 transition-all bg-card ${isSelectedForDelete
+      className={`group relative rounded-lg overflow-hidden border-2 transition-all bg-card w-full ${isSelectedForDelete
         ? 'border-destructive ring-2 ring-destructive/20 shadow-lg'
         : isSelected
           ? 'border-primary ring-2 ring-primary/20 shadow-lg'
@@ -1198,24 +1256,58 @@ function SortableGridFrameCard({
       {/* Image */}
       <div
         onClick={onSelect}
-        className="w-full aspect-square relative overflow-hidden bg-muted/30 group/image cursor-pointer"
+        className="w-full relative overflow-hidden bg-muted/30 group/image cursor-pointer"
       >
         <img
           src={url}
           alt={`Frame ${frameNumber + 1}`}
-          className="w-full h-full object-contain"
+          className="w-full h-auto"
         />
         <div className="absolute bottom-2 left-2 bg-background/90 backdrop-blur-sm border border-border/50 px-2 py-1 rounded text-xs font-mono pointer-events-none">
           {String(frameNumber + 1).padStart(3, '0')} / {String(frameCount).padStart(3, '0')}
         </div>
+
+        {/* View Detail & Add Caption Overlay */}
+        <div
+          className="absolute inset-0 bg-background/60 opacity-0 group-hover/image:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 z-10"
+          onClick={(e) => {
+            e.stopPropagation()
+            _onViewDetail()
+          }}
+        >
+          <div className="bg-background/90 text-foreground px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 hover:bg-background transition-colors transform scale-90 group-hover/image:scale-100 transition-transform shadow-sm cursor-pointer pointer-events-auto">
+            <Maximize2 className="w-3 h-3" />
+            Xem chi tiết
+          </div>
+          {_isAdmin && !caption && (
+            <div 
+              className="bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 hover:bg-primary/90 transition-colors transform scale-90 group-hover/image:scale-100 transition-transform shadow-sm cursor-pointer pointer-events-auto"
+              onClick={(e) => {
+                e.stopPropagation()
+                // In sortable mode, we might not have direct editing, 
+                // but we can at least show the view detail which allows editing?
+                // Or just show the caption field if they want.
+                // For consistency, I'll try to trigger editing if possible.
+                // But SortableGridFrameCard doesn't have an internal editing state.
+                // So I'll just make it navigate to detail or show a message.
+                _onViewDetail()
+              }}
+            >
+              <Edit2 className="w-3 h-3" />
+              Thêm chú thích
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Compact Caption Preview */}
-      <div className="p-2 bg-card border-t min-h-[40px]">
-        <div className="text-xs text-muted-foreground break-words whitespace-pre-wrap line-clamp-2">
-          {caption ? linkifyText(caption) : <span className="italic text-muted-foreground/50">Chưa có chú thích</span>}
+      {caption && (
+        <div className="p-2 bg-card border-t min-h-[40px]">
+          <div className="text-xs text-muted-foreground break-words whitespace-pre-wrap line-clamp-2">
+            {linkifyText(caption)}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

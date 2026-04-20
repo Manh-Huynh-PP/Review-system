@@ -278,7 +278,7 @@ function MobileFileViewLayoutComponent({
                     className={`absolute inset-0 transition-transform duration-300 ease-out ${activeView === 'file' ? 'translate-x-0' : '-translate-x-full'
                         }`}
                 >
-                    <div className="w-full h-full overflow-auto pb-16">
+                    <div id="preview-container" className="w-full h-full overflow-auto pb-16">
                         {renderFilePreview()}
                     </div>
                 </div>
@@ -364,23 +364,25 @@ function MobileFileViewLayoutComponent({
                                 </div>
                             </div>
                         ) : (
-                            <AddComment
-                                isMobile={true}
-                                onSubmit={async (userName, content, timestamp, parentCommentId, annotationDataStr, attachments) => {
-                                    await onAddComment(userName, content, timestamp, parentCommentId, annotationDataStr, attachments)
-                                }}
-                                userName={currentUserName}
-                                onUserNameChange={onUserNameChange}
-                                currentTimestamp={currentTimestamp}
-                                currentTimestampRef={currentTimestampRef}
-                                showTimestamp={showTimestamp}
-                                annotationData={!isReadOnly ? annotationData : null}
-                                onAnnotationClick={() => {
-                                    // Switch to file view and start annotation
-                                    setActiveView('file')
-                                    onAnnotationClick?.()
-                                }}
-                            />
+                            <div id="mobile-add-comment">
+                                <AddComment
+                                    isMobile={true}
+                                    onSubmit={async (userName, content, timestamp, parentCommentId, annotationDataStr, attachments) => {
+                                        await onAddComment(userName, content, timestamp, parentCommentId, annotationDataStr, attachments)
+                                    }}
+                                    userName={currentUserName}
+                                    onUserNameChange={onUserNameChange}
+                                    currentTimestamp={currentTimestamp}
+                                    currentTimestampRef={currentTimestampRef}
+                                    showTimestamp={showTimestamp}
+                                    annotationData={!isReadOnly ? annotationData : null}
+                                    onAnnotationClick={() => {
+                                        // Switch to file view and start annotation
+                                        setActiveView('file')
+                                        onAnnotationClick?.()
+                                    }}
+                                />
+                            </div>
                         )}
                     </div>
                 </div>

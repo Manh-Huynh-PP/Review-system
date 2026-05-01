@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import type { File as FileType } from '@/types'
+import { normalizeDriveUrl } from '@/utils/googleDrive'
 
 export function useProjectThumbnail(projectId: string, status?: string) {
   const [thumbnailData, setThumbnailData] = useState<{ url: string; type: 'image' | 'video' } | null>(null)
@@ -48,17 +49,25 @@ export function useProjectThumbnail(projectId: string, status?: string) {
             const currentVersionData = latestFile.versions?.[latestFile.currentVersion - 1]
 
             if (currentVersionData) {
+              // Normalize URL if it's a Google Drive link
+              const getUrl = (url: string) => {
+                if (url.includes('drive.google.com')) {
+                  return normalizeDriveUrl(url, 800)
+                }
+                return url
+              }
+
               // If there's a specific thumbnail (e.g. for 3D models or generated), use it as image
               if (currentVersionData.thumbnailUrl) {
-                setThumbnailData({ url: currentVersionData.thumbnailUrl, type: 'image' })
+                setThumbnailData({ url: getUrl(currentVersionData.thumbnailUrl), type: 'image' })
               }
               // For videos, use the video URL
               else if (latestFile.type === 'video' && currentVersionData.url) {
-                setThumbnailData({ url: currentVersionData.url, type: 'video' })
+                setThumbnailData({ url: getUrl(currentVersionData.url), type: 'video' })
               }
               // For images/sequences, use the URL
               else if (currentVersionData.url) {
-                setThumbnailData({ url: currentVersionData.url, type: 'image' })
+                setThumbnailData({ url: getUrl(currentVersionData.url), type: 'image' })
               } else {
                 setThumbnailData(null)
               }

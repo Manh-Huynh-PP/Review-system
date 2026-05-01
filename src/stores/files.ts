@@ -1465,23 +1465,26 @@ export const useFileStore = create<FileState>((set, get) => ({
   },
 
   updateFileBackgroundColor: async (projectId: string, fileId: string, color?: string) => {
+    // 1. Optimistic Update for immediate UI feedback
+    set(state => ({
+      files: state.files.map(f =>
+        f.id === fileId ? { ...f, cardBackgroundColor: color } : f
+      )
+    }))
+
     try {
       const fileRef = doc(db, 'projects', projectId, 'files', fileId)
       await updateDoc(fileRef, {
         cardBackgroundColor: color,
         updatedAt: Timestamp.now()
       })
-
-      set(state => ({
-        files: state.files.map(f =>
-          f.id === fileId ? { ...f, cardBackgroundColor: color } : f
-        )
-      }))
-
       // toast.success('Đã cập nhật màu nền')
     } catch (error) {
       console.error('Error updating card background color:', error)
       toast.error('Lỗi khi cập nhật màu nền')
+      
+      // Optional: Rollback state here if critical, 
+      // but onSnapshot will eventually sync with reality.
       throw error
     }
   },

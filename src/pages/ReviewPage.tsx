@@ -9,14 +9,15 @@ import { useAuthStore } from '@/stores/auth'
 import { toast } from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { FileCardShared } from '@/components/shared/FileCardShared'
-import { FileViewDialogShared } from '@/components/shared/FileViewDialogShared'
+import { FileFilters, type SortOption, type SortDirection, type ViewMode } from '@/components/files/FileFilters'
+import { FilesList } from '@/components/files/FilesList'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { LanguageToggle } from '@/components/LanguageToggle'
 import { NotificationSubscriptionDialog } from '@/components/shared/NotificationSubscriptionDialog'
-import { HelpCircle, Download, ShieldAlert, Loader2, Mail, Globe } from 'lucide-react'
+import { HelpCircle, ShieldAlert, Loader2, Mail } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { resetTourStatus } from '@/lib/fileTours'
+import { useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -24,11 +25,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { getSecureDownloadUrl } from '@/lib/secureStorage'
-import type { File as FileType } from '@/types'
 import { useBulkDownload } from '@/hooks/useBulkDownload'
 import { DownloadProgressDialog } from '@/components/dashboard/DownloadProgressDialog'
-import { Archive, ExternalLink, Menu } from 'lucide-react'
+import { Archive, ExternalLink, Menu, Globe } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -39,14 +38,21 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useThemeStore } from '@/stores/theme'
 import { Sun, Moon } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export default function ReviewPage() {
   const { t, i18n } = useTranslation(['review', 'common'])
+  const {
+    isDownloading,
+    downloadProgress,
+    downloadMessage,
+    currentDownloadFile
+  } = useBulkDownload()
   const { theme, toggleTheme } = useThemeStore()
   const { projectId, fileId } = useParams<{ projectId: string; fileId?: string }>()
   const { project, fetchProject } = useProjectStore()
   const { files, subscribeToFiles, cleanup: cleanupFiles } = useFileStore()
-  const { comments, subscribeToComments, addComment, editComment, deleteComment, cleanup: cleanupComments } = useCommentStore()
+  const { subscribeToComments, cleanup: cleanupComments } = useCommentStore()
   const { user } = useAuthStore()
 
   const [currentUserName, setCurrentUserName] = useState(() => {
@@ -62,14 +68,55 @@ export default function ReviewPage() {
   const [loading, setLoading] = useState(true)
   const [showNamePrompt, setShowNamePrompt] = useState(false)
   const [isInitialPrompt, setIsInitialPrompt] = useState(true)
-  const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({})
-  const [selectedFile, setSelectedFile] = useState<FileType | null>(null)
-  const [dialogOpen, setDialogOpen] = useState(false)
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false)
-
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token')
   const { validateToken, verifyOTP, requestOTP, recoverAccess } = useInvitationStore()
+
+  useEffect(() => {
+    if (!projectId) return
+
+    const load = async () => {
+      try {
+        await fetchProject(projectId)
+        subscribeToFiles(projectId)
+        subscribeToComments(projectId)
+      } catch (error) {
+        console.error('Failed to load project:', error)
+      }
+    }
+
+    load()
+
+    return () => {
+      cleanupFiles()
+      cleanupComments()
+    }
+  }, [projectId, fetchProject, subscribeToFiles, subscribeToComments, cleanupFiles, cleanupComments])
+
+  // Filter States
+  const [searchTerm, setSearchTerm] = useState('')
+  const [sortBy, setSortBy] = useState<SortOption>('date')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [selectedColors, setSelectedColors] = useState<string[]>([])
+
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    return (localStorage.getItem('filesViewMode') as ViewMode) || 'grid'
+  })
+
+  useEffect(() => {
+    localStorage.setItem('filesViewMode', viewMode)
+  }, [viewMode])
+
+  const availableColors = useMemo(() => {
+    if (!files || !projectId) return []
+    const projectFiles = files.filter(f => f.projectId === projectId)
+    const colors = new Set<string>()
+    projectFiles.forEach(f => {
+      if (f.cardBackgroundColor) colors.add(f.cardBackgroundColor)
+    })
+    return Array.from(colors)
+  }, [files, projectId])
 
   // Access Control State
   const [accessStatus, setAccessStatus] = useState<'checking' | 'allowed' | 'denied' | 'verification_needed'>('checking')
@@ -202,105 +249,7 @@ export default function ReviewPage() {
 
 
 
-  // Bulk download hook
-  const {
-    handleBulkDownload,
-    isDownloading,
-    downloadProgress,
-    downloadMessage,
-    currentDownloadFile
-  } = useBulkDownload()
 
-  const getKey = (fileId: string, version: number) => `${fileId}-v${version}`
-
-  // Try to fix legacy/bad URLs by extracting the object path from the URL
-  const extractStoragePathFromUrl = (url?: string): string | null => {
-    if (!url) return null
-    // Firebase download URL format: .../o/<ENCODED_PATH>?...
-    const marker = '/o/'
-    const idx = url.indexOf(marker)
-    if (idx === -1) return null
-    const after = url.substring(idx + marker.length)
-    const endIdx = after.indexOf('?')
-    const encodedPath = endIdx === -1 ? after : after.substring(0, endIdx)
-    try {
-      return decodeURIComponent(encodedPath)
-    } catch {
-      return null
-    }
-  }
-
-  const ensureDownloadUrl = async (fileId: string, version: number, storagePath: string, currentUrl?: string) => {
-    const key = getKey(fileId, version)
-    if (resolvedUrls[key]) return resolvedUrls[key]
-
-    const needsFix = currentUrl?.includes('firebasestorage.app')
-    if (!needsFix) return currentUrl
-
-    try {
-      // Prefer extracting the exact object path from the existing URL (more robust
-      // for sequences or legacy uploads where metadata.name doesn't match).
-      const extractedPath = extractStoragePathFromUrl(currentUrl)
-      const targetPath = extractedPath || storagePath
-
-      // Use secure storage utility with fallback to original URL
-      const url = await getSecureDownloadUrl(targetPath, {
-        maxAge: 3600,
-        fallbackUrl: currentUrl
-      })
-
-      setResolvedUrls(prev => ({ ...prev, [key]: url }))
-      return url
-    } catch (e) {
-      console.error('Failed to fix URL:', e)
-      return currentUrl
-    }
-  }
-
-  useEffect(() => {
-    if (!projectId) return
-
-    const load = async () => {
-      setLoading(true)
-      try {
-        await fetchProject(projectId)
-        subscribeToFiles(projectId)
-        subscribeToComments(projectId)
-      } catch (error) {
-        console.error('Failed to load project:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    load()
-
-    return () => {
-      cleanupFiles()
-      cleanupComments()
-    }
-  }, [projectId, fetchProject, subscribeToFiles, subscribeToComments, cleanupFiles, cleanupComments])
-
-  // Fix URLs for files
-  useEffect(() => {
-    const run = async () => {
-      const tasks: Promise<any>[] = []
-      for (const f of files || []) {
-        const current = f.versions.find(v => v.version === f.currentVersion) || f.versions[0]
-        if (!current?.url) continue
-        const key = getKey(f.id, current.version)
-        if (resolvedUrls[key]) continue
-        if (!current.url.includes('firebasestorage.app')) continue
-        // Build a best-effort storagePath as fallback; prefer extracting from URL inside ensureDownloadUrl
-        const fallbackPath = `projects/${projectId}/${f.id}/v${current.version}/${current.metadata.name}`
-        tasks.push(ensureDownloadUrl(f.id, current.version, fallbackPath, current.url))
-      }
-      if (tasks.length) {
-        await Promise.allSettled(tasks)
-      }
-    }
-    run()
-  }, [files, projectId, resolvedUrls])
 
   // Show name prompt if user doesn't have a name
   useEffect(() => {
@@ -309,52 +258,6 @@ export default function ReviewPage() {
       setShowNamePrompt(true)
     }
   }, [loading, currentUserName])
-
-
-  // Note: We intentionally don't auto-sync selectedFile with files array
-  // This allows users to freely browse different versions without being
-  // affected by admin's currentVersion setting
-
-  // Resolve URL for selected file's current version when it changes
-  useEffect(() => {
-    if (!selectedFile || !projectId) return
-
-    const current = selectedFile.versions.find(v => v.version === selectedFile.currentVersion) || selectedFile.versions[0]
-    if (!current?.url) return
-
-    const key = getKey(selectedFile.id, current.version)
-    // Skip if already resolved
-    if (resolvedUrls[key]) return
-
-    // Only need to fix firebasestorage.app URLs
-    if (!current.url.includes('firebasestorage.app')) return
-
-    const fallbackPath = `projects/${projectId}/${selectedFile.id}/v${current.version}/${current.metadata?.name || 'file'}`
-    ensureDownloadUrl(selectedFile.id, current.version, fallbackPath, current.url)
-  }, [selectedFile?.id, selectedFile?.currentVersion, projectId, resolvedUrls])
-
-  // Update page title
-  useEffect(() => {
-    if (project) {
-      document.title = `${project.name} | Review System`
-    }
-
-    return () => {
-      document.title = 'Review System'
-    }
-  }, [project])
-
-
-  // Auto-open file dialog if fileId is provided in URL
-  useEffect(() => {
-    if (fileId && files && files.length > 0 && !selectedFile) {
-      const targetFile = files.find(f => f.id === fileId)
-      if (targetFile) {
-        setSelectedFile(targetFile)
-        setDialogOpen(true)
-      }
-    }
-  }, [fileId, files, selectedFile])
 
   const handleUserNameChange = (name: string) => {
     setCurrentUserName(name)
@@ -374,42 +277,7 @@ export default function ReviewPage() {
     }
   }
 
-  // Get comment count for a file
-  const getCommentCount = (fileId: string, version: number) => {
-    return comments.filter(c => c.fileId === fileId && c.version === version).length
-  }
 
-  // Handle file card click
-  const handleFileClick = (file: FileType) => {
-    setSelectedFile(file)
-    setDialogOpen(true)
-  }
-
-  const handleAddComment = async (userName: string, content: string, timestamp?: number, parentCommentId?: string, annotationData?: string | null, attachments?: File[]) => {
-    if (selectedFile) {
-      await addComment(projectId!, selectedFile.id, selectedFile.currentVersion, userName, content, timestamp, parentCommentId, annotationData, attachments, selectedAvatar, selectedColor)
-    }
-  }
-
-  const handleEditComment = async (commentId: string, newContent: string) => {
-    await editComment(projectId!, commentId, newContent)
-  }
-
-  const handleDeleteComment = async (commentId: string) => {
-    await deleteComment(projectId!, commentId)
-  }
-
-
-  // Handle version switching locally (no Firestore update needed for public preview)
-  const handleSwitchVersion = (_fileId: string, version: number) => {
-    if (selectedFile) {
-      // Update selectedFile with new currentVersion locally
-      setSelectedFile({
-        ...selectedFile,
-        currentVersion: version
-      })
-    }
-  }
 
   // Recovery State
   const [recoveryEmail, setRecoveryEmail] = useState('')
@@ -793,21 +661,6 @@ export default function ReviewPage() {
             <div className="flex items-center gap-2">
               {/* DESKTOP ACTIONS */}
               <div className="hidden sm:flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (project) {
-                      const filesWithProject = projectFiles.map(f => ({ ...f, projectName: project.name }))
-                      handleBulkDownload(filesWithProject, comments)
-                    }
-                  }}
-                  className="gap-2"
-                  title={t('header.downloadAll')}
-                >
-                  <Download className="w-4 h-4" />
-                  <span>{t('header.downloadAll')}</span>
-                </Button>
 
                 <Button
                   variant="outline"
@@ -873,18 +726,6 @@ export default function ReviewPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuItem
-                      onClick={() => {
-                        if (project) {
-                          const filesWithProject = projectFiles.map(f => ({ ...f, projectName: project.name }))
-                          handleBulkDownload(filesWithProject, comments)
-                        }
-                      }}
-                      className="gap-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>{t('header.downloadAll')}</span>
-                    </DropdownMenuItem>
 
                     <DropdownMenuItem
                       onClick={() => setNotificationDialogOpen(true)}
@@ -1021,51 +862,53 @@ export default function ReviewPage() {
             <div className="text-sm text-muted-foreground">{t('common:status.noDocumentsDesc')}</div>
           </div>
         ) : (
-          <>
-            {/* Grid of file cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {projectFiles.map((file) => {
-                const current = file.versions.find(v => v.version === file.currentVersion) || file.versions[0]
-                const urlKey = getKey(file.id, current?.version ?? 1)
-                const effectiveUrl = resolvedUrls[urlKey] ?? current?.url
-                const commentCount = getCommentCount(file.id, file.currentVersion)
-
-                return (
-                  <FileCardShared
-                    key={file.id}
-                    file={file}
-                    resolvedUrl={effectiveUrl}
-                    commentCount={commentCount}
-                    onClick={() => handleFileClick(file)}
-                    isLocked={file.isCommentsLocked}
-                  />
-                )
-              })}
+          <div className="space-y-6">
+            {/* Filters */}
+            <div className="bg-card/30 backdrop-blur-sm p-4 rounded-xl border border-primary/5 shadow-sm">
+              <FileFilters
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                sortDirection={sortDirection}
+                onSortDirectionToggle={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                selectedColors={selectedColors}
+                onColorsChange={setSelectedColors}
+                availableColors={availableColors}
+                colorLabels={project?.colorLabels}
+              >
+              </FileFilters>
             </div>
 
-            {/* File view dialog */}
-            {selectedFile && (
-              <FileViewDialogShared
-                file={selectedFile}
-                projectId={projectId!}
-                resolvedUrl={resolvedUrls[getKey(selectedFile.id, selectedFile.currentVersion)]}
-                open={dialogOpen}
-                onOpenChange={setDialogOpen}
-                onSwitchVersion={handleSwitchVersion}
-                comments={comments}
-                currentUserName={currentUserName}
-                onUserNameChange={handleUserNameChange}
-                onAddComment={handleAddComment}
-                onEditComment={handleEditComment}
-                onDeleteComment={handleDeleteComment}
-                isAdmin={false}
-                project={project || { isCommentsLocked: false }}
-                isArchived={project?.status === 'archived'}
-              />
-            )}
-          </>
+            {/* Files List */}
+            <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+              <div className={cn(
+                viewMode !== 'kanban' && "p-6"
+              )}>
+                <FilesList
+                  projectId={projectId!}
+                  sortBy={sortBy}
+                  sortDirection={sortDirection}
+                  searchTerm={searchTerm}
+                  selectedColors={selectedColors}
+                  viewMode={viewMode}
+                  colorLabels={project?.colorLabels}
+                  columnOrder={project?.kanbanColumnOrder}
+                />
+              </div>
+            </div>
+          </div>
         )}
       </div>
+
+      <DownloadProgressDialog 
+        open={isDownloading} 
+        progress={downloadProgress} 
+        message={downloadMessage} 
+        fileName={currentDownloadFile} 
+      />
 
       {/* Footer */}
       <footer className="border-t bg-muted/30 mt-auto py-8">

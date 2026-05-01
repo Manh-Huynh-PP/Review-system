@@ -1,3 +1,4 @@
+// Force Vite HMR re-index
 import { useEffect, useState, useMemo } from 'react'
 import { useProjectStore } from '@/stores/projects'
 import { useFileStore } from '@/stores/files'

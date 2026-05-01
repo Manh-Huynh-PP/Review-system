@@ -74,6 +74,7 @@ export function ProjectCard({ project, viewMode = 'list' }: { project: Project; 
                           src={thumbnailData.url}
                           alt={project.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          referrerPolicy="no-referrer"
                           onError={(e) => {
                             e.currentTarget.src = 'https://placehold.co/600x400?text=Google+Drive+Video';
                           }}
@@ -111,6 +112,7 @@ export function ProjectCard({ project, viewMode = 'list' }: { project: Project; 
                   src={thumbnailData?.url || ''}
                   alt={project.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  referrerPolicy="no-referrer"
                   onError={(e) => {
                     // Fallback if image fails to load
                     e.currentTarget.src = 'https://placehold.co/600x400?text=No+Preview';

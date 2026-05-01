@@ -118,6 +118,7 @@ export function StandardImagePreview({
               className="w-full h-full object-contain select-none"
               draggable={false}
               onDragStart={(e) => e.preventDefault()}
+              referrerPolicy="no-referrer"
             />
           </div>
 

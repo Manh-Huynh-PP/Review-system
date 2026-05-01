@@ -45,6 +45,8 @@ export interface Project {
   previousStatus?: 'active' | 'archived' // To restore to correct state
   isCommentsLocked?: boolean
   accessLevel?: 'public' | 'token_required'
+  colorLabels?: Record<string, string> // colorValue -> customLabel
+  kanbanColumnOrder?: string[]
 }
 
 export interface ProjectInvitation {

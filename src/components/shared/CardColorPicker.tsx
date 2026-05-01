@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Palette, RotateCcw, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
+import { PRESET_COLORS } from "@/constants/colors"
 
 interface CardColorPickerProps {
   currentColor?: string;
@@ -10,17 +11,6 @@ interface CardColorPickerProps {
   align?: "center" | "start" | "end";
 }
 
-const PRESET_COLORS = [
-  { name: "Default", value: undefined, label: "Mặc định" },
-  { name: "Slate", value: "#475569", label: "Xám đá" },
-  { name: "Navy", value: "#1e3a8a", label: "Xanh biển đậm" },
-  { name: "Indigo", value: "#4f46e5", label: "Xanh chàm" },
-  { name: "Emerald", value: "#059669", label: "Xanh lục" },
-  { name: "Amber", value: "#d97706", label: "Vàng hổ phách" },
-  { name: "Crimson", value: "#dc2626", label: "Đỏ đậm" },
-  { name: "Rose", value: "#e11d48", label: "Hồng cánh sen" },
-  { name: "Violet", value: "#7c3aed", label: "Tím" },
-];
 
 export function CardColorPicker({ currentColor, onColorChange, align = "center" }: CardColorPickerProps) {
   return (

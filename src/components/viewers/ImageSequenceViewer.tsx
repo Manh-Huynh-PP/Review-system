@@ -269,6 +269,7 @@ export function ImageSequenceViewer({
         const tryLoad = () => {
           if (cancelled) { resolve(); return }
           const img = new Image()
+          img.referrerPolicy = 'no-referrer'
           img.onload = () => resolve()
           img.onerror = () => {
             attempt++
@@ -605,6 +606,7 @@ export function ImageSequenceViewer({
                   className="w-full h-full object-contain max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh] select-none"
                   draggable={false}
                   onDragStart={(e) => e.preventDefault()}
+                  referrerPolicy="no-referrer"
                 />
               )}
             </div>
@@ -782,6 +784,7 @@ export function ImageSequenceViewer({
                   src={url}
                   alt={`Thumb ${index + 1}`}
                   className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
                 />
                 <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${currentFrame === index ? 'bg-background/60' : 'bg-background/80'
                   }`}>

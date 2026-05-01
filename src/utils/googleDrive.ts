@@ -43,7 +43,8 @@ export function parseDriveUrl(url: string): { type: 'file' | 'folder'; id: strin
  * @param size - Width in pixels (default: 2000). Use smaller values (e.g. 800) for grid thumbnails to avoid rate-limiting.
  */
 export function getDriveThumbnailUrl(fileId: string, size: number = 2000): string {
-  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w${size}`
+  // Use googleusercontent.com which is often more reliable for direct embedding
+  return `https://lh3.googleusercontent.com/d/${fileId}=w${size}`
 }
 
 /** @deprecated Use getDriveThumbnailUrl instead */

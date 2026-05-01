@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useFileStore } from '@/stores/files'
+import { useAuthStore } from '@/stores/auth'
 import { useCommentStore } from '@/stores/comments'
 import { useProjectStore } from '@/stores/projects'
-import { useAuthStore } from '@/stores/auth'
 import { FileCardShared } from '@/components/shared/FileCardShared'
 import { FileViewDialogShared } from '@/components/shared/FileViewDialogShared'
+import { KanbanView } from './KanbanView'
 import { DeleteFileDialog } from './DeleteFileDialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -12,22 +13,32 @@ import { Badge } from '@/components/ui/badge'
 import { ref, getDownloadURL } from 'firebase/storage'
 import { storage } from '@/lib/firebase'
 import { formatFileSize } from '@/lib/utils'
-import { Trash2, X, CheckSquare, Square, Grid3x3, List, MessageSquare, Calendar, FileImage, Download, Play } from 'lucide-react'
+import { Trash2, CheckSquare, Square, MessageSquare, Calendar, FileImage, Play } from 'lucide-react'
 import type { File as FileType } from '@/types'
 import { useBulkDownload } from '@/hooks/useBulkDownload'
 import { DownloadProgressDialog } from '@/components/dashboard/DownloadProgressDialog'
 import { CardColorPicker } from '../shared/CardColorPicker'
 import { cn } from '@/lib/utils'
+import { normalizeDriveUrl } from '@/utils/googleDrive'
 
 type SortOption = 'name' | 'date' | 'type' | 'size'
 type SortDirection = 'asc' | 'desc'
-type ViewMode = 'grid' | 'list'
+type ViewMode = 'grid' | 'list' | 'kanban'
 
 interface FilesListProps {
   projectId: string
   sortBy?: SortOption
   sortDirection?: SortDirection
   searchTerm?: string
+  selectedColors?: string[]
+  viewMode?: ViewMode
+  isSelectionMode?: boolean
+  onSelectionModeChange?: (mode: boolean) => void
+  selectedFileIds?: Set<string>
+  onSelectedFileIdsChange?: (ids: Set<string>) => void
+  colorLabels?: Record<string, string>
+  columnOrder?: string[]
+  onColumnOrderChange?: (newOrder: string[]) => void
 }
 
 const getFileTypeLabel = (type: string) => {
@@ -39,7 +50,21 @@ const getFileTypeLabel = (type: string) => {
   return 'Tệp tin'
 }
 
-export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', searchTerm = '' }: FilesListProps) {
+export function FilesList({ 
+  projectId, 
+  sortBy = 'date', 
+  sortDirection = 'desc', 
+  searchTerm = '',
+  selectedColors = [],
+  viewMode = 'grid',
+  isSelectionMode: externalIsSelectionMode,
+  onSelectionModeChange,
+  selectedFileIds: externalSelectedFileIds,
+  onSelectedFileIdsChange,
+  colorLabels = {},
+  columnOrder = [],
+  onColumnOrderChange
+}: FilesListProps) {
   const { files, switchVersion, deleteFile, deleting, uploadFile, setSequenceViewMode, updateFrameCaption, renameFile, toggleFileLock, selectedFile: storeSelectedFile, selectFile: storeSelectFile, updateFileBackgroundColor } = useFileStore()
   const { comments, subscribeToComments, addComment, toggleResolve, editComment, deleteComment, cleanup: cleanupComments } = useCommentStore()
   const { user } = useAuthStore()
@@ -54,29 +79,28 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
   })
   const [displayLimit, setDisplayLimit] = useState(20)
 
-  // Multi-select state
-  const [isSelectionMode, setIsSelectionMode] = useState(false)
-  const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set())
+  // Multi-select state (Controlled or Uncontrolled)
+  const [internalIsSelectionMode, setInternalIsSelectionMode] = useState(false)
+  const [internalSelectedFileIds, setInternalSelectedFileIds] = useState<Set<string>>(new Set())
+  
+  const isSelectionMode = externalIsSelectionMode ?? internalIsSelectionMode
+
+  const selectedFileIds = externalSelectedFileIds ?? internalSelectedFileIds
+  const setSelectedFileIds = (update: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+    const newValue = typeof update === 'function' ? update(selectedFileIds) : update
+    if (onSelectedFileIdsChange) onSelectedFileIdsChange(newValue)
+    else setInternalSelectedFileIds(newValue)
+  }
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false)
   const [bulkDeleting, setBulkDeleting] = useState(false)
 
   const {
-    handleBulkDownload,
     isDownloading,
     downloadProgress,
     downloadMessage,
     currentDownloadFile
   } = useBulkDownload()
 
-  // View mode state
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    return (localStorage.getItem('filesViewMode') as ViewMode) || 'grid'
-  })
-
-  // Save view mode preference
-  useEffect(() => {
-    localStorage.setItem('filesViewMode', viewMode)
-  }, [viewMode])
 
   const getKey = (fileId: string, version: number) => `${fileId}-v${version}`
 
@@ -105,14 +129,41 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
       const tasks: Promise<any>[] = []
       for (const f of files || []) {
         const current = f.versions.find(v => v.version === f.currentVersion) || f.versions[0]
-        if (!current?.url || !current?.metadata?.name) continue
-        if (current.url.includes('token=')) continue
-
+        if (!current?.url) continue
+        
         const key = getKey(f.id, current.version)
         if (resolvedUrls[key]) continue
-        if (!current.url.includes('firebasestorage.app')) continue
+        
+        // Handle Google Drive links
+        if (current.url.includes('drive.google.com')) {
+          const optimizedUrl = normalizeDriveUrl(current.url, 800);
+          if (optimizedUrl !== current.url) {
+            setResolvedUrls(prev => ({ ...prev, [key]: optimizedUrl }));
+            continue;
+          }
+        }
 
-        const storagePath = `projects/${projectId}/${f.id}/v${current.version}/${current.metadata.name}`
+        // Skip other external links
+        if (f.isExternalLink) continue
+        
+        // Ensure we have a Firebase Storage URL to resolve
+        if (!current.url.includes('firebasestorage.app') && !current.url.includes('firebasestorage.googleapis.com')) continue
+
+        // Try to extract storage path from the URL if metadata name is not reliable (especially for sequences)
+        let storagePath = `projects/${projectId}/${f.id}/v${current.version}/${current.metadata.name}`
+        
+        // For sequences or if path construction might be wrong, extract from URL
+        if (f.type === 'sequence' || !current.metadata.name) {
+          try {
+            const urlMatch = current.url.match(/\/o\/(.+?)\?/);
+            if (urlMatch && urlMatch[1]) {
+              storagePath = decodeURIComponent(urlMatch[1]);
+            }
+          } catch (e) {
+            if (f.type === 'sequence') continue; // Skip if we can't determine path for sequence
+          }
+        }
+
         tasks.push(ensureDownloadUrl(f.id, current.version, storagePath, current.url))
       }
       if (tasks.length) {
@@ -233,6 +284,15 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
         return matchesName || matchesType || matchesFileName
       })
     }
+    
+    // Filter by color
+    if (selectedColors.length > 0) {
+      filtered = filtered.filter(file => {
+        if (selectedColors.includes('default') && !file.cardBackgroundColor) return true
+        return file.cardBackgroundColor && selectedColors.includes(file.cardBackgroundColor)
+      })
+    }
+
     const sorted = [...filtered].sort((a, b) => {
       let compareValue = 0
       switch (sortBy) {
@@ -250,17 +310,10 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
       return sortDirection === 'asc' ? compareValue : -compareValue
     })
     return sorted
-  }, [files, sortBy, sortDirection, searchTerm])
+  }, [files, sortBy, sortDirection, searchTerm, selectedColors])
 
   const displayedFiles = filteredAndSortedFiles.slice(0, displayLimit)
   const hasMore = filteredAndSortedFiles.length > displayLimit
-
-  const toggleSelectionMode = () => {
-    setIsSelectionMode(prev => {
-      if (prev) setSelectedFileIds(new Set())
-      return !prev
-    })
-  }
 
   const toggleFileSelection = (fileId: string) => {
     setSelectedFileIds(prev => {
@@ -285,7 +338,8 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
       for (const fileId of selectedFileIds) await deleteFile(projectId, fileId)
       setSelectedFileIds(new Set())
       setBulkDeleteDialogOpen(false)
-      setIsSelectionMode(false)
+      if (onSelectionModeChange) onSelectionModeChange(false)
+      else setInternalIsSelectionMode(false)
     } catch (error) {
       console.error('Bulk delete failed:', error)
     } finally {
@@ -313,72 +367,32 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
 
   return (
     <>
-      {user && filteredAndSortedFiles.length > 0 && (
-        <div className="flex items-center justify-between mb-4 bg-background/50 backdrop-blur-sm p-2 rounded-lg border border-primary/5 shadow-sm">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground ml-2">
-            <span className="font-medium">{filteredAndSortedFiles.length} tài liệu</span>
-            {isSelectionMode && selectedFileIds.size > 0 && (
-              <span className="text-primary font-bold px-2 py-0.5 rounded-full bg-primary/10">
-                Đã chọn {selectedFileIds.size}
-              </span>
-            )}
+      {isSelectionMode && selectedFileIds.size > 0 && (
+        <div className="flex items-center justify-between mb-4 bg-primary/5 p-2 rounded-lg border border-primary/20 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2 text-sm ml-2">
+            <span className="text-primary font-bold">Đã chọn {selectedFileIds.size} tài liệu</span>
           </div>
-
-          <div className="flex items-center gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const filesToDownload = isSelectionMode && selectedFileIds.size > 0
-                  ? files.filter(f => selectedFileIds.has(f.id))
-                  : filteredAndSortedFiles
-                handleBulkDownload(filesToDownload.map(f => ({ ...f, projectName: 'Project Files' })), comments)
-              }}
-              className="h-8 px-3 text-xs"
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={selectedFileIds.size < displayedFiles.length ? selectAllDisplayed : deselectAllFiles} 
+              className="h-8 w-8 p-0"
+              title={selectedFileIds.size < displayedFiles.length ? 'Chọn tất cả' : 'Bỏ chọn'}
             >
-              <Download className="w-3.5 h-3.5 mr-1.5" />
-              <span className="hidden sm:inline">Tải về {isSelectionMode && selectedFileIds.size > 0 ? 'đã chọn' : 'tất cả'}</span>
+              {selectedFileIds.size < displayedFiles.length ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
             </Button>
-
-            <div className="flex items-center bg-muted/50 p-0.5 rounded-md border">
-              <Button
-                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className="h-7 px-2 rounded-sm"
+            {user && (
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={() => setBulkDeleteDialogOpen(true)} 
+                disabled={selectedFileIds.size === 0} 
+                className="h-8 px-2 gap-1.5 font-bold"
+                title={`Xóa ${selectedFileIds.size} tài liệu`}
               >
-                <Grid3x3 className="w-3.5 h-3.5" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className="h-7 px-2 rounded-sm"
-              >
-                <List className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-
-            <div className="h-4 w-px bg-border mx-1" />
-
-            {isSelectionMode ? (
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm" onClick={selectedFileIds.size < displayedFiles.length ? selectAllDisplayed : deselectAllFiles} className="h-8 px-2 text-xs">
-                  {selectedFileIds.size < displayedFiles.length ? <CheckSquare className="w-3.5 h-3.5 mr-1.5" /> : <Square className="w-3.5 h-3.5 mr-1.5" />}
-                  {selectedFileIds.size < displayedFiles.length ? 'Tất cả' : 'Bỏ chọn'}
-                </Button>
-                <Button variant="destructive" size="sm" onClick={() => setBulkDeleteDialogOpen(true)} disabled={selectedFileIds.size === 0} className="h-8 px-3 text-xs font-bold">
-                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                  Xóa
-                </Button>
-                <Button variant="ghost" size="icon" onClick={toggleSelectionMode} className="h-8 w-8 rounded-full">
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            ) : (
-              <Button variant="ghost" size="sm" onClick={toggleSelectionMode} className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground">
-                <CheckSquare className="w-3.5 h-3.5 mr-1.5" />
-                Chọn nhiều
+                <Trash2 className="w-4 h-4" />
+                <span>{selectedFileIds.size}</span>
               </Button>
             )}
           </div>
@@ -509,6 +523,18 @@ export function FilesList({ projectId, sortBy = 'date', sortDirection = 'desc', 
             )
           })}
         </div>
+      )}
+
+      {viewMode === 'kanban' && (
+        <KanbanView
+          files={displayedFiles}
+          projectId={projectId}
+          isAdmin={!!user}
+          colorLabels={colorLabels}
+          columnOrder={columnOrder}
+          onColumnOrderChange={onColumnOrderChange}
+          onFileClick={handleFileClick}
+        />
       )}
 
       {hasMore && (

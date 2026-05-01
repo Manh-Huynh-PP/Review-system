@@ -1,3 +1,4 @@
+// Force Vite HMR re-index
 import { Badge } from '@/components/ui/badge'
 import { FileImage, Video, Box, FileText, MessageSquare, Lock, Play, Trash2 } from 'lucide-react'
 import type { File as FileType } from '@/types'
@@ -6,6 +7,7 @@ import { CardColorPicker } from './CardColorPicker'
 import { Button } from '@/components/ui/button'
 import { useTranslation } from 'react-i18next'
 import { useFileStore } from '@/stores/files'
+import { normalizeDriveUrl } from '@/utils/googleDrive'
 
 interface FileCardSharedProps {
   file: FileType
@@ -49,20 +51,32 @@ export function FileCardShared({
     return t('types.file')
   }
   const current = file.versions.find(v => v.version === file.currentVersion) || file.versions[0]
-  const effectiveUrl = resolvedUrl || current?.url
+  let effectiveUrl = resolvedUrl || current?.url
+
+  // Normalize Google Drive URLs for thumbnails
+  if (effectiveUrl?.includes('drive.google.com')) {
+    effectiveUrl = normalizeDriveUrl(effectiveUrl, 800)
+  }
+
   const { updateFileBackgroundColor } = useFileStore()
 
   const renderThumbnail = () => {
-    // Sequence files - show first frame with badge
+    const imgClassName = cn(
+      "w-full object-contain transition-all duration-300",
+      compact ? "relative h-auto" : "absolute inset-0 h-full"
+    )
+
+    // Sequence files
     if (file.type === 'sequence' && effectiveUrl) {
       return (
-        <div className="absolute inset-0">
+        <div className={cn(!compact && "absolute inset-0")}>
           <img
             src={effectiveUrl}
             alt={file.name}
-            className="w-full h-full object-cover"
+            className={imgClassName}
             loading="lazy"
             decoding="async"
+            referrerPolicy="no-referrer"
           />
           <Badge
             variant="secondary"
@@ -80,23 +94,24 @@ export function FileCardShared({
         <img
           src={effectiveUrl}
           alt={file.name}
-          className="absolute inset-0 w-full h-full object-cover"
+          className={imgClassName}
           loading="lazy"
           decoding="async"
         />
       )
     }
 
-    // Video files - show as static thumbnail with play icon overlay
+    // Video files
     if (file.type === 'video' && effectiveUrl) {
       return (
-        <div className="absolute inset-0 bg-muted">
+        <div className={cn("bg-muted", !compact && "absolute inset-0")}>
           <img
             src={effectiveUrl}
             alt={file.name}
-            className="w-full h-full object-cover"
+            className={imgClassName}
             loading="lazy"
             decoding="async"
+            referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
             <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 transition-transform group-hover:scale-110">
@@ -107,26 +122,13 @@ export function FileCardShared({
       )
     }
 
-    // Model files - show thumbnail if available, otherwise icon
-    if (file.type === 'model' && current?.thumbnailUrl) {
+    // Model & PDF files
+    if ((file.type === 'model' || file.type === 'pdf') && current?.thumbnailUrl) {
       return (
         <img
           src={current.thumbnailUrl}
           alt={file.name}
-          className="absolute inset-0 w-full h-full object-cover"
-          loading="lazy"
-          decoding="async"
-        />
-      )
-    }
-
-    // PDF files - show thumbnail if available, otherwise icon
-    if (file.type === 'pdf' && current?.thumbnailUrl) {
-      return (
-        <img
-          src={current.thumbnailUrl}
-          alt={file.name}
-          className="absolute inset-0 w-full h-full object-cover"
+          className={imgClassName}
           loading="lazy"
           decoding="async"
         />
@@ -135,7 +137,7 @@ export function FileCardShared({
 
     // Fallback icon
     return (
-      <div className="absolute inset-0 flex items-center justify-center">
+      <div className={cn("flex items-center justify-center bg-zinc-200/50 dark:bg-zinc-800/50", compact ? "aspect-square w-full" : "absolute inset-0")}>
         {getFileTypeIcon(file.type, 'w-16 h-16 opacity-50')}
       </div>
     )
@@ -160,9 +162,9 @@ export function FileCardShared({
       {/* Thumbnail Container */}
       <div 
         className={cn(
-          compact ? 'aspect-square' : 'aspect-video',
-          "relative overflow-hidden transition-colors duration-500",
-          !file.cardBackgroundColor && "bg-muted/10"
+          compact ? 'h-auto' : 'aspect-video',
+          "relative overflow-hidden transition-all duration-500 bg-zinc-200/50 dark:bg-zinc-800/50",
+          !file.cardBackgroundColor && "bg-muted/20"
         )}
       >
         {renderThumbnail()}
@@ -251,7 +253,7 @@ export function FileCardShared({
       </div>
 
       {/* Info Section */}
-      <div className="p-4 flex-1 flex flex-col justify-center min-w-0">
+      <div className={cn("flex-1 flex flex-col justify-center min-w-0", compact ? "p-3" : "p-4")}>
         <h3 className={cn(
           "font-bold truncate group-hover:text-primary transition-colors",
           compact ? "text-xs" : "text-sm",

@@ -197,7 +197,7 @@ function App() {
   const { theme, setTheme } = useThemeStore()
 
   useEffect(() => {
-    // Initialize theme from localStorage or default to dark
+    // Initialize theme from localStorage or default to light
     setTheme(theme)
 
     // Initialize auth listener

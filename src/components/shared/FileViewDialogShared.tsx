@@ -24,6 +24,7 @@ import { StandardVideoPreview } from './StandardVideoPreview'
 import { DesktopFileViewLayout } from './DesktopFileViewLayout'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from './ConfirmDialog'
+import { normalizeDriveUrl, extractDriveFileId } from '@/utils/googleDrive'
 
 import type { AnnotationObject } from '@/types'
 import type { GLBViewerRef } from '@/components/viewers/GLBViewer'
@@ -193,9 +194,17 @@ export function FileViewDialogShared(props: Props) {
 
   if (!file) return null
 
-  const current = file.versions.find(v => v.version === currentVersion) || file.versions[0]
-  const latestVersion = file.versions.reduce((max, v) => (v.version > max.version ? v : max), file.versions[0])
-  const effectiveUrl = (currentVersion === file.currentVersion && resolvedUrl) ? resolvedUrl : current?.url
+  const current = file.versions.find(v => v.version === file.currentVersion) || file.versions[0]
+  const latestVersion = file.versions.reduce((max, v) => (max.version > v.version ? max : v), file.versions[0])
+  let effectiveUrl = (currentVersion === file.currentVersion && resolvedUrl) ? resolvedUrl : current?.url
+  
+  const driveFileId = effectiveUrl?.includes('drive.google.com') ? extractDriveFileId(effectiveUrl) : null
+
+  // Normalize Google Drive URLs for high-quality preview (Images, PDF, Sequence)
+  // For videos, we want to keep the original URL or use the direct stream URL
+  if (driveFileId && file.type !== 'video') {
+    effectiveUrl = normalizeDriveUrl(effectiveUrl!, 2000)
+  }
   const latestUrl = latestVersion?.url
   const uploadDate = current?.uploadedAt?.toDate ? current.uploadedAt.toDate() : new Date()
 
@@ -330,8 +339,8 @@ export function FileViewDialogShared(props: Props) {
     if (file.type === 'video') {
       const m = allFileComments.filter(c => c.timestamp !== null).sort((a,b) => a.timestamp! - b.timestamp!)
       if (videoComparison.isComparing && videoComparison.secondaryUrl) return <VideoCompareMode videoComparison={videoComparison} currentVersion={currentVersion} uniqueVersions={uniqueVersions} effectiveUrl={effectiveUrl} handleTimeUpdate={handleTimeUpdate} />
-      const parseDriveUrl = (u:string) => { const mt = u.match(/drive\.google\.com\/file\/d\/([^/]+)/); return mt ? { id: mt[1] } : null }
-      return <StandardVideoPreview file={file} effectiveUrl={effectiveUrl} allFileComments={allFileComments} currentTime={currentTime} videoFps={videoFps} videoDuration={videoDuration} navMode={navMode} setNavMode={setNavMode} isPlaying={isPlaying} driveInfo={parseDriveUrl(effectiveUrl)} handleTimeUpdate={handleTimeUpdate} handleCommentMarkerClick={c => { setCurrentTime(c.timestamp || 0); if (c.annotationData) handleViewAnnotation(c.annotationData, c) }} handleFullscreenChange={handleFullscreenChange} handleLoadedMetadata={handleLoadedMetadata} handleVideoPlay={handleVideoPlay} handleVideoPause={handleVideoPause} renderAnnotationOverlay={renderAnnotationOverlay} handleNextFrame={() => setCurrentTime(p => Math.min(videoDuration, p + 1/videoFps))} handlePrevFrame={() => setCurrentTime(p => Math.max(0, p - 1/videoFps))} handleSkipForward={() => setCurrentTime(p => Math.min(videoDuration, p+5))} handleSkipBackward={() => setCurrentTime(p => Math.max(0, p-5))} handleNextMarker={() => { const n = m.find(x => x.timestamp! > currentTime); if (n) setCurrentTime(n.timestamp!) }} handlePrevMarker={() => { const p = [...m].reverse().find(x => x.timestamp! < currentTime); if (p) setCurrentTime(p.timestamp!) }} handleFirstMarker={() => m.length > 0 && setCurrentTime(m[0].timestamp!)} handleLastMarker={() => m.length > 0 && setCurrentTime(m[m.length-1].timestamp!)} />
+      const driveInfo = driveFileId ? { id: driveFileId } : null
+      return <StandardVideoPreview file={file} effectiveUrl={effectiveUrl} allFileComments={allFileComments} currentTime={currentTime} videoFps={videoFps} videoDuration={videoDuration} navMode={navMode} setNavMode={setNavMode} isPlaying={isPlaying} driveInfo={driveInfo} handleTimeUpdate={handleTimeUpdate} handleCommentMarkerClick={c => { setCurrentTime(c.timestamp || 0); if (c.annotationData) handleViewAnnotation(c.annotationData, c) }} handleFullscreenChange={handleFullscreenChange} handleLoadedMetadata={handleLoadedMetadata} handleVideoPlay={handleVideoPlay} handleVideoPause={handleVideoPause} renderAnnotationOverlay={renderAnnotationOverlay} handleNextFrame={() => setCurrentTime(p => Math.min(videoDuration, p + 1/videoFps))} handlePrevFrame={() => setCurrentTime(p => Math.max(0, p - 1/videoFps))} handleSkipForward={() => setCurrentTime(p => Math.min(videoDuration, p+5))} handleSkipBackward={() => setCurrentTime(p => Math.max(0, p-5))} handleNextMarker={() => { const n = m.find(x => x.timestamp! > currentTime); if (n) setCurrentTime(n.timestamp!) }} handlePrevMarker={() => { const p = [...m].reverse().find(x => x.timestamp! < currentTime); if (p) setCurrentTime(p.timestamp!) }} handleFirstMarker={() => m.length > 0 && setCurrentTime(m[0].timestamp!)} handleLastMarker={() => m.length > 0 && setCurrentTime(m[m.length-1].timestamp!)} />
     }
     if (file.type === 'model') return <div className="relative h-[70vh] w-full"><Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground">{t('common:status.loading')}</div>}><GLBViewer ref={glbViewerRef} url={effectiveUrl} className="w-full h-full" initialCameraState={current?.cameraState} isAdmin={isAdmin} initialRenderSettings={current?.renderSettings} onSaveSettings={handleSaveRenderSettings} /></Suspense>{renderAnnotationOverlay()}{isAdmin && <div className="absolute top-4 right-4"><Button disabled={savingThumbnail} onClick={async () => { const cam = glbViewerRef.current?.getCameraState(); const snap = glbViewerRef.current?.captureScreenshot(); if (cam && snap) { setSavingThumbnail(true); try { await useFileStore.getState().setModelThumbnail(_projectId, file.id, currentVersion, snap, cam) } finally { setSavingThumbnail(false) } } }}>{savingThumbnail ? t('common:status.loading') : 'Set Thumbnail'}</Button></div>}</div>
     return <div className="p-8 text-center text-muted-foreground">Không hỗ trợ xem loại file này</div>

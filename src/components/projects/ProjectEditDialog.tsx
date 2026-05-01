@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useProjectStore } from '@/stores/projects'
 import { useClientStore } from '@/stores/clients'
 import { useAuthStore } from '@/stores/auth'
+import { PRESET_COLORS } from '@/constants/colors'
 import type { Project, ArchiveLink } from '@/types'
 import { Button } from '@/components/ui/button'
 import {
@@ -45,6 +46,7 @@ export function ProjectEditDialog({ project, triggerAsMenuItem = false }: Props)
     project.archiveLinks || (project.archiveUrl ? [{ url: project.archiveUrl, title: project.archiveTitle }] : [])
   )
   const [notificationEmails, setNotificationEmails] = useState(project.notificationEmails?.join(', ') || '')
+  const [colorLabels, setColorLabels] = useState<Record<string, string>>(project.colorLabels || {})
 
   const { updateProject, loading } = useProjectStore()
   const { clients, subscribeToClients } = useClientStore()
@@ -74,7 +76,8 @@ export function ProjectEditDialog({ project, triggerAsMenuItem = false }: Props)
         archiveLinks: archiveLinks.filter(l => l.url.trim()),
         notificationEmails: notificationEmails.trim()
           ? notificationEmails.split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
-          : undefined
+          : undefined,
+        colorLabels
       }
 
       await updateProject(project.id, updateData)
@@ -260,7 +263,44 @@ export function ProjectEditDialog({ project, triggerAsMenuItem = false }: Props)
               </div>
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">Tùy chỉnh nhãn màu sắc</Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Thay đổi tên hiển thị của các màu nền để phân loại file (VD: Màu Emerald &rarr; "Đã duyệt").
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {PRESET_COLORS.map((color) => {
+                  const colorKey = color.value || 'default';
+                  return (
+                    <div key={colorKey} className="flex items-center gap-3 bg-muted/20 p-2 rounded-md border">
+                      <div 
+                        className="w-6 h-6 rounded-full border shadow-sm shrink-0" 
+                        style={{ backgroundColor: color.hex }}
+                      />
+                      <div className="flex-1 space-y-1">
+                        <Label htmlFor={`color-${colorKey}`} className="text-[10px] uppercase text-muted-foreground">
+                          {color.label}
+                        </Label>
+                        <Input
+                          id={`color-${colorKey}`}
+                          value={colorLabels[colorKey] || ''}
+                          onChange={(e) => setColorLabels(prev => ({
+                            ...prev,
+                            [colorKey]: e.target.value
+                          }))}
+                          placeholder={color.label}
+                          className="h-8 text-sm bg-background"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4 border-t">
               <Button
                 type="button"
                 variant="ghost"

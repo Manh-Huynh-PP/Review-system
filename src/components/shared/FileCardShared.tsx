@@ -105,15 +105,27 @@ export function FileCardShared({
     if (file.type === 'video' && effectiveUrl) {
       return (
         <div className={cn("bg-muted", !compact && "absolute inset-0")}>
-          <img
+          <video
             src={effectiveUrl}
-            alt={file.name}
-            className={imgClassName}
-            loading="lazy"
-            decoding="async"
-            referrerPolicy="no-referrer"
+            className={cn(imgClassName, "object-cover")}
+            preload="metadata"
+            muted
+            playsInline
+            onMouseOver={(e) => {
+              if (!compact) {
+                const video = e.currentTarget;
+                video.play().catch(() => {});
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!compact) {
+                const video = e.currentTarget;
+                video.pause();
+                video.currentTime = 0;
+              }
+            }}
           />
-          <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/0 transition-colors pointer-events-none">
             <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 transition-transform group-hover:scale-110">
               <Play className="w-6 h-6 text-white fill-current ml-1" />
             </div>

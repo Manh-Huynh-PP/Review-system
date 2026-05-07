@@ -208,9 +208,9 @@ export const useFileStore = create<FileState>((set, get) => ({
             const { generateImageThumbnail } = await import('../lib/shareThumbnail')
             thumbnailBlob = await generateImageThumbnail(url)
           } else if (fileType === 'video') {
-            // For videos, extract first frame
-            const { generateVideoThumbnail } = await import('../lib/shareThumbnail')
-            thumbnailBlob = await generateVideoThumbnail(url)
+            // Video live preview is used in UI, no need for static thumbnail file
+            console.log('⏭️ Skipping video thumbnail generation (live preview enabled)')
+            thumbnailBlob = null
           } else if (fileType === 'pdf') {
             // For PDFs, render first page
             const { generatePdfThumbnail } = await import('../lib/shareThumbnail')

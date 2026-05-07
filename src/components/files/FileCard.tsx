@@ -3,11 +3,10 @@ import type { File as FileType } from '@/types'
 import { format } from 'date-fns'
 import { formatFileSize } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { FileImage, Video, Box, MessageSquare, Clock, ShieldAlert, MoreHorizontal, Share2, HardDrive, Play } from 'lucide-react'
+import { FileImage, Video, Box, MessageSquare, Clock, ShieldAlert, MoreHorizontal, Share2, Play } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { ProjectShareDialog } from '@/components/dashboard/ProjectShareDialog'
-import { CustomVideoPlayer } from '../viewers/CustomVideoPlayer'
 import { parseDriveUrl } from '@/utils/googleDrive'
 import { CardColorPicker } from '../shared/CardColorPicker'
 import { useFileStore } from '@/stores/files'
@@ -63,36 +62,45 @@ export function FileCard({ file, resolvedUrl, commentCount, onClick }: Props) {
     }
 
     if (file.type === 'video' && effectiveUrl) {
-      const driveInfo = parseDriveUrl(effectiveUrl)
-      if (driveInfo) {
+      const isDrive = !!parseDriveUrl(effectiveUrl)
+      if (isDrive) {
         return (
-          <div className="w-full h-full relative">
+          <div className="absolute inset-0 bg-muted flex items-center justify-center">
             <img
               src={effectiveUrl}
               alt={file.name}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.currentTarget.src = 'https://placehold.co/600x400?text=Google+Drive+Video';
-              }}
+              className={cn("w-full h-full object-cover", imageError && "hidden")}
+              onError={() => setImageError(true)}
             />
-            <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
-              <div className="bg-white/90 p-1.5 rounded-full shadow-lg">
-                <HardDrive className="w-5 h-5 text-blue-600" />
+            {imageError && <Video className="w-12 h-12 text-muted-foreground opacity-20" />}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+                <Play className="w-6 h-6 text-white fill-current ml-1" />
               </div>
             </div>
           </div>
         )
       }
+
       return (
-        <CustomVideoPlayer
-          src={effectiveUrl}
-          minimal={true}
-          autoPlay={isHovered}
-          comments={[]}
-          onTimeUpdate={() => {}}
-          onCommentMarkerClick={() => {}}
-          className="w-full h-full"
-        />
+        <div className="absolute inset-0 bg-muted">
+          <video
+            src={effectiveUrl}
+            className="w-full h-full object-cover"
+            preload="metadata"
+            muted
+            playsInline
+            autoPlay={isHovered}
+            loop
+          />
+          {!isHovered && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+                <Play className="w-6 h-6 text-white fill-current ml-1" />
+              </div>
+            </div>
+          )}
+        </div>
       )
     }
 

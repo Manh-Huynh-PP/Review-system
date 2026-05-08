@@ -51,11 +51,11 @@ export function FileCardShared({
     return t('types.file')
   }
   const current = file.versions.find(v => v.version === file.currentVersion) || file.versions[0]
-  let effectiveUrl = resolvedUrl || current?.url
+  let effectiveUrl = resolvedUrl || current?.url || (file.type === 'sequence' && current?.sequenceUrls?.[0] ? current.sequenceUrls[0] : undefined)
 
   // Normalize Google Drive URLs for thumbnails
-  if (effectiveUrl?.includes('drive.google.com')) {
-    effectiveUrl = normalizeDriveUrl(effectiveUrl, 800)
+  if (effectiveUrl?.includes('drive.google.com') || effectiveUrl?.includes('googleusercontent.com')) {
+    effectiveUrl = normalizeDriveUrl(effectiveUrl, 800, current?.metadata?.lastModified)
   }
 
   const { updateFileBackgroundColor } = useFileStore()

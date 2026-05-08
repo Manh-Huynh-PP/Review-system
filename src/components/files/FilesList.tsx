@@ -129,20 +129,21 @@ export function FilesList({
       const tasks: Promise<any>[] = []
       for (const f of files || []) {
         const current = f.versions.find(v => v.version === f.currentVersion) || f.versions[0]
-        if (!current?.url) continue
+        const mainUrl = current?.url || (f.type === 'sequence' && current?.sequenceUrls?.[0] ? current.sequenceUrls[0] : undefined)
+        
+        if (!mainUrl) continue
         
         const key = getKey(f.id, current.version)
         if (resolvedUrls[key]) continue
         
         // Handle Google Drive links
-        if (current.url.includes('drive.google.com')) {
-          const optimizedUrl = normalizeDriveUrl(current.url, 800);
-          if (optimizedUrl !== current.url) {
+        if (mainUrl.includes('drive.google.com') || mainUrl.includes('googleusercontent.com')) {
+          const optimizedUrl = normalizeDriveUrl(mainUrl, 800, current?.metadata?.lastModified);
+          if (optimizedUrl !== mainUrl) {
             setResolvedUrls(prev => ({ ...prev, [key]: optimizedUrl }));
             continue;
           }
         }
-
         // Skip other external links
         if (f.isExternalLink) continue
         

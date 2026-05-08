@@ -9,8 +9,14 @@ export function parseDriveUrl(url: string): { type: 'file' | 'folder'; id: strin
 
   try {
     const u = new URL(url)
-    if (!u.hostname.includes('drive.google.com') && !u.hostname.includes('docs.google.com')) {
+    if (!u.hostname.includes('drive.google.com') && !u.hostname.includes('docs.google.com') && !u.hostname.includes('googleusercontent.com')) {
       return null
+    }
+
+    // Handle lh[3-6].googleusercontent.com/d/ID or /drive-viewer/ID
+    const lhMatch = url.match(/lh[3-6]\.googleusercontent\.com\/(?:d|drive-viewer)\/([a-zA-Z0-9_-]+)/)
+    if (lhMatch) {
+      return { type: 'file', id: lhMatch[1] }
     }
 
     // Folder: https://drive.google.com/drive/folders/{id}
@@ -41,10 +47,16 @@ export function parseDriveUrl(url: string): { type: 'file' | 'folder'; id: strin
  * Get a thumbnail URL for a Google Drive file with configurable size.
  * @param fileId - The Drive file ID
  * @param size - Width in pixels (default: 2000). Use smaller values (e.g. 800) for grid thumbnails to avoid rate-limiting.
+ * @param t - Optional timestamp or version string for cache-busting
  */
-export function getDriveThumbnailUrl(fileId: string, size: number = 2000): string {
-  // Use googleusercontent.com which is often more reliable for direct embedding
-  return `https://lh3.googleusercontent.com/d/${fileId}=w${size}`
+export function getDriveThumbnailUrl(fileId: string, size: number = 2000, t?: string | number): string {
+  // Using lh3.googleusercontent.com for better CORS support and performance in sequences
+  // The =w{size} is part of the path-like structure, so we need to use '?' for the first parameter
+  const baseUrl = `https://lh3.googleusercontent.com/d/${fileId}=w${size}`
+  if (!t) return baseUrl
+  
+  const separator = baseUrl.includes('?') ? '&' : '?'
+  return `${baseUrl}${separator}t=${t}`
 }
 
 /** @deprecated Use getDriveThumbnailUrl instead */
@@ -57,19 +69,20 @@ export function getDirectImageUrl(fileId: string): string {
  * Returns null if the URL is not a recognized Drive format.
  */
 export function extractDriveFileId(url: string): string | null {
-  if (!url || !url.includes('google.com')) return null
+  if (!url) return null
+  if (!url.includes('google.com') && !url.includes('googleusercontent.com')) return null
 
-  // Format: thumbnail?id=...
-  const thumbMatch = url.match(/thumbnail\?id=([a-zA-Z0-9_-]+)/)
-  if (thumbMatch) return thumbMatch[1]
+  // Handle lh[3-6].googleusercontent.com/d/ID or /drive-viewer/ID
+  const lhMatch = url.match(/lh[3-6]\.googleusercontent\.com\/(?:d|drive-viewer)\/([a-zA-Z0-9_-]+)/)
+  if (lhMatch) return lhMatch[1]
 
-  // Format: uc?id=... or open?id=...
-  const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/)
-  if (idMatch) return idMatch[1]
+  // Format: thumbnail?id=... or srcid=...
+  const idParamMatch = url.match(/[?&](?:id|srcid)=([a-zA-Z0-9_-]+)/)
+  if (idParamMatch) return idParamMatch[1]
 
-  // Format: /file/d/... or /d/...
-  const dMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/)
-  if (dMatch) return dMatch[1]
+  // Format: /file/d/... or /d/... or /folders/...
+  const pathMatch = url.match(/\/(?:file\/d|d|folders)\/([a-zA-Z0-9_-]+)/)
+  if (pathMatch) return pathMatch[1]
 
   return null
 }
@@ -79,11 +92,23 @@ export function extractDriveFileId(url: string): string | null {
  * Handles old 'uc' links, file share links, etc.
  * @param url - The Drive URL to normalize
  * @param size - Thumbnail width in pixels (default: 2000)
+ * @param t - Optional timestamp or version string for cache-busting
  */
-export function normalizeDriveUrl(url: string, size: number = 2000): string {
+export function normalizeDriveUrl(url: string, size: number = 2000, t?: string | number): string {
   const fileId = extractDriveFileId(url)
   if (fileId) {
-    return getDriveThumbnailUrl(fileId, size)
+    // If t is not provided, try to extract it from the URL
+    let timestamp = t
+    if (!timestamp) {
+      try {
+        const u = new URL(url)
+        timestamp = u.searchParams.get('t') || undefined
+      } catch {
+        const tMatch = url.match(/[?&]t=([a-zA-Z0-9_-]+)/)
+        if (tMatch) timestamp = tMatch[1]
+      }
+    }
+    return getDriveThumbnailUrl(fileId, size, timestamp)
   }
   return url
 }
@@ -138,6 +163,7 @@ export interface DriveFileInfo {
   mimeType: string
   thumbnailLink?: string
   webContentLink?: string
+  modifiedTime?: string
 }
 
 /**

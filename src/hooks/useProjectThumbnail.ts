@@ -51,8 +51,8 @@ export function useProjectThumbnail(projectId: string, status?: string) {
             if (currentVersionData) {
               // Normalize URL if it's a Google Drive link
               const getUrl = (url: string) => {
-                if (url.includes('drive.google.com')) {
-                  return normalizeDriveUrl(url, 800)
+                if (url.includes('drive.google.com') || url.includes('googleusercontent.com')) {
+                  return normalizeDriveUrl(url, 800, currentVersionData.metadata?.lastModified)
                 }
                 return url
               }

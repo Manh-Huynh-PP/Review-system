@@ -940,7 +940,7 @@ exports.listDriveFolder = functions.https.onCall(async (data, context) => {
 
     const response = await drive.files.list({
       q: `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`,
-      fields: 'files(id, name, mimeType, thumbnailLink, webContentLink)',
+      fields: 'files(id, name, mimeType, thumbnailLink, webContentLink, modifiedTime)',
       orderBy: 'name',
       pageSize: 500,
     });
@@ -951,6 +951,7 @@ exports.listDriveFolder = functions.https.onCall(async (data, context) => {
       mimeType: f.mimeType,
       thumbnailLink: f.thumbnailLink || null,
       webContentLink: f.webContentLink || null,
+      modifiedTime: f.modifiedTime || null,
     }));
 
     console.log(`✅ Listed ${files.length} image files from Drive folder ${folderId}`);

@@ -41,6 +41,7 @@ interface PickableImageSequenceViewerProps {
   externalIsFullscreen?: boolean
   onToggleFullscreen?: () => void
   externalFullscreenRef?: React.RefObject<HTMLDivElement | null>
+  lastModified?: string | number
 }
 
 export function PickableImageSequenceViewer(props: PickableImageSequenceViewerProps) {

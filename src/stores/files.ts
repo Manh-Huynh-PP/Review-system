@@ -1175,13 +1175,16 @@ export const useFileStore = create<FileState>((set, get) => ({
         throw new Error('Không tìm thấy ảnh nào trong folder Google Drive.')
       }
 
-      // Generate direct URLs for all images
-      const sequenceUrls = imageFiles.map(f => normalizeDriveUrl(`https://drive.google.com/open?id=${f.id}`))
+      // Generate direct URLs for all images with cache busting
+      const sequenceUrls = imageFiles.map(f => normalizeDriveUrl(`https://drive.google.com/open?id=${f.id}`, 2000, f.modifiedTime))
       set({ uploadProgress: 80 })
+
+      // Get the latest modified time among all images to use as lastModified metadata
+      const latestModified = Math.max(...imageFiles.map(f => f.modifiedTime ? new Date(f.modifiedTime).getTime() : 0))
 
       const fileId = generateId()
       const newVersion: FileVersion = {
-        url: normalizeDriveUrl(sequenceUrls[0]), // First image as thumbnail
+        url: normalizeDriveUrl(sequenceUrls[0], 2000, imageFiles[0].modifiedTime), // First image as thumbnail with cache buster
         sequenceUrls,
         frameCount: sequenceUrls.length,
         version: 1,
@@ -1193,7 +1196,7 @@ export const useFileStore = create<FileState>((set, get) => ({
           size: 0,
           type: 'image/sequence',
           name: name,
-          lastModified: Date.now(),
+          lastModified: latestModified || Date.now(),
           duration: sequenceUrls.length / 24
         }
       }

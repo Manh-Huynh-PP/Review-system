@@ -93,6 +93,7 @@ interface ImageSequenceViewerProps {
   externalIsFullscreen?: boolean
   onToggleFullscreen?: () => void
   externalFullscreenRef?: React.RefObject<HTMLDivElement | null>
+  lastModified?: string | number
 }
 
 type ViewMode = 'video' | 'carousel' | 'grid'
@@ -133,7 +134,8 @@ export function ImageSequenceViewer({
   renderFrameOverlay,
   externalIsFullscreen,
   onToggleFullscreen,
-  externalFullscreenRef
+  externalFullscreenRef,
+  lastModified
 }: ImageSequenceViewerProps) {
   const { t } = useTranslation()
   const [currentFrame, setCurrentFrame] = useState(externalCurrentFrame !== undefined ? externalCurrentFrame : 0)
@@ -154,8 +156,8 @@ export function ImageSequenceViewer({
 
   // Normalize URLs at the component level to handle legacy 'uc' links
   const normalizedUrls = useMemo(() => {
-    return urls.map(url => normalizeDriveUrl(url))
-  }, [urls])
+    return urls.map(url => normalizeDriveUrl(url, 2000, lastModified))
+  }, [urls, lastModified])
 
   const frameCount = normalizedUrls.length
 
@@ -781,7 +783,7 @@ export function ImageSequenceViewer({
                   }`}
               >
                 <img
-                  src={url}
+                  src={normalizeDriveUrl(url, 400, lastModified)}
                   alt={`Thumb ${index + 1}`}
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"

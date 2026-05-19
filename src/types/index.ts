@@ -146,6 +146,35 @@ export interface File {
   cardBackgroundColor?: string
 }
 
+export type SpatialAnnotationType = 'pin' | 'region'
+
+/** Coordinates for the drop-pin / region-draw gesture */
+export interface DropPinCoordinates {
+  x: number
+  y: number
+  w?: number       // Width in % (region only)
+  h?: number       // Height in % (region only)
+  screenX?: number
+  screenY?: number
+  type?: SpatialAnnotationType
+}
+
+export interface SpatialContext {
+  viewerType: 'image' | 'video' | 'pdf' | '3d'
+  // Spatial
+  x_pct?: number
+  y_pct?: number
+  w_pct?: number  // Region width in %
+  h_pct?: number  // Region height in %
+  position3D?: { x: number; y: number; z: number }
+  cameraState?: { position: [number, number, number]; target: [number, number, number] }
+  
+  // Temporal & Paging
+  pageNumber?: number // For PDF
+  timestamp?: number  // For Video (seconds)
+  frameNumber?: number // For Image Sequence (index)
+}
+
 export interface Comment {
   id: string
   projectId: string
@@ -159,6 +188,7 @@ export interface Comment {
   createdAt: Timestamp
   // --- Advanced features ---
   isPinned?: boolean
+  spatialContext?: SpatialContext
   annotationData?: string | null // JSON.stringify(AnnotationObject[])
   // --- Image attachments ---
   imageUrls?: string[] // Firebase Storage URLs for attached images

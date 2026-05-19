@@ -30,9 +30,12 @@
     "addAnnotation": "Add annotation",
     "drawing": "Drawing...",
     "filtering": "Filtering",
-    "filterTime": "Filter time"
+    "filterTime": "Filter time",
+    "dropPin": "Drop Pin",
+    "dropPinActive": "Cancel Pin"
   },
   "comments": {
+    "dropPinHint": "Click to pin · Drag to draw region",
     "title": "Feedback",
     "hide": "Hide",
     "show": "Show",

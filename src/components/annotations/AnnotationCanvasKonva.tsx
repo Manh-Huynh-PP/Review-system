@@ -33,12 +33,19 @@ export function AnnotationCanvasKonva({
   const transformerRef = useRef<any>(null)
   const shapeRefs = useRef<Record<string, any>>({})
 
-  const [shapes, setShapes] = useState<AnnotationObject[]>(data || [])
+  const safeParseData = (d: unknown): AnnotationObject[] => {
+    if (Array.isArray(d)) return d
+    if (typeof d === 'string') {
+      try { const parsed = JSON.parse(d); return Array.isArray(parsed) ? parsed : [] } catch { return [] }
+    }
+    return []
+  }
+  const [shapes, setShapes] = useState<AnnotationObject[]>(safeParseData(data))
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [drawingId, setDrawingId] = useState<string | null>(null)
   const [stageSize, setStageSize] = useState({ w: propW || 800, h: propH || 400 })
 
-  useEffect(() => setShapes(data || []), [data])
+  useEffect(() => setShapes(safeParseData(data)), [data])
 
   useEffect(() => {
     const resize = () => {
@@ -97,7 +104,7 @@ export function AnnotationCanvasKonva({
       if (!selectedId) return
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault()
-        const newShapes = shapes.filter(s => s.id !== selectedId)
+        const newShapes = (Array.isArray(shapes) ? shapes : []).filter(s => s.id !== selectedId)
         setShapes(newShapes)
         onChange?.(newShapes)
         setSelectedId(null)
@@ -150,7 +157,7 @@ export function AnnotationCanvasKonva({
     if (mode !== 'edit' || !drawingId) return
     const pos = getRelativePointer()
     if (!pos) return
-    setShapes(prev => prev.map(s => {
+    setShapes(prev => (Array.isArray(prev) ? prev : []).map(s => {
       if (s.id !== drawingId) return s
       if (s.type === 'pen') {
         const pts = s.points || []
@@ -174,7 +181,7 @@ export function AnnotationCanvasKonva({
 
   const finishDrawing = () => {
     if (!drawingId) return
-    const updatedShapes = shapes.map(s => {
+    const updatedShapes = (Array.isArray(shapes) ? shapes : []).map(s => {
       if (s.id !== drawingId) return s
       if (s.type === 'rect') {
         if (s.w && s.w < 0) {
@@ -203,7 +210,7 @@ export function AnnotationCanvasKonva({
     if (tool === 'select') {
       setSelectedId(id)
     } else if (tool === 'eraser') {
-      const shape = shapes.find(s => s.id === id)
+      const shape = (Array.isArray(shapes) ? shapes : []).find(s => s.id === id)
       if (!shape) return
 
       // For pen strokes, implement partial deletion
@@ -217,7 +224,7 @@ export function AnnotationCanvasKonva({
         const points = shape.points || []
         if (points.length < 4) {
           // Too few points, delete entire stroke
-          const newShapes = shapes.filter(s => s.id !== id)
+          const newShapes = (Array.isArray(shapes) ? shapes : []).filter(s => s.id !== id)
           setShapes(newShapes)
           onChange?.(newShapes)
           return
@@ -258,12 +265,12 @@ export function AnnotationCanvasKonva({
 
         if (newPoints.length < 4) {
           // After erasing, too few points remain, delete entire stroke
-          const newShapes = shapes.filter(s => s.id !== id)
+          const newShapes = (Array.isArray(shapes) ? shapes : []).filter(s => s.id !== id)
           setShapes(newShapes)
           onChange?.(newShapes)
         } else {
           // Update the stroke with remaining points
-          const newShapes = shapes.map(s =>
+          const newShapes = (Array.isArray(shapes) ? shapes : []).map(s =>
             s.id === id ? { ...s, points: newPoints } : s
           )
           setShapes(newShapes)
@@ -271,7 +278,7 @@ export function AnnotationCanvasKonva({
         }
       } else {
         // For other shapes (rect, arrow, text), delete the entire shape
-        const newShapes = shapes.filter(s => s.id !== id)
+        const newShapes = (Array.isArray(shapes) ? shapes : []).filter(s => s.id !== id)
         setShapes(newShapes)
         onChange?.(newShapes)
       }
@@ -282,7 +289,7 @@ export function AnnotationCanvasKonva({
     const node = shapeRefs.current[id]
     if (!node) return
     const attrs = node.getAttrs ? node.getAttrs() : node.attrs
-    const newShapes = shapes.map(s => {
+    const newShapes = (Array.isArray(shapes) ? shapes : []).map(s => {
       if (s.id !== id) return s
       if (s.type === 'rect') {
         const x = normalize(attrs.x || 0, stageSize.w)
@@ -311,7 +318,7 @@ export function AnnotationCanvasKonva({
     const node = shapeRefs.current[id]
     if (!node) return
     const attrs = node.getAttrs ? node.getAttrs() : node.attrs
-    const newShapes = shapes.map(s => {
+    const newShapes = (Array.isArray(shapes) ? shapes : []).map(s => {
       if (s.id !== id) return s
       if (s.type === 'rect') {
         const x = normalize(attrs.x || 0, stageSize.w)
@@ -353,7 +360,7 @@ export function AnnotationCanvasKonva({
         className={cursorClass}
       >
         <Layer>
-          {shapes.map(s => {
+          {(Array.isArray(shapes) ? shapes : []).map(s => {
             if (s.type === 'pen') {
               const pts = denormalizePoints(s.points || [], stageSize.w, stageSize.h)
               return (

@@ -69,7 +69,8 @@ function Loader() {
   useEffect(() => {
     let timeout: NodeJS.Timeout
     if (active) {
-      setVisible(true)
+      // Use microtask to avoid setState-during-render conflicts with Model's suspend cycle
+      queueMicrotask(() => setVisible(true))
     } else {
       // Delay hiding to bridge gaps between sequential loads (e.g., GLB -> Draco)
       timeout = setTimeout(() => {

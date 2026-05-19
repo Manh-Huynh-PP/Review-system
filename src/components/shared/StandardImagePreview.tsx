@@ -3,6 +3,7 @@ import { Minus, Plus, RotateCcw, Minimize2, Maximize2, ChevronLeft, ChevronRight
 import { Button } from '@/components/ui/button'
 import { FramePickOverlay } from '@/components/viewers/FramePickOverlay'
 import { useFileStore } from '@/stores/files'
+import { SpatialCommentOverlay } from '@/components/comments/SpatialCommentOverlay'
 
 interface Props {
   file: any
@@ -22,6 +23,10 @@ interface Props {
   handleZoomIn: () => void
   handleZoomOut: () => void
   resetZoomPan: () => void
+  fileComments?: any[]
+  isDropPinMode?: boolean
+  dropPinCoordinates?: any
+  setDropPinCoordinates?: (coords: any) => void
 }
 
 export function StandardImagePreview({
@@ -41,7 +46,11 @@ export function StandardImagePreview({
   projectId,
   handleZoomIn,
   handleZoomOut,
-  resetZoomPan
+  resetZoomPan,
+  fileComments = [],
+  isDropPinMode,
+  dropPinCoordinates,
+  setDropPinCoordinates
 }: Props) {
   return (
     <div className={`flex flex-col w-full h-full bg-muted/20 relative overflow-hidden ${sequenceFullscreen.isFullscreen ? 'pointer-events-auto' : ''}`} ref={sequenceFullscreenRef as any}>
@@ -119,6 +128,12 @@ export function StandardImagePreview({
               draggable={false}
               onDragStart={(e) => e.preventDefault()}
               referrerPolicy="no-referrer"
+            />
+              <SpatialCommentOverlay 
+              comments={fileComments} 
+              isDropPinMode={isDropPinMode} 
+              dropPinCoordinates={dropPinCoordinates} 
+              setDropPinCoordinates={setDropPinCoordinates} 
             />
           </div>
 

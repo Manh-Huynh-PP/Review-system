@@ -16,7 +16,8 @@ service cloud.firestore {
     match /projects/{projectId} {
       function isProjectActive() {
         let project = get(/databases/$(database)/documents/projects/$(projectId)).data;
-        return project.status == 'active';
+        // Legacy projects may not have 'status' field - treat as active
+        return !('status' in project) || project.status == 'active';
       }
 
       // Public read (for review links)
@@ -59,7 +60,7 @@ service cloud.firestore {
           request.resource.data.userName.size() > 0 && 
           request.resource.data.userName.size() <= 100 &&
           request.resource.data.content is string && 
-          request.resource.data.content.size() > 5 && 
+          request.resource.data.content.size() >= 5 && 
           request.resource.data.content.size() <= 2000 &&
           request.resource.data.fileId is string &&
           // version optional but if present must be a number

@@ -21,7 +21,8 @@ import {
   Trash2,
   Settings,
   Loader2,
-  Minimize2
+  Minimize2,
+  Filter
 } from 'lucide-react'
 import {
   ToggleGroup,
@@ -35,6 +36,7 @@ import { AnnotationCanvasKonva } from '@/components/annotations/AnnotationCanvas
 import { AnnotationToolbar } from '@/components/annotations/AnnotationToolbar'
 import type { AnnotationObject } from '@/types'
 import { normalizeDriveUrl } from '@/utils/googleDrive'
+import { SpatialCommentOverlay } from '@/components/comments/SpatialCommentOverlay'
 
 // DnD Kit imports
 import {
@@ -94,6 +96,13 @@ interface ImageSequenceViewerProps {
   onToggleFullscreen?: () => void
   externalFullscreenRef?: React.RefObject<HTMLDivElement | null>
   lastModified?: string | number
+  allFileComments?: any[]
+  fileComments?: any[]
+  isDropPinMode?: boolean
+  dropPinCoordinates?: any
+  setDropPinCoordinates?: (coords: any) => void
+  showOnlyCurrentTimeComments?: boolean
+  setShowOnlyCurrentTimeComments?: (show: boolean) => void
 }
 
 type ViewMode = 'video' | 'carousel' | 'grid'
@@ -135,7 +144,14 @@ export function ImageSequenceViewer({
   externalIsFullscreen,
   onToggleFullscreen,
   externalFullscreenRef,
-  lastModified
+  lastModified,
+  allFileComments = [],
+  fileComments,
+  isDropPinMode,
+  dropPinCoordinates,
+  setDropPinCoordinates,
+  showOnlyCurrentTimeComments,
+  setShowOnlyCurrentTimeComments
 }: ImageSequenceViewerProps) {
   const { t } = useTranslation()
   const [currentFrame, setCurrentFrame] = useState(externalCurrentFrame !== undefined ? externalCurrentFrame : 0)
@@ -548,9 +564,23 @@ export function ImageSequenceViewer({
         )}
 
         <div className="flex items-center gap-2">
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground hidden sm:block">
             {viewMode === 'video' ? t('fileView:sequence.modeDesc.video') : viewMode === 'carousel' ? t('fileView:sequence.modeDesc.carousel') : t('fileView:sequence.modeDesc.grid')}
           </div>
+
+          {/* Filter Time toggle — inline with mode toggles */}
+          {setShowOnlyCurrentTimeComments && (
+            <Button
+              id="filter-time-toggle-inline"
+              variant={showOnlyCurrentTimeComments ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-7 text-xs gap-1.5"
+              onClick={() => setShowOnlyCurrentTimeComments(!showOnlyCurrentTimeComments)}
+            >
+              <Filter className="w-3.5 h-3.5" />
+              {showOnlyCurrentTimeComments ? t('fileView:toolbar.filtering') : t('fileView:toolbar.filterTime')}
+            </Button>
+          )}
 
           {/* Fullscreen Button in Header (Only when not fullscreen AND not in grid mode) */}
           {!isFullscreen && viewMode !== 'grid' && (
@@ -611,6 +641,13 @@ export function ImageSequenceViewer({
                   referrerPolicy="no-referrer"
                 />
               )}
+
+              <SpatialCommentOverlay
+                comments={fileComments || allFileComments || []}
+                isDropPinMode={isDropPinMode}
+                dropPinCoordinates={dropPinCoordinates}
+                setDropPinCoordinates={setDropPinCoordinates}
+              />
             </div>
 
             {/* Annotation overlay moved inside zoomed container */}

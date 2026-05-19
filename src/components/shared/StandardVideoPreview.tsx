@@ -1,11 +1,14 @@
 import React from 'react'
 import { CustomVideoPlayer, type CustomVideoPlayerRef } from '@/components/viewers/CustomVideoPlayer'
 import { VideoFrameControls } from '@/components/viewers/VideoFrameControls'
+import { SpatialCommentOverlay } from '@/components/comments/SpatialCommentOverlay'
+import type { DropPinCoordinates } from '@/types'
 
 interface Props {
   file: any
   effectiveUrl: string
   allFileComments: any[]
+  fileComments?: any[]
   currentTime: number
   videoFps: number
   videoDuration: number | null
@@ -22,6 +25,11 @@ interface Props {
   handleVideoPause: () => void
   renderAnnotationOverlay: () => React.ReactNode
   
+  // Spatial Comments
+  isDropPinMode?: boolean
+  dropPinCoordinates?: DropPinCoordinates | null
+  setDropPinCoordinates?: (coords: DropPinCoordinates | null) => void
+
   // Handlers for controls
   handleNextFrame: () => void
   handlePrevFrame: () => void
@@ -36,6 +44,7 @@ interface Props {
 export function StandardVideoPreview({
   effectiveUrl,
   allFileComments,
+  fileComments = [],
   currentTime,
   videoFps,
   navMode,
@@ -49,6 +58,9 @@ export function StandardVideoPreview({
   handleVideoPlay,
   handleVideoPause,
   renderAnnotationOverlay,
+  isDropPinMode,
+  dropPinCoordinates,
+  setDropPinCoordinates,
   handleNextFrame,
   handlePrevFrame,
   handleSkipForward,
@@ -89,6 +101,15 @@ export function StandardVideoPreview({
               onPlay={handleVideoPlay}
               onPause={handleVideoPause}
               className="w-full h-full"
+            />
+            {/* Spatial Comments - We filter out comments without timestamp in CustomVideoPlayer, 
+                but for overlay we only want to show comments for the current time. 
+                FileViewDialogShared already filters allFileComments to be within 3 frames for video */}
+            <SpatialCommentOverlay
+              comments={fileComments}
+              isDropPinMode={isDropPinMode}
+              dropPinCoordinates={dropPinCoordinates}
+              setDropPinCoordinates={setDropPinCoordinates}
             />
             {!isPlaying && renderAnnotationOverlay()}
           </>

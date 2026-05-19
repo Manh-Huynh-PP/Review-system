@@ -37,9 +37,12 @@
     "addAnnotation": "Thêm ghi chú",
     "drawing": "Đang vẽ...",
     "filtering": "Đang lọc",
-    "filterTime": "Lọc thời gian"
+    "filterTime": "Lọc thời gian",
+    "dropPin": "Ghim vị trí",
+    "dropPinActive": "Hủy ghim"
   },
   "comments": {
+    "dropPinHint": "Click để ghim · Kéo thả để vẽ vùng",
     "title": "Góp ý",
     "hide": "Ẩn",
     "show": "Hiện",

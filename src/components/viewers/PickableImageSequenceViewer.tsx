@@ -42,8 +42,14 @@ interface PickableImageSequenceViewerProps {
   onToggleFullscreen?: () => void
   externalFullscreenRef?: React.RefObject<HTMLDivElement | null>
   lastModified?: string | number
+  allFileComments?: any[]
+  fileComments?: any[]
+  isDropPinMode?: boolean
+  dropPinCoordinates?: any
+  setDropPinCoordinates?: (coords: any) => void
+  showOnlyCurrentTimeComments?: boolean
+  setShowOnlyCurrentTimeComments?: (show: boolean) => void
 }
-
 export function PickableImageSequenceViewer(props: PickableImageSequenceViewerProps) {
   const { file, isAdmin } = props
   const files = useFileStore((state) => state.files)
@@ -77,6 +83,11 @@ export function PickableImageSequenceViewer(props: PickableImageSequenceViewerPr
       renderFrameOverlay={renderFrameOverlay}
       externalIsFullscreen={props.externalIsFullscreen}
       onToggleFullscreen={props.onToggleFullscreen}
+      allFileComments={props.allFileComments}
+      fileComments={props.fileComments}
+      isDropPinMode={props.isDropPinMode}
+      dropPinCoordinates={props.dropPinCoordinates}
+      setDropPinCoordinates={props.setDropPinCoordinates}
     />
   )
 }

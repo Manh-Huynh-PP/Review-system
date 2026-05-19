@@ -1,5 +1,6 @@
 import React from 'react'
-import { createPortal } from 'react-dom'
+import type { DropPinCoordinates } from '@/types'
+
 import {
   Dialog,
   DialogContent,
@@ -9,9 +10,8 @@ import { Button } from '@/components/ui/button'
 import { Filter } from 'lucide-react'
 import { FileViewHeader } from './FileViewHeader'
 import { DesktopCommentsSidebar } from './DesktopCommentsSidebar'
+import { FloatingCommentCard } from '@/components/comments/FloatingCommentCard'
 import { useTranslation } from 'react-i18next'
-import { AnnotationToolbar } from '@/components/annotations/AnnotationToolbar'
-
 interface DesktopFileViewLayoutProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -90,6 +90,10 @@ interface DesktopFileViewLayoutProps {
   annotationHistory: any[]
   portalContainer?: HTMLElement | null
   fullscreenPortalTarget?: HTMLElement | null
+  isDropPinMode?: boolean
+  setIsDropPinMode?: (isDropPinMode: boolean) => void
+  dropPinCoordinates?: DropPinCoordinates | null
+  setDropPinCoordinates?: (coords: DropPinCoordinates | null) => void
 }
 
 export const DesktopFileViewLayout: React.FC<DesktopFileViewLayoutProps> = (props) => {
@@ -101,17 +105,15 @@ export const DesktopFileViewLayout: React.FC<DesktopFileViewLayoutProps> = (prop
     latestVersion, handleStartTour, videoComparison, showComments, setShowComments,
     compareMode, setCompareMode, getShareLink, copyShareLink, copied,
     handleDragOver, handleDragLeave, handleDrop, renderFilePreview,
-    isAnnotating, isReadOnly, handleStartAnnotating, handleDoneAnnotating,
+
     showOnlyCurrentTimeComments, setShowOnlyCurrentTimeComments,
     isVideoFullscreen, handleResizeStart, project, isArchived,
     viewAllVersions, setViewAllVersions, fileComments, currentUserName, onUserNameChange,
     onResolveToggle, handleTimestampClick, handleViewAnnotation, onAddComment,
-    onEditComment, onDeleteComment, annotationData, glbViewerRef, setAnnotationData,
-    setIsAnnotating, currentTime, currentTimeRef, currentFrame, commentWidth,
-    annotationTool, setAnnotationTool, annotationColor, setAnnotationColor,
-    annotationStrokeWidth, setAnnotationStrokeWidth, handleAnnotationUndo,
-    handleAnnotationRedo, handleClearAnnotations, annotationHistoryIndex,
-    annotationHistory, portalContainer, fullscreenPortalTarget
+    onEditComment, onDeleteComment,
+    currentTime, currentTimeRef, currentFrame, commentWidth,
+    portalContainer, fullscreenPortalTarget,
+    isDropPinMode, dropPinCoordinates, setDropPinCoordinates
   } = props
 
   const { t } = useTranslation(['fileView', 'common'])
@@ -144,15 +146,8 @@ export const DesktopFileViewLayout: React.FC<DesktopFileViewLayoutProps> = (prop
           <div className="flex-1 overflow-y-auto flex flex-col bg-background/50">
             <div className="p-2 border-b flex items-center justify-between sticky top-0 z-10 bg-background/95">
               <div className="flex items-center gap-2">
-                {!isAnnotating ? (
-                  <Button onClick={handleStartAnnotating} variant="outline" size="sm">{t('fileView:toolbar.addAnnotation')}</Button>
-                ) : (
-                  <Button onClick={handleDoneAnnotating} variant="ghost" size="sm">
-                    {isReadOnly ? t('common:actions.close') : t('fileView:toolbar.drawing')}
-                  </Button>
-                )}
               </div>
-              {(file.type === 'video' || file.type === 'sequence') && (
+              {file.type === 'video' && (
                 <Button 
                   id="filter-time-toggle"
                   variant={showOnlyCurrentTimeComments ? 'secondary' : 'ghost'} 
@@ -164,8 +159,38 @@ export const DesktopFileViewLayout: React.FC<DesktopFileViewLayoutProps> = (prop
                 </Button>
               )}
             </div>
-            <div id="preview-container" className="flex-1 flex overflow-hidden">
+            <div 
+              id="preview-container" 
+              className={`flex-1 flex overflow-hidden relative ${isDropPinMode ? 'cursor-crosshair' : ''}`}
+            >
               {renderFilePreview()}
+              
+              {isDropPinMode && dropPinCoordinates && dropPinCoordinates.screenX !== undefined && dropPinCoordinates.screenY !== undefined && (
+                <FloatingCommentCard
+                  x={dropPinCoordinates.screenX}
+                  y={dropPinCoordinates.screenY}
+                  spatialContext={{
+                    viewerType: file.type as any,
+                    x_pct: dropPinCoordinates.x,
+                    y_pct: dropPinCoordinates.y,
+                    w_pct: dropPinCoordinates.w,
+                    h_pct: dropPinCoordinates.h,
+                    timestamp: file.type === 'video' ? currentTime : undefined,
+                    frameNumber: file.type === 'sequence' ? currentFrame : undefined
+                  }}
+                  onClose={() => { setDropPinCoordinates?.(null); /* Do not turn off isDropPinMode */ }}
+                  onSubmit={async (content, attachments, color) => {
+                    const spatialData = dropPinCoordinates.type === 'region'
+                      ? JSON.stringify({ x: dropPinCoordinates.x, y: dropPinCoordinates.y, w: dropPinCoordinates.w, h: dropPinCoordinates.h, color: color || '#ef4444', type: 'region' })
+                      : JSON.stringify({ x: dropPinCoordinates.x, y: dropPinCoordinates.y, color: color || '#ef4444' });
+                    const ts = file.type === 'video' ? currentTimeRef.current : (file.type === 'sequence' ? currentFrame : undefined);
+                    await onAddComment(currentUserName, content, ts, undefined, spatialData, attachments);
+                    setDropPinCoordinates?.(null);
+                  }}
+                  userName={currentUserName}
+                  onUserNameChange={onUserNameChange}
+                />
+              )}
             </div>
           </div>
           {showComments && !isVideoFullscreen && (
@@ -179,15 +204,10 @@ export const DesktopFileViewLayout: React.FC<DesktopFileViewLayoutProps> = (prop
                 isFullscreen={false} file={file} project={project} isArchived={isArchived} 
                 isAdmin={isAdmin} viewAllVersions={viewAllVersions} setViewAllVersions={setViewAllVersions} 
                 showOnlyCurrentTimeComments={showOnlyCurrentTimeComments} fileComments={fileComments} 
-                currentUserName={currentUserName} onUserNameChange={onUserNameChange} 
+                currentUserName={currentUserName}
                 onResolveToggle={onResolveToggle} handleTimestampClick={handleTimestampClick} 
                 handleViewAnnotation={handleViewAnnotation} onAddComment={onAddComment} 
                 onEditComment={onEditComment} onDeleteComment={onDeleteComment} 
-                annotationData={annotationData} isReadOnly={isReadOnly} 
-                getCameraState={() => glbViewerRef.current?.getCameraState()} 
-                setAnnotationData={setAnnotationData} setIsAnnotating={setIsAnnotating} 
-                currentTime={currentTime} currentTimeRef={currentTimeRef} 
-                currentFrame={currentFrame} handleStartAnnotating={handleStartAnnotating} 
                 commentWidth={commentWidth} 
               />
             </div>
@@ -198,41 +218,13 @@ export const DesktopFileViewLayout: React.FC<DesktopFileViewLayoutProps> = (prop
             isFullscreen={true} file={file} project={project} isArchived={isArchived} 
             isAdmin={isAdmin} viewAllVersions={viewAllVersions} setViewAllVersions={setViewAllVersions} 
             showOnlyCurrentTimeComments={showOnlyCurrentTimeComments} fileComments={fileComments} 
-            currentUserName={currentUserName} onUserNameChange={onUserNameChange} 
+            currentUserName={currentUserName}
             onResolveToggle={onResolveToggle} handleTimestampClick={handleTimestampClick} 
             handleViewAnnotation={handleViewAnnotation} onAddComment={onAddComment} 
             onEditComment={onEditComment} onDeleteComment={onDeleteComment} 
-            annotationData={annotationData} isReadOnly={isReadOnly} 
-            getCameraState={() => glbViewerRef.current?.getCameraState()} 
-            setAnnotationData={setAnnotationData} setIsAnnotating={setIsAnnotating} 
-            currentTime={currentTime} currentTimeRef={currentTimeRef} 
-            currentFrame={currentFrame} handleStartAnnotating={handleStartAnnotating} 
           />
         )}
-        {isAnnotating && !isReadOnly && (
-          fullscreenPortalTarget ? createPortal(
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50">
-              <AnnotationToolbar 
-                tool={annotationTool} onToolChange={setAnnotationTool} color={annotationColor} 
-                onColorChange={setAnnotationColor} strokeWidth={annotationStrokeWidth} 
-                onStrokeWidthChange={setAnnotationStrokeWidth} onUndo={handleAnnotationUndo} 
-                onRedo={handleAnnotationRedo} onClear={handleClearAnnotations} 
-                onDone={handleDoneAnnotating} canUndo={annotationHistoryIndex > 0} 
-                canRedo={annotationHistoryIndex < annotationHistory.length - 1} 
-              />
-            </div>,
-            fullscreenPortalTarget
-          ) : (
-            <AnnotationToolbar 
-              tool={annotationTool} onToolChange={setAnnotationTool} color={annotationColor} 
-              onColorChange={setAnnotationColor} strokeWidth={annotationStrokeWidth} 
-              onStrokeWidthChange={setAnnotationStrokeWidth} onUndo={handleAnnotationUndo} 
-              onRedo={handleAnnotationRedo} onClear={handleClearAnnotations} 
-              onDone={handleDoneAnnotating} canUndo={annotationHistoryIndex > 0} 
-              canRedo={annotationHistoryIndex < annotationHistory.length - 1} 
-            />
-          )
-        )}
+        {/* Legacy AnnotationToolbar deprecated */}
       </DialogContent>
     </Dialog>
   )

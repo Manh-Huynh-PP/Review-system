@@ -1,19 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
-import locatorBabel from "@locator/babel-jsx"
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => {
-  const isDev = mode === 'development'
-  
+export default defineConfig(() => {
   return {
     plugins: [
-      react({
-        babel: {
-          plugins: isDev ? [locatorBabel] : [],
-        },
-      }),
+      react(),
     ],
     resolve: {
       alias: {

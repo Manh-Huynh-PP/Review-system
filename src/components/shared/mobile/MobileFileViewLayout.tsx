@@ -1,4 +1,5 @@
 import { useState, useEffect, type ReactNode, memo } from 'react'
+import type { DropPinCoordinates } from '@/types'
 import { MobileViewToggle } from './MobileViewToggle'
 import { Button } from '@/components/ui/button'
 import {
@@ -8,14 +9,14 @@ import {
     Clock,
     ChevronDown,
     Layers,
-    PenTool
+    MapPin
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { formatFileSize } from '@/lib/utils'
-import type { File as FileType, Comment, AnnotationObject } from '@/types'
+import type { File as FileType, Comment } from '@/types'
 import { CommentsList } from '@/components/comments/CommentsList'
-import { AddComment } from '@/components/comments/AddComment'
-import { AnnotationToolbar } from '@/components/annotations/AnnotationToolbar'
+
+import { CommentBottomSheet } from '@/components/comments/CommentBottomSheet'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -51,26 +52,7 @@ interface MobileFileViewLayoutProps {
 
     // Video/Sequence specific
     currentTimestamp?: number
-    currentTimestampRef?: React.MutableRefObject<number>
-    showTimestamp?: boolean
-
-    // Annotation props
-    isAnnotating?: boolean
-    isReadOnly?: boolean
-    annotationData?: AnnotationObject[] | null
-    annotationTool?: 'pen' | 'rect' | 'arrow' | 'select' | 'eraser'
-    annotationColor?: string
-    annotationStrokeWidth?: number
-    onAnnotationClick?: () => void
-    onAnnotationToolChange?: (tool: 'pen' | 'rect' | 'arrow' | 'select' | 'eraser') => void
-    onAnnotationColorChange?: (color: string) => void
-    onAnnotationStrokeWidthChange?: (width: number) => void
-    onAnnotationUndo?: () => void
-    onAnnotationRedo?: () => void
-    onAnnotationClear?: () => void
-    onAnnotationDone?: () => void
-    canUndoAnnotation?: boolean
-    canRedoAnnotation?: boolean
+    currentTimeRef?: any
 
     // Actions
     onClose: () => void
@@ -81,6 +63,12 @@ interface MobileFileViewLayoutProps {
     uniqueVersions: any[]
     currentVersion: number
     onSwitchVersion?: (fileId: string, version: number) => void
+
+    // Drop pin props
+    isDropPinMode?: boolean
+    setIsDropPinMode?: (mode: boolean) => void
+    dropPinCoordinates?: DropPinCoordinates | null
+    setDropPinCoordinates?: (coords: DropPinCoordinates | null) => void
 }
 
 /**
@@ -107,25 +95,7 @@ function MobileFileViewLayoutComponent({
     viewAllVersions,
     onViewAllVersionsChange,
     currentTimestamp,
-    currentTimestampRef,
-    showTimestamp = false,
-    // Annotation props
-    isAnnotating = false,
-    isReadOnly = false,
-    annotationData,
-    annotationTool = 'pen',
-    annotationColor = '#ffff00',
-    annotationStrokeWidth = 2,
-    onAnnotationClick,
-    onAnnotationToolChange,
-    onAnnotationColorChange,
-    onAnnotationStrokeWidthChange,
-    onAnnotationUndo,
-    onAnnotationRedo,
-    onAnnotationClear,
-    onAnnotationDone,
-    canUndoAnnotation = false,
-    canRedoAnnotation = false,
+    currentTimeRef,
     // Actions
     onClose,
     onDownload,
@@ -133,6 +103,10 @@ function MobileFileViewLayoutComponent({
     uniqueVersions,
     currentVersion,
     onSwitchVersion,
+    isDropPinMode = false,
+    setIsDropPinMode,
+    dropPinCoordinates,
+    setDropPinCoordinates,
 }: MobileFileViewLayoutProps) {
     const [activeView, setActiveView] = useState<'file' | 'comments'>('file')
 
@@ -157,10 +131,7 @@ function MobileFileViewLayoutComponent({
         }
     }, [])
 
-    // Handle switching to comments after annotation is done
-    const handleSwitchToComments = () => {
-        setActiveView('comments')
-    }
+
 
     return (
         <div className="fixed inset-0 z-[100] bg-background flex flex-col">
@@ -217,18 +188,18 @@ function MobileFileViewLayoutComponent({
 
                 {/* Quick actions */}
                 <div className="flex items-center gap-1">
-                    {/* Annotation button - only show in file view */}
-                    {activeView === 'file' && !isAnnotating && (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={onAnnotationClick}
-                            title="Thêm ghi chú"
-                        >
-                            <PenTool className="w-4 h-4" />
-                        </Button>
-                    )}
+                    <Button
+                        variant={isDropPinMode ? 'default' : 'ghost'}
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => {
+                            const nextMode = !isDropPinMode;
+                            setIsDropPinMode?.(nextMode);
+                            if (!nextMode) setDropPinCoordinates?.(null);
+                        }}
+                    >
+                        <MapPin className="w-4 h-4" />
+                    </Button>
                     <Button
                         variant="ghost"
                         size="sm"
@@ -256,21 +227,7 @@ function MobileFileViewLayoutComponent({
 
 
 
-            {/* Annotation Status Bar - Show when viewing annotation */}
-            {isAnnotating && isReadOnly && activeView === 'file' && (
-                <div className="px-3 py-2 border-b bg-primary/5 flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Đang xem ghi chú</span>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        onClick={onAnnotationDone}
-                    >
-                        Đóng
-                    </Button>
-                </div>
-            )}
-
+            {/* Legacy Annotation Status Bar deprecated */}
             {/* Content area with slide animation */}
             <div className="flex-1 relative overflow-hidden">
                 {/* File View */}
@@ -278,8 +235,36 @@ function MobileFileViewLayoutComponent({
                     className={`absolute inset-0 transition-transform duration-300 ease-out ${activeView === 'file' ? 'translate-x-0' : '-translate-x-full'
                         }`}
                 >
-                    <div id="preview-container" className="w-full h-full overflow-auto pb-16">
+                    <div 
+                        id="preview-container" 
+                        className={`w-full h-full overflow-auto pb-16 relative ${isDropPinMode ? 'cursor-crosshair' : ''}`}
+                    >
                         {renderFilePreview()}
+
+                        {isDropPinMode && dropPinCoordinates && dropPinCoordinates.screenX !== undefined && dropPinCoordinates.screenY !== undefined && (
+                            <CommentBottomSheet
+                                spatialContext={{
+                                    viewerType: file.type as any,
+                                    x_pct: dropPinCoordinates.x,
+                                    y_pct: dropPinCoordinates.y,
+                                    w_pct: dropPinCoordinates.w,
+                                    h_pct: dropPinCoordinates.h,
+                                    timestamp: file.type === 'video' ? (currentTimeRef?.current ?? currentTimestamp) : undefined,
+                                    frameNumber: file.type === 'sequence' ? currentTimestamp : undefined
+                                }}
+                                onClose={() => { setDropPinCoordinates?.(null); /* Do not turn off isDropPinMode */ }}
+                                onSubmit={async (content, attachments, color) => {
+                                    const spatialData = dropPinCoordinates.type === 'region'
+                                      ? JSON.stringify({ x: dropPinCoordinates.x, y: dropPinCoordinates.y, w: dropPinCoordinates.w, h: dropPinCoordinates.h, color: color || '#ef4444', type: 'region' })
+                                      : JSON.stringify({ x: dropPinCoordinates.x, y: dropPinCoordinates.y, color: color || '#ef4444' });
+                                    const ts = file.type === 'video' ? (currentTimeRef?.current ?? currentTimestamp) : (file.type === 'sequence' ? currentTimestamp : undefined);
+                                    await onAddComment(currentUserName, content, ts, undefined, spatialData, attachments);
+                                    setDropPinCoordinates?.(null);
+                                }}
+                                userName={currentUserName}
+                                onUserNameChange={onUserNameChange}
+                            />
+                        )}
                     </div>
                 </div>
 
@@ -307,16 +292,7 @@ function MobileFileViewLayoutComponent({
                         </Button>
                     </div>
 
-                    {/* Annotation Indicator - Show when there's pending annotation data */}
-                    {annotationData && annotationData.length > 0 && !isReadOnly && (
-                        <div className="px-3 py-2 bg-yellow-500/10 border-b border-yellow-500/20 flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-yellow-500 animate-pulse" />
-                            <span className="text-xs text-yellow-700 dark:text-yellow-400">
-                                Ghi chú đã được thêm - Gửi bình luận để lưu
-                            </span>
-                        </div>
-                    )}
-
+                    {/* Legacy Annotation Indicator deprecated */}
                     {/* Comments List */}
                     <div className="flex-1 overflow-y-auto p-3 min-h-0 basic-scroll">
                         <CommentsList
@@ -354,71 +330,16 @@ function MobileFileViewLayoutComponent({
                         )}
                     </div>
 
-                    {/* Add Comment - In flow at bottom, with padding for Toggle */}
-                    <div className={`flex-shrink-0 border-t bg-background/95 backdrop-blur-lg p-2 ${!isAnnotating ? 'pb-[60px]' : 'safe-area-pb'}`}>
-                        {isLocked ? (
-                            <div className="text-center text-muted-foreground py-2 px-2 bg-muted/30 rounded-md">
-                                <div className="flex items-center justify-center gap-2 text-xs">
-                                    <span>🔒</span>
-                                    <span>Bình luận đang tạm khóa</span>
-                                </div>
-                            </div>
-                        ) : (
-                            <div id="mobile-add-comment">
-                                <AddComment
-                                    isMobile={true}
-                                    onSubmit={async (userName, content, timestamp, parentCommentId, annotationDataStr, attachments) => {
-                                        await onAddComment(userName, content, timestamp, parentCommentId, annotationDataStr, attachments)
-                                    }}
-                                    userName={currentUserName}
-                                    onUserNameChange={onUserNameChange}
-                                    currentTimestamp={currentTimestamp}
-                                    currentTimestampRef={currentTimestampRef}
-                                    showTimestamp={showTimestamp}
-                                    annotationData={!isReadOnly ? annotationData : null}
-                                    onAnnotationClick={() => {
-                                        // Switch to file view and start annotation
-                                        setActiveView('file')
-                                        onAnnotationClick?.()
-                                    }}
-                                />
-                            </div>
-                        )}
-                    </div>
+
                 </div>
             </div>
 
-            {/* Annotation Toolbar - Show when annotating */}
-            {isAnnotating && !isReadOnly && activeView === 'file' && onAnnotationToolChange && (
-                <div className="border-b bg-background/95 backdrop-blur-lg fixed bottom-0 left-0 right-0 z-[60] safe-area-pb">
-                    <AnnotationToolbar
-                        tool={annotationTool}
-                        onToolChange={onAnnotationToolChange}
-                        color={annotationColor}
-                        onColorChange={onAnnotationColorChange || (() => { })}
-                        strokeWidth={annotationStrokeWidth}
-                        onStrokeWidthChange={onAnnotationStrokeWidthChange || (() => { })}
-                        onUndo={onAnnotationUndo || (() => { })}
-                        onRedo={onAnnotationRedo || (() => { })}
-                        onClear={onAnnotationClear || (() => { })}
-                        onDone={() => {
-                            onAnnotationDone?.()
-                            // Switch to comments to submit
-                            handleSwitchToComments()
-                        }}
-                        canUndo={canUndoAnnotation}
-                        canRedo={canRedoAnnotation}
-                    />
-                </div>
-            )}
-
-            {/* Bottom Toggle Navigation - Hide when annotating to show AnnotationToolbar */}
-            {!isAnnotating && (
-                <MobileViewToggle
-                    activeView={activeView}
-                    onViewChange={setActiveView}
-                />
-            )}
+            {/* Legacy Annotation Toolbar deprecated */}
+            {/* Bottom Toggle Navigation */}
+            <MobileViewToggle
+                activeView={activeView}
+                onViewChange={setActiveView}
+            />
         </div>
     )
 }
@@ -428,6 +349,8 @@ export const MobileFileViewLayout = memo(MobileFileViewLayoutComponent, (prevPro
     if (prevProps.file.id !== nextProps.file.id) return false
     if (prevProps.currentVersion !== nextProps.currentVersion) return false
     if (prevProps.comments !== nextProps.comments) return false
+    if (prevProps.isDropPinMode !== nextProps.isDropPinMode) return false
+    if (prevProps.dropPinCoordinates !== nextProps.dropPinCoordinates) return false
 
     // We explicitly IGNORE currentTimestamp updates for re-rendering the whole layout
     // The AddComment component inside will receive the new timestamp, but we'll try to optimize that too.

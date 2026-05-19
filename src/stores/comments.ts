@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore'
 import type { Unsubscribe } from 'firebase/firestore'
 import { db, uploadCommentAttachments } from '../lib/firebase'
-import type { Comment } from '../types'
+import type { Comment, SpatialContext } from '../types'
 import toast from 'react-hot-toast'
 
 interface CommentState {
@@ -23,7 +23,7 @@ interface CommentState {
   unsubscribeMap: Map<string, Unsubscribe>
 
   subscribeToComments: (projectId: string, fileId?: string) => void
-  addComment: (projectId: string, fileId: string, version: number, userName: string, content: string, timestamp?: number, parentCommentId?: string, annotationData?: string | null, attachments?: File[], avatarUrl?: string, avatarColor?: string) => Promise<void>
+  addComment: (projectId: string, fileId: string, version: number, userName: string, content: string, timestamp?: number, parentCommentId?: string, annotationData?: string | null, attachments?: File[], avatarUrl?: string, avatarColor?: string, spatialContext?: SpatialContext) => Promise<void>
   toggleResolve: (projectId: string, commentId: string, isResolved: boolean) => Promise<void>
   togglePin: (projectId: string, commentId: string, currentStatus: boolean) => Promise<void>
   editComment: (projectId: string, commentId: string, newContent: string) => Promise<void>
@@ -94,7 +94,7 @@ export const useCommentStore = create<CommentState>((set, get) => ({
     set({ unsubscribeMap, unsubscribe })
   },
 
-  addComment: async (projectId: string, fileId: string, version: number, userName: string, content: string, timestamp?: number, parentCommentId?: string, annotationData?: string | null, attachments?: File[], avatarUrl?: string, avatarColor?: string) => {
+  addComment: async (projectId: string, fileId: string, version: number, userName: string, content: string, timestamp?: number, parentCommentId?: string, annotationData?: string | null, attachments?: File[], avatarUrl?: string, avatarColor?: string, spatialContext?: SpatialContext) => {
     set({ loading: true })
 
     // Generate temporary ID for optimistic update
@@ -118,7 +118,8 @@ export const useCommentStore = create<CommentState>((set, get) => ({
       imageUrls: undefined,
       isPending: true, // Mark as pending
       avatarUrl,
-      avatarColor
+      avatarColor,
+      spatialContext
     }
 
     // Add optimistic comment to state immediately
@@ -143,7 +144,8 @@ export const useCommentStore = create<CommentState>((set, get) => ({
         attachments: null,
         imageUrls: null,
         avatarUrl: avatarUrl || null,
-        avatarColor: avatarColor || null
+        avatarColor: avatarColor || null,
+        spatialContext: spatialContext || null
       })
 
       // Upload attachments if any

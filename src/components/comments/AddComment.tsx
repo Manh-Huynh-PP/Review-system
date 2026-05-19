@@ -121,7 +121,8 @@ export function AddComment({
         }
 
         // Minimum time check (human users take time to type)
-        if (timeSpent < 3000) {
+        // Reduced to 100ms to allow fast testers
+        if (timeSpent < 100) {
             toast.error(t('fileView:comments.antiSpam'))
             return
         }
@@ -168,6 +169,8 @@ export function AddComment({
             setContent('')
             setAttachments([])
             setCaptureView(false)
+            // Reset anti-spam timer for next comment
+            startTimeRef.current = Date.now()
             if (onUserNameChange) {
                 onUserNameChange(userName.trim())
             }

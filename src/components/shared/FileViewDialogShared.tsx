@@ -19,6 +19,7 @@ import { DragDropUpdateOverlay } from './DragDropUpdateOverlay'
 import { PDFPreviewMode } from './PDFPreviewMode'
 import { ImageCompareMode } from './ImageCompareMode'
 import { VideoCompareMode } from './VideoCompareMode'
+import { SpatialCommentOverlay } from '@/components/comments/SpatialCommentOverlay'
 import { StandardImagePreview } from './StandardImagePreview'
 import { StandardVideoPreview } from './StandardVideoPreview'
 import { DesktopFileViewLayout } from './DesktopFileViewLayout'
@@ -26,7 +27,7 @@ import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from './ConfirmDialog'
 import { normalizeDriveUrl, extractDriveFileId } from '@/utils/googleDrive'
 
-import type { AnnotationObject } from '@/types'
+import type { AnnotationObject, DropPinCoordinates } from '@/types'
 import type { GLBViewerRef } from '@/components/viewers/GLBViewer'
 
 const GLBViewer = lazy(() => import('@/components/viewers/GLBViewer').then(m => ({ default: m.GLBViewer })))
@@ -112,6 +113,8 @@ export function FileViewDialogShared(props: Props) {
   const [annotationTool, setAnnotationTool] = useState<'pen' | 'rect' | 'arrow' | 'select' | 'eraser'>('pen')
   const [annotationColor, setAnnotationColor] = useState('#ffff00')
   const [annotationStrokeWidth, setAnnotationStrokeWidth] = useState(2)
+  const [isDropPinMode, setIsDropPinMode] = useState(true)
+  const [dropPinCoordinates, setDropPinCoordinates] = useState<DropPinCoordinates | null>(null)
   const [annotationData, setAnnotationData] = useState<AnnotationObject[] | null>(null)
   const [annotationHistory, setAnnotationHistory] = useState<AnnotationObject[][]>([])
   const [annotationHistoryIndex, setAnnotationHistoryIndex] = useState(0)
@@ -161,7 +164,29 @@ export function FileViewDialogShared(props: Props) {
   const [optimisticSequenceData, setOptimisticSequenceData] = useState<{ urls: string[], captions?: Record<number, string> } | null>(null)
 
   const videoComparison = useVideoComparison({ primaryVersion: currentVersion, versions: file?.versions.map(v => ({ version: v.version, url: v.url })) || [], onSeek: (time) => setCurrentTime(time) })
-  const handleTimeUpdate = useCallback((time: number) => { currentTimeRef.current = time }, [])
+  // Throttle timer ref for syncing video currentTime state when filter-by-time is active
+  const timeUpdateThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleTimeUpdate = useCallback((time: number) => {
+    currentTimeRef.current = time
+    // When filter-by-time is active, also sync to state (throttled to avoid excessive re-renders)
+    if (showOnlyCurrentTimeComments) {
+      if (!timeUpdateThrottleRef.current) {
+        timeUpdateThrottleRef.current = setTimeout(() => {
+          setCurrentTime(currentTimeRef.current)
+          timeUpdateThrottleRef.current = null
+        }, 500)
+      }
+    }
+  }, [showOnlyCurrentTimeComments])
+  // When filter-by-time is toggled ON, immediately sync ref → state so filter updates right away
+  useEffect(() => {
+    if (showOnlyCurrentTimeComments && file?.type === 'video') {
+      setCurrentTime(currentTimeRef.current)
+    }
+    return () => {
+      if (timeUpdateThrottleRef.current) { clearTimeout(timeUpdateThrottleRef.current); timeUpdateThrottleRef.current = null }
+    }
+  }, [showOnlyCurrentTimeComments, file?.type])
   const handleFullscreenChange = useCallback((f: boolean) => { setIsVideoFullscreen(f); if (f) setShowOnlyCurrentTimeComments(true); onFullscreenChange?.(f) }, [onFullscreenChange])
   
   // Sync sequence-based fullscreen with UI layout fullscreen
@@ -231,13 +256,45 @@ export function FileViewDialogShared(props: Props) {
     } catch { toast.error(t('common:status.error'), { id: tid }); window.open(u, '_blank') }
   }
 
-  const fileComments = showOnlyCurrentTimeComments && ['video','sequence','pdf'].includes(file.type) ? allFileComments.filter(c => {
-    if (c.timestamp === null) return false
-    if (file.type === 'video') return Math.abs(c.timestamp - currentTime) <= (3 / (videoFps || 30))
-    if (file.type === 'sequence') return c.timestamp === currentFrame
-    if (file.type === 'pdf') return c.timestamp === pdfPage
-    return true
-  }) : allFileComments
+  const fileComments = (() => {
+    if (!showOnlyCurrentTimeComments || !['video','sequence','pdf'].includes(file.type)) return allFileComments
+
+    // Pass 1: find root/top-level comments that match current time
+    const timeMatchIds = new Set<string>()
+    const timeMatched = allFileComments.filter(c => {
+      // Skip replies in first pass — they'll be handled in pass 2
+      if (c.parentCommentId) return false
+
+      // Comments without timestamp: check spatialContext for frame/time match
+      if (c.timestamp === null || c.timestamp === undefined) {
+        if (c.spatialContext) {
+          if (file.type === 'sequence' && c.spatialContext.frameNumber !== undefined) {
+            const match = c.spatialContext.frameNumber === currentFrame
+            if (match) timeMatchIds.add(c.id)
+            return match
+          }
+          if (file.type === 'video' && c.spatialContext.timestamp !== undefined) {
+            const match = Math.abs(c.spatialContext.timestamp - currentTime) <= 2
+            if (match) timeMatchIds.add(c.id)
+            return match
+          }
+        }
+        return false
+      }
+      let match = false
+      if (file.type === 'video') match = Math.abs(c.timestamp - currentTime) <= 2
+      else if (file.type === 'sequence') match = c.timestamp === currentFrame
+      else if (file.type === 'pdf') match = c.timestamp === pdfPage
+      else match = true
+      if (match) timeMatchIds.add(c.id)
+      return match
+    })
+
+    // Pass 2: include replies whose parent is in the matched set
+    const replies = allFileComments.filter(c => c.parentCommentId && timeMatchIds.has(c.parentCommentId))
+
+    return [...timeMatched, ...replies]
+  })()
 
   const handleViewAnnotation = useCallback((ds: string, comment?: any) => {
     try {
@@ -327,22 +384,22 @@ export function FileViewDialogShared(props: Props) {
       </div>
     )
     const isPdf = file.type === 'pdf' || file.name.toLowerCase().endsWith('.pdf') || current?.metadata?.type === 'application/pdf'
-    if (isPdf) return <PDFPreviewMode url={effectiveUrl} currentPage={pdfPage} onPageChange={p => { setPdfPage(p); setCurrentFrame(p) }} annotationOverlay={renderAnnotationOverlay()} />
+    if (isPdf) return <PDFPreviewMode url={effectiveUrl} currentPage={pdfPage} onPageChange={p => { setPdfPage(p); setCurrentFrame(p) }} annotationOverlay={renderAnnotationOverlay()} allFileComments={allFileComments} fileComments={fileComments} isDropPinMode={isDropPinMode} dropPinCoordinates={dropPinCoordinates} setDropPinCoordinates={setDropPinCoordinates} />
     if (file.type === 'image') {
       if (compareMode) return <ImageCompareMode uniqueVersions={uniqueVersions} currentVersion={currentVersion} resolvedUrl={resolvedUrl} sequenceContext={sequenceContext} leftVersion={leftVersion} rightVersion={rightVersion} setLeftVersion={setLeftVersion} setRightVersion={setRightVersion} compareDisplayMode={compareDisplayMode} setCompareDisplayMode={setCompareDisplayMode} comparePosition={comparePosition} setComparePosition={setComparePosition} zoomPanBind={zoomPanBind} zoom={zoom} panOffset={panOffset} handleZoomIn={handleZoomIn} handleZoomOut={handleZoomOut} resetZoomPan={resetZoomPan} />
-      return <StandardImagePreview file={file} current={current} effectiveUrl={effectiveUrl} zoom={zoom} panOffset={panOffset} zoomPanBind={zoomPanBind} renderAnnotationOverlay={renderAnnotationOverlay} sequenceFullscreen={sequenceFullscreen} sequenceFullscreenRef={sequenceFullscreenRef as any} frameDetailView={frameDetailView} sequenceContext={sequenceContext} reactivePickedFrames={reactivePickedFrames} isAdmin={isAdmin} projectId={_projectId} handleZoomIn={handleZoomIn} handleZoomOut={handleZoomOut} resetZoomPan={resetZoomPan} />
+      return <StandardImagePreview file={file} current={current} effectiveUrl={effectiveUrl} zoom={zoom} panOffset={panOffset} zoomPanBind={zoomPanBind} renderAnnotationOverlay={renderAnnotationOverlay} sequenceFullscreen={sequenceFullscreen} sequenceFullscreenRef={sequenceFullscreenRef as any} frameDetailView={frameDetailView} sequenceContext={sequenceContext} reactivePickedFrames={reactivePickedFrames} isAdmin={isAdmin} projectId={_projectId} handleZoomIn={handleZoomIn} handleZoomOut={handleZoomOut} resetZoomPan={resetZoomPan} fileComments={fileComments} isDropPinMode={isDropPinMode} dropPinCoordinates={dropPinCoordinates} setDropPinCoordinates={setDropPinCoordinates} />
     }
     if (file.type === 'sequence') {
       const u = optimisticSequenceData?.urls || current?.sequenceUrls || []
-      return <PickableImageSequenceViewer urls={u} lastModified={current?.metadata?.lastModified} fps={current?.metadata?.duration && current?.frameCount ? Math.round(current.frameCount / current.metadata.duration) : 24} currentFrame={currentFrame} onFrameChange={setCurrentFrame} className="viewport" isAdmin={isAdmin} defaultViewMode={file.sequenceViewMode || 'video'} onViewModeChange={m => { setSequenceViewMode(m); onSequenceViewModeChange?.(file.id, m) }} frameCaptions={optimisticSequenceData?.captions || effectiveFrameCaptions} onCaptionChange={handleCaptionChangeWithLocalUpdate} file={{ id: file.id, currentVersion: current.version, projectId: _projectId }} isAnnotating={isAnnotating} annotationData={annotationData} annotationTool={annotationTool} annotationColor={annotationColor} annotationStrokeWidth={annotationStrokeWidth} isAnnotationReadOnly={isReadOnly} onAnnotationChange={handleAnnotationChange} onAnnotationUndo={handleAnnotationUndo} onAnnotationRedo={handleAnnotationRedo} onClearAnnotations={handleClearAnnotations} onDoneAnnotating={handleDoneAnnotating} canUndoAnnotation={annotationHistoryIndex > 0} canRedoAnnotation={annotationHistoryIndex < annotationHistory.length - 1} onStartAnnotating={f => { setCurrentFrame(f); setIsAnnotating(true); setIsReadOnly(false) }} onFrameDetailView={f => setFrameDetailView(f)} onReorderFrames={handleReorderFrames} onDeleteFrames={i => deleteSequenceFrames(file.projectId, file.id, current.version, i)} onAddFrames={fls => addSequenceFrames(file.projectId, file.id, current.version, fls)} isUploading={uploading} externalIsFullscreen={sequenceFullscreen.isFullscreen} onToggleFullscreen={sequenceFullscreen.toggle} externalFullscreenRef={sequenceFullscreenRef as any} />
+      return <PickableImageSequenceViewer urls={u} lastModified={current?.metadata?.lastModified} fps={current?.metadata?.duration && current?.frameCount ? Math.round(current.frameCount / current.metadata.duration) : 24} currentFrame={currentFrame} onFrameChange={setCurrentFrame} className="viewport" isAdmin={isAdmin} defaultViewMode={file.sequenceViewMode || 'video'} onViewModeChange={m => { setSequenceViewMode(m); onSequenceViewModeChange?.(file.id, m) }} frameCaptions={optimisticSequenceData?.captions || effectiveFrameCaptions} onCaptionChange={handleCaptionChangeWithLocalUpdate} file={{ id: file.id, currentVersion: current.version, projectId: _projectId }} isAnnotating={isAnnotating} annotationData={annotationData} annotationTool={annotationTool} annotationColor={annotationColor} annotationStrokeWidth={annotationStrokeWidth} isAnnotationReadOnly={isReadOnly} onAnnotationChange={handleAnnotationChange} onAnnotationUndo={handleAnnotationUndo} onAnnotationRedo={handleAnnotationRedo} onClearAnnotations={handleClearAnnotations} onDoneAnnotating={handleDoneAnnotating} canUndoAnnotation={annotationHistoryIndex > 0} canRedoAnnotation={annotationHistoryIndex < annotationHistory.length - 1} onStartAnnotating={f => { setCurrentFrame(f); setIsAnnotating(true); setIsReadOnly(false) }} onFrameDetailView={f => setFrameDetailView(f)} onReorderFrames={handleReorderFrames} onDeleteFrames={i => deleteSequenceFrames(file.projectId, file.id, current.version, i)} onAddFrames={fls => addSequenceFrames(file.projectId, file.id, current.version, fls)} isUploading={uploading} externalIsFullscreen={sequenceFullscreen.isFullscreen} onToggleFullscreen={sequenceFullscreen.toggle} externalFullscreenRef={sequenceFullscreenRef as any} allFileComments={allFileComments} fileComments={fileComments} isDropPinMode={isDropPinMode} dropPinCoordinates={dropPinCoordinates} setDropPinCoordinates={setDropPinCoordinates} showOnlyCurrentTimeComments={showOnlyCurrentTimeComments} setShowOnlyCurrentTimeComments={setShowOnlyCurrentTimeComments} />
     }
     if (file.type === 'video') {
       const m = allFileComments.filter(c => c.timestamp !== null).sort((a,b) => a.timestamp! - b.timestamp!)
       if (videoComparison.isComparing && videoComparison.secondaryUrl) return <VideoCompareMode videoComparison={videoComparison} currentVersion={currentVersion} uniqueVersions={uniqueVersions} effectiveUrl={effectiveUrl} handleTimeUpdate={handleTimeUpdate} />
       const driveInfo = driveFileId ? { id: driveFileId } : null
-      return <StandardVideoPreview file={file} effectiveUrl={effectiveUrl} allFileComments={allFileComments} currentTime={currentTime} videoFps={videoFps} videoDuration={videoDuration} navMode={navMode} setNavMode={setNavMode} isPlaying={isPlaying} driveInfo={driveInfo} handleTimeUpdate={handleTimeUpdate} handleCommentMarkerClick={c => { setCurrentTime(c.timestamp || 0); if (c.annotationData) handleViewAnnotation(c.annotationData, c) }} handleFullscreenChange={handleFullscreenChange} handleLoadedMetadata={handleLoadedMetadata} handleVideoPlay={handleVideoPlay} handleVideoPause={handleVideoPause} renderAnnotationOverlay={renderAnnotationOverlay} handleNextFrame={() => setCurrentTime(p => Math.min(videoDuration, p + 1/videoFps))} handlePrevFrame={() => setCurrentTime(p => Math.max(0, p - 1/videoFps))} handleSkipForward={() => setCurrentTime(p => Math.min(videoDuration, p+5))} handleSkipBackward={() => setCurrentTime(p => Math.max(0, p-5))} handleNextMarker={() => { const n = m.find(x => x.timestamp! > currentTime); if (n) setCurrentTime(n.timestamp!) }} handlePrevMarker={() => { const p = [...m].reverse().find(x => x.timestamp! < currentTime); if (p) setCurrentTime(p.timestamp!) }} handleFirstMarker={() => m.length > 0 && setCurrentTime(m[0].timestamp!)} handleLastMarker={() => m.length > 0 && setCurrentTime(m[m.length-1].timestamp!)} />
+      return <StandardVideoPreview file={file} effectiveUrl={effectiveUrl} allFileComments={allFileComments} fileComments={fileComments} currentTime={currentTime} videoFps={videoFps} videoDuration={videoDuration} navMode={navMode} setNavMode={setNavMode} isPlaying={isPlaying} driveInfo={driveInfo} handleTimeUpdate={handleTimeUpdate} handleCommentMarkerClick={c => { setCurrentTime(c.timestamp || 0); if (c.annotationData) handleViewAnnotation(c.annotationData, c) }} handleFullscreenChange={handleFullscreenChange} handleLoadedMetadata={handleLoadedMetadata} handleVideoPlay={handleVideoPlay} handleVideoPause={handleVideoPause} renderAnnotationOverlay={renderAnnotationOverlay} handleNextFrame={() => setCurrentTime(p => Math.min(videoDuration, p + 1/videoFps))} handlePrevFrame={() => setCurrentTime(p => Math.max(0, p - 1/videoFps))} handleSkipForward={() => setCurrentTime(p => Math.min(videoDuration, p+5))} handleSkipBackward={() => setCurrentTime(p => Math.max(0, p-5))} handleNextMarker={() => { const n = m.find(x => x.timestamp! > currentTime); if (n) setCurrentTime(n.timestamp!) }} handlePrevMarker={() => { const p = [...m].reverse().find(x => x.timestamp! < currentTime); if (p) setCurrentTime(p.timestamp!) }} handleFirstMarker={() => m.length > 0 && setCurrentTime(m[0].timestamp!)} handleLastMarker={() => m.length > 0 && setCurrentTime(m[m.length-1].timestamp!)} isDropPinMode={isDropPinMode} dropPinCoordinates={dropPinCoordinates} setDropPinCoordinates={setDropPinCoordinates} />
     }
-    if (file.type === 'model') return <div className="relative h-[70vh] w-full"><Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground">{t('common:status.loading')}</div>}><GLBViewer ref={glbViewerRef} url={effectiveUrl} className="w-full h-full" initialCameraState={current?.cameraState} isAdmin={isAdmin} initialRenderSettings={current?.renderSettings} onSaveSettings={handleSaveRenderSettings} /></Suspense>{renderAnnotationOverlay()}{isAdmin && <div className="absolute top-4 right-4"><Button disabled={savingThumbnail} onClick={async () => { const cam = glbViewerRef.current?.getCameraState(); const snap = glbViewerRef.current?.captureScreenshot(); if (cam && snap) { setSavingThumbnail(true); try { await useFileStore.getState().setModelThumbnail(_projectId, file.id, currentVersion, snap, cam) } finally { setSavingThumbnail(false) } } }}>{savingThumbnail ? t('common:status.loading') : 'Set Thumbnail'}</Button></div>}</div>
+    if (file.type === 'model') return <div className="relative h-[70vh] w-full"><Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground">{t('common:status.loading')}</div>}><GLBViewer ref={glbViewerRef} url={effectiveUrl} className="w-full h-full" initialCameraState={current?.cameraState} isAdmin={isAdmin} initialRenderSettings={current?.renderSettings} onSaveSettings={handleSaveRenderSettings} /></Suspense><SpatialCommentOverlay comments={fileComments} isDropPinMode={isDropPinMode} dropPinCoordinates={dropPinCoordinates} setDropPinCoordinates={setDropPinCoordinates} />{renderAnnotationOverlay()}{isAdmin && <div className="absolute top-4 right-4"><Button disabled={savingThumbnail} onClick={async () => { const cam = glbViewerRef.current?.getCameraState(); const snap = glbViewerRef.current?.captureScreenshot(); if (cam && snap) { setSavingThumbnail(true); try { await useFileStore.getState().setModelThumbnail(_projectId, file.id, currentVersion, snap, cam) } finally { setSavingThumbnail(false) } } }}>{savingThumbnail ? t('common:status.loading') : 'Set Thumbnail'}</Button></div>}</div>
     return <div className="p-8 text-center text-muted-foreground">Không hỗ trợ xem loại file này</div>
   }
 
@@ -356,8 +413,11 @@ export function FileViewDialogShared(props: Props) {
             const dts = annotationData?.length && !isReadOnly ? JSON.stringify({ konva: annotationData, camera: glbViewerRef.current?.getCameraState() }) : a
             await onAddComment(u, c, t, p, dts, att)
             if (annotationData?.length && !isReadOnly) { setAnnotationData(null); setIsAnnotating(false); }
+            if (isDropPinMode) { setDropPinCoordinates(null); }
           }}
-          onResolveToggle={onResolveToggle} onEditComment={onEditComment} onDeleteComment={onDeleteComment} onTimestampClick={handleTimestampClick} onViewAnnotation={handleViewAnnotation} isAdmin={isAdmin} isLocked={file.isCommentsLocked || project?.isCommentsLocked || isArchived} viewAllVersions={viewAllVersions} onViewAllVersionsChange={setViewAllVersions} currentTimestamp={file.type === 'video' ? currentTime : (file.type === 'sequence' ? currentFrame : undefined)} currentTimestampRef={currentTimeRef} showTimestamp={['video','sequence'].includes(file.type)} isAnnotating={isAnnotating} isReadOnly={isReadOnly} annotationData={annotationData} annotationTool={annotationTool} annotationColor={annotationColor} annotationStrokeWidth={annotationStrokeWidth} onAnnotationClick={handleStartAnnotating} onAnnotationToolChange={setAnnotationTool} onAnnotationColorChange={setAnnotationColor} onAnnotationStrokeWidthChange={setAnnotationStrokeWidth} onAnnotationUndo={handleAnnotationUndo} onAnnotationRedo={handleAnnotationRedo} onAnnotationClear={handleClearAnnotations} onAnnotationDone={handleDoneAnnotating} canUndoAnnotation={annotationHistoryIndex > 0} canRedoAnnotation={annotationHistoryIndex < annotationHistory.length - 1} onClose={() => onOpenChange(false)} onDownload={handleDownload} onShare={copyShareLink} uniqueVersions={uniqueVersions} currentVersion={currentVersion} onSwitchVersion={onSwitchVersion}
+          onResolveToggle={onResolveToggle} onEditComment={onEditComment} onDeleteComment={onDeleteComment} onTimestampClick={handleTimestampClick} onViewAnnotation={handleViewAnnotation} isAdmin={isAdmin} isLocked={file.isCommentsLocked || project?.isCommentsLocked || isArchived} viewAllVersions={viewAllVersions} onViewAllVersionsChange={setViewAllVersions} currentTimestamp={file.type === 'video' ? currentTime : (file.type === 'sequence' ? currentFrame : undefined)} currentTimeRef={currentTimeRef} onClose={() => onOpenChange(false)} onDownload={handleDownload} onShare={copyShareLink} uniqueVersions={uniqueVersions} currentVersion={currentVersion} onSwitchVersion={onSwitchVersion}
+          isDropPinMode={isDropPinMode} setIsDropPinMode={setIsDropPinMode}
+          dropPinCoordinates={dropPinCoordinates} setDropPinCoordinates={setDropPinCoordinates}
         />, portalContainer || document.body
       )}
 
@@ -433,11 +493,15 @@ export function FileViewDialogShared(props: Props) {
             setAnnotationStrokeWidth={setAnnotationStrokeWidth} 
             handleAnnotationUndo={handleAnnotationUndo} 
             handleAnnotationRedo={handleAnnotationRedo} 
-            handleClearAnnotations={handleClearAnnotations} 
+            handleClearAnnotations={handleClearAnnotations}
             annotationHistoryIndex={annotationHistoryIndex} 
             annotationHistory={annotationHistory} 
             portalContainer={portalContainer}
             fullscreenPortalTarget={sequenceFullscreen.isFullscreen ? sequenceFullscreenRef.current : null}
+            isDropPinMode={isDropPinMode}
+            setIsDropPinMode={setIsDropPinMode}
+            dropPinCoordinates={dropPinCoordinates}
+            setDropPinCoordinates={setDropPinCoordinates}
           />
       )}
 

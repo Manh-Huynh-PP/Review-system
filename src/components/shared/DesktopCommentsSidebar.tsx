@@ -84,9 +84,9 @@ export function DesktopCommentsSidebar({
             showVersionBadge={viewAllVersions}
           />
           {fileComments.length === 0 && (
-            <div className="text-center text-muted-foreground py-8">
+            <div className="text-center text-muted-foreground py-8 whitespace-pre-line px-4 leading-relaxed">
               {t('fileView:comments.empty')}
-              {showOnlyCurrentTimeComments && <div className="text-xs mt-1">{t('fileView:comments.filteringByTime')}</div>}
+              {showOnlyCurrentTimeComments && <div className="text-xs mt-2">{t('fileView:comments.filteringByTime')}</div>}
             </div>
           )}
         </div>
@@ -139,10 +139,10 @@ export function DesktopCommentsSidebar({
           showVersionBadge={viewAllVersions}
         />
         {fileComments.length === 0 && (
-          <div className="text-center text-muted-foreground py-8">
+          <div className="text-center text-muted-foreground py-8 whitespace-pre-line px-4 leading-relaxed">
             {t('fileView:comments.empty')}
-            {showOnlyCurrentTimeComments && <div className="text-xs mt-1">{t('fileView:comments.filteringByTime')}</div>}
-            {viewAllVersions && <div className="text-xs mt-1">{t('fileView:comments.allVersionsEnabled')}</div>}
+            {showOnlyCurrentTimeComments && <div className="text-xs mt-2">{t('fileView:comments.filteringByTime')}</div>}
+            {viewAllVersions && <div className="text-xs mt-2">{t('fileView:comments.allVersionsEnabled')}</div>}
           </div>
         )}
       </div>

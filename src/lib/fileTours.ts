@@ -36,7 +36,7 @@ async function getClientIp(): Promise<string | null> {
 export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'video', t }: TourOptions) {
   let steps: any[] = []
 
-  // Common comment step for desktop
+  // Common steps for desktop
   const commentStep = {
     element: '#comments-sidebar',
     popover: {
@@ -67,33 +67,13 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
     }
   }
 
-  const attachStep = {
-    element: '#comment-attach-button',
+  const resizeHandleStep = {
+    element: '#comments-resize-handle',
     popover: {
-      title: t('tours:common.attach.title'),
-      description: t('tours:common.attach.description'),
+      title: t('tours:common.resizeHandle.title'),
+      description: t('tours:common.resizeHandle.description'),
       side: 'left',
-      align: 'start'
-    }
-  }
-
-  const linkStep = {
-    element: '#comment-link-button',
-    popover: {
-      title: t('tours:common.link.title'),
-      description: t('tours:common.link.description'),
-      side: 'left',
-      align: 'start'
-    }
-  }
-
-  const drawStep = {
-    element: '#comment-draw-button',
-    popover: {
-      title: t('tours:common.draw.title'),
-      description: t('tours:common.draw.description'),
-      side: 'left',
-      align: 'start'
+      align: 'center'
     }
   }
 
@@ -119,6 +99,27 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
     }
   ]
 
+  // Common mobile helper steps
+  const mobileCommentModeStep = {
+    element: '#mobile-comment-mode-toggle',
+    popover: {
+      title: t('tours:common.mobileCommentMode.title'),
+      description: t('tours:common.mobileCommentMode.description'),
+      side: 'top',
+      align: 'center'
+    }
+  }
+
+  const mobileViewToggleStep = {
+    element: '#mobile-view-comments-btn',
+    popover: {
+      title: t('tours:common.mobileViewToggle.title'),
+      description: t('tours:common.mobileViewToggle.description'),
+      side: 'top',
+      align: 'center'
+    }
+  }
+
   // ========== IMAGE TOURS ==========
   if (fileType === 'image') {
     if (isMobile) {
@@ -132,61 +133,34 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
             align: 'center'
           }
         },
-        {
-          element: '#mobile-add-comment',
-          popover: {
-            title: t('tours:image.addCommentMobile.title'),
-            description: t('tours:image.addCommentMobile.description'),
-            side: 'top',
-            align: 'center'
-          }
-        },
-        {
-          element: '#mobile-comment-attach-button',
-          popover: {
-            title: t('tours:common.attach.title'),
-            description: t('tours:common.attach.description'),
-            side: 'top',
-            align: 'start'
-          }
-        },
-        {
-          element: '#mobile-comment-link-button',
-          popover: {
-            title: t('tours:common.link.title'),
-            description: t('tours:common.link.description'),
-            side: 'top',
-            align: 'start'
-          }
-        },
-        {
-          element: '#mobile-comment-draw-button',
-          popover: {
-            title: t('tours:common.draw.title'),
-            description: t('tours:common.draw.description'),
-            side: 'top',
-            align: 'start'
-          }
-        }
+        mobileCommentModeStep,
+        mobileViewToggleStep
       ]
     } else {
       steps = [
         ...headerSteps,
         compareStep,
         {
+          element: '#image-mode-selector',
+          popover: {
+            title: t('tours:image.modeSwitcher.title'),
+            description: t('tours:image.modeSwitcher.description'),
+            side: 'bottom',
+            align: 'start'
+          }
+        },
+        {
           element: '#preview-container',
           popover: {
-            title: t('tours:image.preview.title'),
-            description: t('tours:image.preview.description'),
+            title: t('tours:image.spatialComment.title'),
+            description: t('tours:image.spatialComment.description'),
             side: 'bottom',
             align: 'center'
           }
         },
+        resizeHandleStep,
         commentStep,
-        versionToggleStep,
-        attachStep,
-        linkStep,
-        drawStep
+        versionToggleStep
       ]
     }
   }
@@ -227,55 +201,12 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
           popover: {
             title: t('tours:video.navToggleMobile.title'),
             description: t('tours:video.navToggleMobile.description'),
-            side: 'bottom',
-            align: 'start'
-          }
-        },
-        {
-          element: '#mobile-filter-toggle',
-          popover: {
-            title: t('tours:video.filterTime.title'),
-            description: t('tours:video.filterTime.description'),
-            side: 'bottom',
-            align: 'start'
-          }
-        },
-        {
-          element: '#mobile-add-comment',
-          popover: {
-            title: t('tours:image.addCommentMobile.title'),
-            description: t('tours:image.addCommentMobile.description'),
             side: 'top',
             align: 'center'
           }
         },
-        {
-          element: '#mobile-comment-attach-button',
-          popover: {
-            title: t('tours:common.attach.title'),
-            description: t('tours:common.attach.description'),
-            side: 'top',
-            align: 'start'
-          }
-        },
-        {
-          element: '#mobile-comment-link-button',
-          popover: {
-            title: t('tours:common.link.title'),
-            description: t('tours:common.link.description'),
-            side: 'top',
-            align: 'start'
-          }
-        },
-        {
-          element: '#mobile-comment-draw-button',
-          popover: {
-            title: t('tours:common.draw.title'),
-            description: t('tours:common.draw.description'),
-            side: 'top',
-            align: 'start'
-          }
-        }
+        mobileCommentModeStep,
+        mobileViewToggleStep
       ]
     } else {
       steps = [
@@ -292,8 +223,8 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
         {
           element: '#preview-container',
           popover: {
-            title: t('tours:video.player.title'),
-            description: t('tours:video.player.description'),
+            title: t('tours:video.spatialComment.title'),
+            description: t('tours:video.spatialComment.description'),
             side: 'bottom',
             align: 'center'
           }
@@ -343,20 +274,9 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
             align: 'center'
           }
         },
-        {
-          element: '#comments-resize-handle',
-          popover: {
-            title: t('tours:common.resizeHandle.title'),
-            description: t('tours:common.resizeHandle.description'),
-            side: 'left',
-            align: 'center'
-          }
-        },
+        resizeHandleStep,
         commentStep,
-        versionToggleStep,
-        attachStep,
-        linkStep,
-        drawStep
+        versionToggleStep
       ]
     }
   }
@@ -385,42 +305,8 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
             align: 'center'
           }
         },
-        {
-          element: '#mobile-add-comment',
-          popover: {
-            title: t('tours:image.addCommentMobile.title'),
-            description: t('tours:image.addCommentMobile.description'),
-            side: 'top',
-            align: 'center'
-          }
-        },
-        {
-          element: '#mobile-comment-attach-button',
-          popover: {
-            title: t('tours:common.attach.title'),
-            description: t('tours:common.attach.description'),
-            side: 'top',
-            align: 'start'
-          }
-        },
-        {
-          element: '#mobile-comment-link-button',
-          popover: {
-            title: t('tours:common.link.title'),
-            description: t('tours:common.link.description'),
-            side: 'top',
-            align: 'start'
-          }
-        },
-        {
-          element: '#mobile-comment-draw-button',
-          popover: {
-            title: t('tours:common.draw.title'),
-            description: t('tours:common.draw.description'),
-            side: 'top',
-            align: 'start'
-          }
-        }
+        mobileCommentModeStep,
+        mobileViewToggleStep
       ]
     } else {
       steps = [
@@ -428,7 +314,7 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
         {
           element: '#preview-container',
           popover: {
-            title: t('tours:sequence.preview.title'),
+            title: t('tours:sequence.spatialComment.title'),
             description: sequenceViewMode === 'video'
               ? t('tours:sequence.previewVideo.description')
               : sequenceViewMode === 'carousel'
@@ -447,20 +333,9 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
             align: 'center'
           }
         },
-        {
-          element: '#comments-resize-handle',
-          popover: {
-            title: t('tours:common.resizeHandle.title'),
-            description: t('tours:common.resizeHandle.description'),
-            side: 'left',
-            align: 'center'
-          }
-        },
+        resizeHandleStep,
         commentStep,
-        versionToggleStep,
-        attachStep,
-        linkStep,
-        drawStep
+        versionToggleStep
       ]
     }
   }
@@ -478,42 +353,8 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
             align: 'center'
           }
         },
-        {
-          element: '#mobile-add-comment',
-          popover: {
-            title: t('tours:image.addCommentMobile.title'),
-            description: t('tours:image.addCommentMobile.description'),
-            side: 'top',
-            align: 'center'
-          }
-        },
-        {
-          element: '#mobile-comment-attach-button',
-          popover: {
-            title: t('tours:common.attach.title'),
-            description: t('tours:common.attach.description'),
-            side: 'top',
-            align: 'start'
-          }
-        },
-        {
-          element: '#mobile-comment-link-button',
-          popover: {
-            title: t('tours:common.link.title'),
-            description: t('tours:common.link.description'),
-            side: 'top',
-            align: 'start'
-          }
-        },
-        {
-          element: '#mobile-comment-draw-button',
-          popover: {
-            title: t('tours:common.draw.title'),
-            description: t('tours:common.draw.description'),
-            side: 'top',
-            align: 'start'
-          }
-        }
+        mobileCommentModeStep,
+        mobileViewToggleStep
       ]
     } else {
       steps = [
@@ -521,26 +362,15 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
         {
           element: '#preview-container',
           popover: {
-            title: t('tours:pdf.preview.title'),
-            description: t('tours:pdf.preview.description'),
+            title: t('tours:pdf.spatialComment.title'),
+            description: t('tours:pdf.spatialComment.description'),
             side: 'bottom',
             align: 'center'
           }
         },
-        {
-          element: '#comments-resize-handle',
-          popover: {
-            title: t('tours:common.resizeHandle.title'),
-            description: t('tours:common.resizeHandle.description'),
-            side: 'left',
-            align: 'center'
-          }
-        },
+        resizeHandleStep,
         commentStep,
-        versionToggleStep,
-        attachStep,
-        linkStep,
-        drawStep
+        versionToggleStep
       ]
     }
   }
@@ -570,7 +400,7 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
         {
           element: '#mobile-model-auto-rotate',
           popover: {
-            title: t('tours:model.lighting.title'), // Using lighting or just generic title
+            title: t('tours:model.lighting.title'),
             description: t('tours:model.lighting.description'),
             side: 'top',
             align: 'center'
@@ -603,42 +433,8 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
             align: 'center'
           }
         },
-        {
-          element: '#mobile-add-comment',
-          popover: {
-            title: t('tours:image.addCommentMobile.title'),
-            description: t('tours:image.addCommentMobile.description'),
-            side: 'top',
-            align: 'center'
-          }
-        },
-        {
-          element: '#mobile-comment-attach-button',
-          popover: {
-            title: t('tours:common.attach.title'),
-            description: t('tours:common.attach.description'),
-            side: 'top',
-            align: 'start'
-          }
-        },
-        {
-          element: '#mobile-comment-link-button',
-          popover: {
-            title: t('tours:common.link.title'),
-            description: t('tours:common.link.description'),
-            side: 'top',
-            align: 'start'
-          }
-        },
-        {
-          element: '#mobile-comment-draw-button',
-          popover: {
-            title: t('tours:common.draw.title'),
-            description: t('tours:common.draw.description'),
-            side: 'top',
-            align: 'start'
-          }
-        }
+        mobileCommentModeStep,
+        mobileViewToggleStep
       ]
     } else {
       steps = [
@@ -646,8 +442,8 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
         {
           element: '#preview-container',
           popover: {
-            title: t('tours:model.preview.title'),
-            description: t('tours:model.preview.description'),
+            title: t('tours:model.spatialComment.title'),
+            description: t('tours:model.spatialComment.description'),
             side: 'bottom',
             align: 'center'
           }
@@ -715,20 +511,9 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
             align: 'center'
           }
         },
-        {
-          element: '#comments-resize-handle',
-          popover: {
-            title: t('tours:common.resizeHandle.title'),
-            description: t('tours:common.resizeHandle.description'),
-            side: 'left',
-            align: 'center'
-          }
-        },
+        resizeHandleStep,
         commentStep,
-        versionToggleStep,
-        attachStep,
-        linkStep,
-        drawStep
+        versionToggleStep
       ]
     }
   }
@@ -745,26 +530,28 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
           align: 'center'
         }
       },
-      {
-        element: '#comments-resize-handle',
-        popover: {
-          title: t('tours:common.resizeHandle.title'),
-          description: t('tours:common.resizeHandle.description'),
-          side: 'left',
-          align: 'center'
-        }
-      },
+      resizeHandleStep,
       commentStep,
-      versionToggleStep,
-      attachStep,
-      linkStep,
-      drawStep
+      versionToggleStep
     ]
   }
 
+  // Filter out steps whose target elements are not currently present in the DOM
+  const activeSteps = steps.filter(step => {
+    if (!step.element) return true
+    try {
+      if (typeof step.element === 'string') {
+        return document.querySelector(step.element) !== null
+      }
+    } catch (e) {
+      // ignore query selector errors
+    }
+    return true
+  })
+
   const driverObj = driver({
     showProgress: true,
-    steps: steps,
+    steps: activeSteps,
     onDestroyed: async () => {
       try {
         const ip = await getClientIp()

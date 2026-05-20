@@ -130,7 +130,7 @@ export function FileViewDialogShared(props: Props) {
   const [commentWidth, setCommentWidth] = useState(350)
   const [isResizing, setIsResizing] = useState(false)
   const [copied, setCopied] = useState(false)
-  const { zoom, setZoom, panOffset, setPanOffset, bind: zoomPanBind, reset: resetZoomPan, handleZoomIn, handleZoomOut } = useZoomPan({ maxZoom: 4 })
+  const { zoom, setZoom, panOffset, setPanOffset, bind: zoomPanBind, reset: resetZoomPan, handleZoomIn, handleZoomOut } = useZoomPan({ maxZoom: 4, disabled: isDropPinMode })
   const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [droppedFiles, setDroppedFiles] = useState<File[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
@@ -387,7 +387,7 @@ export function FileViewDialogShared(props: Props) {
     if (isPdf) return <PDFPreviewMode url={effectiveUrl} currentPage={pdfPage} onPageChange={p => { setPdfPage(p); setCurrentFrame(p) }} annotationOverlay={renderAnnotationOverlay()} allFileComments={allFileComments} fileComments={fileComments} isDropPinMode={isDropPinMode} dropPinCoordinates={dropPinCoordinates} setDropPinCoordinates={setDropPinCoordinates} />
     if (file.type === 'image') {
       if (compareMode) return <ImageCompareMode uniqueVersions={uniqueVersions} currentVersion={currentVersion} resolvedUrl={resolvedUrl} sequenceContext={sequenceContext} leftVersion={leftVersion} rightVersion={rightVersion} setLeftVersion={setLeftVersion} setRightVersion={setRightVersion} compareDisplayMode={compareDisplayMode} setCompareDisplayMode={setCompareDisplayMode} comparePosition={comparePosition} setComparePosition={setComparePosition} zoomPanBind={zoomPanBind} zoom={zoom} panOffset={panOffset} handleZoomIn={handleZoomIn} handleZoomOut={handleZoomOut} resetZoomPan={resetZoomPan} />
-      return <StandardImagePreview file={file} current={current} effectiveUrl={effectiveUrl} zoom={zoom} panOffset={panOffset} zoomPanBind={zoomPanBind} renderAnnotationOverlay={renderAnnotationOverlay} sequenceFullscreen={sequenceFullscreen} sequenceFullscreenRef={sequenceFullscreenRef as any} frameDetailView={frameDetailView} sequenceContext={sequenceContext} reactivePickedFrames={reactivePickedFrames} isAdmin={isAdmin} projectId={_projectId} handleZoomIn={handleZoomIn} handleZoomOut={handleZoomOut} resetZoomPan={resetZoomPan} fileComments={fileComments} isDropPinMode={isDropPinMode} dropPinCoordinates={dropPinCoordinates} setDropPinCoordinates={setDropPinCoordinates} />
+      return <StandardImagePreview file={file} current={current} effectiveUrl={effectiveUrl} zoom={zoom} panOffset={panOffset} zoomPanBind={zoomPanBind} renderAnnotationOverlay={renderAnnotationOverlay} sequenceFullscreen={sequenceFullscreen} sequenceFullscreenRef={sequenceFullscreenRef as any} frameDetailView={frameDetailView} sequenceContext={sequenceContext} reactivePickedFrames={reactivePickedFrames} isAdmin={isAdmin} projectId={_projectId} handleZoomIn={handleZoomIn} handleZoomOut={handleZoomOut} resetZoomPan={resetZoomPan} fileComments={fileComments} isDropPinMode={isDropPinMode} setIsDropPinMode={setIsDropPinMode} dropPinCoordinates={dropPinCoordinates} setDropPinCoordinates={setDropPinCoordinates} />
     }
     if (file.type === 'sequence') {
       const u = optimisticSequenceData?.urls || current?.sequenceUrls || []

@@ -20,6 +20,7 @@ export function MobileViewToggle({
                 <div className="flex items-center bg-muted rounded-full p-1 gap-1">
                     {/* File View Toggle */}
                     <button
+                        id="mobile-view-file-btn"
                         onClick={() => onViewChange('file')}
                         className={cn(
                             "flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 ease-out",
@@ -34,6 +35,7 @@ export function MobileViewToggle({
 
                     {/* Comments View Toggle */}
                     <button
+                        id="mobile-view-comments-btn"
                         onClick={() => onViewChange('comments')}
                         className={cn(
                             "flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 ease-out relative",

@@ -32,14 +32,16 @@
     "filtering": "Filtering",
     "filterTime": "Filter time",
     "dropPin": "Drop Pin",
-    "dropPinActive": "Cancel Pin"
+    "dropPinActive": "Cancel Pin",
+    "moveMode": "Move & Zoom",
+    "commentMode": "Pin & Region Comment"
   },
   "comments": {
     "dropPinHint": "Click to pin · Drag to draw region",
     "title": "Feedback",
     "hide": "Hide",
     "show": "Show",
-    "empty": "No feedback yet. Be the first one!",
+    "empty": "No feedback yet. Be the first one!\n\n💡 Tip: Make sure Comment mode is active, then click on the image to drop a pin or drag to select a region.",
     "addComment": "Add feedback...",
     "reply": "Reply",
     "resolve": "Resolve",

@@ -2,7 +2,7 @@
   "common": {
     "comments": {
       "title": "Bình luận & Thảo luận",
-      "description": "Xem các bình luận, thêm phản hồi hoặc đánh dấu đã giải quyết tại đây."
+      "description": "Xem danh sách bình luận tại đây. Để tạo bình luận ghim mới, hãy thao tác trực tiếp trên giao diện xem file ở bên cạnh."
     },
     "versionToggle": {
       "title": "Lọc phiên bản bình luận",
@@ -11,18 +11,6 @@
     "compare": {
       "title": "So sánh phiên bản",
       "description": "So sánh trực quan giữa hai phiên bản khác nhau."
-    },
-    "attach": {
-      "title": "Đính kèm File",
-      "description": "Đính kèm ảnh hoặc tài liệu vào bình luận của bạn."
-    },
-    "link": {
-      "title": "Chèn liên kết",
-      "description": "Thêm đường dẫn (link) vào bình luận."
-    },
-    "draw": {
-      "title": "Vẽ/Ghi chú",
-      "description": "Vẽ trực tiếp lên hình ảnh để minh họa ý kiến của bạn."
     },
     "headerVersion": {
       "title": "Quản lý phiên bản",
@@ -35,38 +23,54 @@
     "resizeHandle": {
       "title": "Thay đổi kích thước",
       "description": "Kéo thanh này sang trái hoặc phải để thay đổi chiều rộng khung bình luận."
+    },
+    "mobileCommentMode": {
+      "title": "Chế độ Ghim bình luận",
+      "description": "Bật/Tắt chế độ bình luận. Khi bật, bạn có thể chạm lên file preview để thả ghim nhận xét."
+    },
+    "mobileViewToggle": {
+      "title": "Chuyển đổi góc nhìn",
+      "description": "Nhấn để chuyển đổi giữa tab Xem file và tab Danh sách bình luận."
     }
   },
   "image": {
+    "modeSwitcher": {
+      "title": "Chế độ tương tác",
+      "description": "Chuyển sang chế độ 'Ghim & Vẽ bình luận' (icon ô vuông) để bắt đầu nhận xét, hoặc 'Di chuyển & Thu phóng' (icon bàn tay) để phóng to/thu nhỏ ảnh."
+    },
+    "spatialComment": {
+      "title": "Ghim & Vẽ bình luận",
+      "description": "Click vào bất kỳ điểm nào trên ảnh để thả ghim, hoặc click và kéo chuột để tạo một vùng nhận xét trực quan."
+    },
     "preview": {
       "title": "Xem hình ảnh",
-      "description": "Bạn có thể phóng to, thu nhỏ và di chuyển hình ảnh để xem chi tiết."
+      "description": "Giao diện hiển thị hình ảnh của tệp."
     },
     "previewMobile": {
       "title": "Xem hình ảnh",
-      "description": "Chạm để phóng to/thu nhỏ và kéo để di chuyển ảnh."
-    },
-    "addCommentMobile": {
-      "title": "Thêm bình luận",
-      "description": "Nhập bình luận cho hình ảnh tại đây."
+      "description": "Khu vực xem trước hình ảnh."
     }
   },
   "video": {
     "player": {
       "title": "Trình phát Video",
-      "description": "Sử dụng các phím tắt (Space để phát/dừng, Mũi tên để tua) để điều khiển."
+      "description": "Sử dụng phím cách để phát/tạm dừng hoặc sử dụng các phím điều hướng để tua chính xác."
     },
     "playerMobile": {
       "title": "Video player",
       "description": "Chạm để phát/dừng video."
     },
+    "spatialComment": {
+      "title": "Ghim bình luận Video",
+      "description": "Click trực tiếp lên khung hình video để thả ghim bình luận tại giây/frame hiện tại."
+    },
     "timeline": {
-      "title": "Timeline & Markers",
-      "description": "Điểm đánh dấu trên timeline hiển thị vị trí các bình luận và ghi chú."
+      "title": "Dòng thời gian & Điểm bình luận",
+      "description": "Xem các chấm đỏ trên dòng thời gian hiển thị vị trí các bình luận. Click vào chấm đỏ để tua nhanh tới thời điểm đó."
     },
     "timelineMobile": {
-      "title": "Timeline",
-      "description": "Chạm vào timeline để nhảy tới thời điểm đó. Các điểm đỏ là vị trí có bình luận."
+      "title": "Dòng thời gian",
+      "description": "Các chấm đỏ là vị trí có bình luận. Chạm vào timeline để nhảy tới thời điểm đó."
     },
     "exportFrame": {
       "title": "Sao chép Frame",
@@ -105,6 +109,10 @@
     "viewMode": {
       "title": "Chế độ xem",
       "description": "Chuyển đổi giữa chế độ video, carousel hoặc lưới để tối ưu trải nghiệm."
+    },
+    "spatialComment": {
+      "title": "Ghim bình luận trên Frame",
+      "description": "Click vào bất kỳ vị trí nào trên hình ảnh hiển thị để thêm bình luận ghim cho khung hình (frame) hiện tại."
     }
   },
   "pdf": {
@@ -115,6 +123,10 @@
     "previewMobile": {
       "title": "Xem PDF",
       "description": "Vuốt để chuyển trang, chạm để phóng to."
+    },
+    "spatialComment": {
+      "title": "Ghim bình luận trên PDF",
+      "description": "Click vào bất kỳ điểm nào trên trang PDF hiện tại để thêm bình luận ghim tương ứng."
     }
   },
   "model": {
@@ -125,6 +137,10 @@
     "previewMobile": {
       "title": "Mô hình 3D",
       "description": "Chạm và kéo để xoay, véo để phóng to/thu nhỏ mô hình."
+    },
+    "spatialComment": {
+      "title": "Ghim bình luận 3D",
+      "description": "Click trực tiếp lên mô hình 3D để ghim bình luận tại vị trí không gian 3D đó."
     },
     "interactionMode": {
       "title": "Chế độ Tương tác",
@@ -158,7 +174,7 @@
   "fallback": {
     "preview": {
       "title": "Xem & Duyệt",
-      "description": "Trình xem tiêu chuẩn cho các loại tệp. Bạn có thể xem nội dung và thêm góp ý."
+      "description": "Trình xem tiêu chuẩn cho các loại tệp. Bạn có thể xem nội dung và thêm góp ý bằng cách click trực tiếp lên file."
     }
   }
 }

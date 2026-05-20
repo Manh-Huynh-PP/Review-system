@@ -2,7 +2,7 @@
   "common": {
     "comments": {
       "title": "Comments & Discussion",
-      "description": "View comments, add feedback, or mark as resolved here."
+      "description": "View comments here. To add a new comment, interact directly with the file preview on the side."
     },
     "versionToggle": {
       "title": "Filter Comment Versions",
@@ -11,18 +11,6 @@
     "compare": {
       "title": "Version Comparison",
       "description": "Visual comparison between two different versions."
-    },
-    "attach": {
-      "title": "Attach File",
-      "description": "Attach images or documents to your comment."
-    },
-    "link": {
-      "title": "Insert Link",
-      "description": "Add a link to your comment."
-    },
-    "draw": {
-      "title": "Draw/Annotate",
-      "description": "Draw directly on the image to illustrate your ideas."
     },
     "headerVersion": {
       "title": "Version Management",
@@ -35,34 +23,50 @@
     "resizeHandle": {
       "title": "Resize Handle",
       "description": "Drag this bar left or right to change the comment pane width."
+    },
+    "mobileCommentMode": {
+      "title": "Pin Comment Mode",
+      "description": "Toggle comment mode. When enabled, tap on the file preview to drop a pin and write your comment."
+    },
+    "mobileViewToggle": {
+      "title": "Switch Views",
+      "description": "Tap to switch between the File tab and the Comments list tab."
     }
   },
   "image": {
+    "modeSwitcher": {
+      "title": "Interaction Mode",
+      "description": "Switch to 'Comment' mode (box select icon) to add spatial comments, or 'Move & Zoom' mode (hand icon) to navigate the image."
+    },
+    "spatialComment": {
+      "title": "Ghim & Vẽ bình luận",
+      "description": "Click anywhere on the image to drop a pin, or click and drag to highlight a specific region."
+    },
     "preview": {
       "title": "View Image",
-      "description": "You can zoom in, zoom out, and move the image to see details."
+      "description": "Viewer showing the image file content."
     },
     "previewMobile": {
       "title": "View Image",
-      "description": "Tap to zoom in/out and drag to move the image."
-    },
-    "addCommentMobile": {
-      "title": "Add Comment",
-      "description": "Enter your comment for the image here."
+      "description": "Image preview viewport."
     }
   },
   "video": {
     "player": {
       "title": "Video Player",
-      "description": "Use keyboard shortcuts (Space to play/pause, Arrows to seek) to control."
+      "description": "Use Space to play/pause or use controls to seek frame-by-frame."
     },
     "playerMobile": {
       "title": "Video Player",
       "description": "Tap to play/pause the video."
     },
+    "spatialComment": {
+      "title": "Drop Pin on Video",
+      "description": "Click directly on the video screen to drop a pin comment at the current timestamp."
+    },
     "timeline": {
       "title": "Timeline & Markers",
-      "description": "Markers on the timeline show the positions of comments and annotations."
+      "description": "View red dots on the timeline indicating comments. Click a dot to seek to that timestamp."
     },
     "timelineMobile": {
       "title": "Timeline",
@@ -105,6 +109,10 @@
     "viewMode": {
       "title": "View Mode",
       "description": "Switch between video, carousel, or grid modes to optimize your experience."
+    },
+    "spatialComment": {
+      "title": "Drop Pin on Frame",
+      "description": "Click anywhere on the current frame to drop a pin comment at this frame."
     }
   },
   "pdf": {
@@ -115,6 +123,10 @@
     "previewMobile": {
       "title": "View PDF",
       "description": "Swipe to switch pages, tap to zoom."
+    },
+    "spatialComment": {
+      "title": "Drop Pin on PDF",
+      "description": "Click anywhere on the PDF page to drop a pin and add a page-specific comment."
     }
   },
   "model": {
@@ -125,6 +137,10 @@
     "previewMobile": {
       "title": "3D Model",
       "description": "Tap and drag to rotate, pinch to zoom the model."
+    },
+    "spatialComment": {
+      "title": "Drop 3D Comment Pin",
+      "description": "Click directly on the 3D model surface to drop a comment pin in 3D space."
     },
     "interactionMode": {
       "title": "Interaction Mode",
@@ -158,7 +174,7 @@
   "fallback": {
     "preview": {
       "title": "View & Browse",
-      "description": "Standard viewer for files. You can see the content and add feedback."
+      "description": "Standard viewer for files. You can see the content and add feedback by clicking directly on the file."
     }
   }
 }

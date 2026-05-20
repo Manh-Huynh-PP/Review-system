@@ -189,6 +189,7 @@ function MobileFileViewLayoutComponent({
                 {/* Quick actions */}
                 <div className="flex items-center gap-1">
                     <Button
+                        id="mobile-comment-mode-toggle"
                         variant={isDropPinMode ? 'default' : 'ghost'}
                         size="sm"
                         className="h-8 w-8 p-0"

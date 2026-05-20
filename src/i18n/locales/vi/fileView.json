@@ -39,14 +39,16 @@
     "filtering": "Đang lọc",
     "filterTime": "Lọc thời gian",
     "dropPin": "Ghim vị trí",
-    "dropPinActive": "Hủy ghim"
+    "dropPinActive": "Hủy ghim",
+    "moveMode": "Di chuyển & Thu phóng",
+    "commentMode": "Ghim & Vẽ bình luận"
   },
   "comments": {
     "dropPinHint": "Click để ghim · Kéo thả để vẽ vùng",
     "title": "Góp ý",
     "hide": "Ẩn",
     "show": "Hiện",
-    "empty": "Chưa có góp ý nào. Hãy là người đầu tiên!",
+    "empty": "Chưa có góp ý nào. Hãy là người đầu tiên!\n\n💡 Gợi ý: Hãy chắc chắn chế độ Bình luận đang bật, sau đó click lên ảnh để ghim vị trí hoặc kéo rê chuột để khoanh vùng bình luận.",
     "addComment": "Thêm góp ý...",
     "reply": "Trả lời",
     "resolve": "Giải quyết",

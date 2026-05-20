@@ -1,5 +1,6 @@
 import React from 'react'
-import { Minus, Plus, RotateCcw, Minimize2, Maximize2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Minus, Plus, RotateCcw, Minimize2, Maximize2, ChevronLeft, ChevronRight, Hand, BoxSelect } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { FramePickOverlay } from '@/components/viewers/FramePickOverlay'
 import { useFileStore } from '@/stores/files'
@@ -25,6 +26,7 @@ interface Props {
   resetZoomPan: () => void
   fileComments?: any[]
   isDropPinMode?: boolean
+  setIsDropPinMode?: (mode: boolean) => void
   dropPinCoordinates?: any
   setDropPinCoordinates?: (coords: any) => void
 }
@@ -49,12 +51,42 @@ export function StandardImagePreview({
   resetZoomPan,
   fileComments = [],
   isDropPinMode,
+  setIsDropPinMode,
   dropPinCoordinates,
   setDropPinCoordinates
 }: Props) {
+  const { t } = useTranslation(['fileView', 'common'])
+
   return (
     <div className={`flex flex-col w-full h-full bg-muted/20 relative overflow-hidden ${sequenceFullscreen.isFullscreen ? 'pointer-events-auto' : ''}`} ref={sequenceFullscreenRef as any}>
       <div className="relative flex-1 min-h-0 w-full flex items-center justify-center overflow-hidden">
+        {/* Mode Switcher Toolbar (Top Left) */}
+        <div id="image-mode-selector" className="absolute top-2 left-2 z-30 bg-background/80 backdrop-blur-sm border border-border/50 rounded-md shadow-sm flex items-center gap-1 p-1">
+          <Button
+            size="sm"
+            variant={isDropPinMode ? 'ghost' : 'secondary'}
+            className="h-7 px-2 text-[11px] flex items-center gap-1.5"
+            onClick={() => {
+              setIsDropPinMode?.(false)
+              setDropPinCoordinates?.(null)
+            }}
+            title={t('fileView:toolbar.moveMode')}
+          >
+            <Hand className="h-3.5 w-3.5" />
+            <span>{t('fileView:toolbar.moveMode')}</span>
+          </Button>
+          <Button
+            size="sm"
+            variant={isDropPinMode ? 'secondary' : 'ghost'}
+            className="h-7 px-2 text-[11px] flex items-center gap-1.5"
+            onClick={() => setIsDropPinMode?.(true)}
+            title={t('fileView:toolbar.commentMode')}
+          >
+            <BoxSelect className="h-3.5 w-3.5" />
+            <span>{t('fileView:toolbar.commentMode')}</span>
+          </Button>
+        </div>
+
         {/* Unified Controls Toolbar */}
         <div className="absolute top-2 right-2 z-30 bg-background/80 backdrop-blur-sm border border-border/50 rounded-md shadow-sm flex items-center gap-1 p-1">
           {/* Zoom Group */}
@@ -112,7 +144,13 @@ export function StandardImagePreview({
 
         {/* Scaled content wrapper (image + annotations) */}
         <div
-          className={`origin-center w-full h-full flex items-center justify-center ${zoom > 1 ? 'cursor-move' : 'cursor-grab active:cursor-grabbing'}`}
+          className={`origin-center w-full h-full flex items-center justify-center ${
+            isDropPinMode
+              ? 'cursor-crosshair'
+              : zoom > 1
+                ? 'cursor-move'
+                : 'cursor-grab active:cursor-grabbing'
+          }`}
           {...zoomPanBind}
           style={{
             ...zoomPanBind.style,
@@ -144,7 +182,7 @@ export function StandardImagePreview({
         {sequenceContext && (
           <>
             {/* Frame Counter */}
-            <div className="absolute top-4 left-4 bg-background/90 backdrop-blur-sm border border-border/50 px-3 py-1.5 rounded-md text-sm font-mono pointer-events-none z-10">
+            <div className="absolute top-14 left-2 bg-background/90 backdrop-blur-sm border border-border/50 px-3 py-1 rounded-md text-xs font-mono pointer-events-none z-10">
               Frame {sequenceContext.currentFrameIndex + 1} / {sequenceContext.totalFrames}
             </div>
 

@@ -134,9 +134,12 @@
   }
 }
 
-/* When a guided tour is running, ensure 3D viewer toolbar stays visible */
-.tour-running .glb-toolbar {
+/* When a guided tour is running, ensure 3D viewer toolbar & Video controls stay visible */
+.tour-running .glb-toolbar,
+.tour-running .video-controls,
+.tour-running #video-timeline-container {
   opacity: 1 !important;
+  visibility: visible !important;
   pointer-events: auto !important;
 }
 

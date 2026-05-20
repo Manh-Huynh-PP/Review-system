@@ -6,6 +6,7 @@ interface ZoomPanOptions {
     zoomStep?: number
     initialZoom?: number
     initialPan?: { x: number; y: number }
+    disabled?: boolean
 }
 
 export function useZoomPan(options: ZoomPanOptions = {}) {
@@ -14,7 +15,8 @@ export function useZoomPan(options: ZoomPanOptions = {}) {
         maxZoom = 5,
         zoomStep = 0.25,
         initialZoom = 1,
-        initialPan = { x: 0, y: 0 }
+        initialPan = { x: 0, y: 0 },
+        disabled = false
     } = options
 
     const [zoom, setZoom] = useState(initialZoom)
@@ -49,6 +51,8 @@ export function useZoomPan(options: ZoomPanOptions = {}) {
     }
 
     const onPointerDown = useCallback((e: React.PointerEvent) => {
+        if (disabled) return
+
         // Only allow dragging if zoomed in
         if (zoom <= 1 && e.pointerType === 'mouse') return
 
@@ -67,9 +71,10 @@ export function useZoomPan(options: ZoomPanOptions = {}) {
         if (e.pointerType === 'touch') {
             (e.target as HTMLElement).releasePointerCapture(e.pointerId)
         }
-    }, [zoom])
+    }, [zoom, disabled])
 
     const onPointerMove = useCallback((e: React.PointerEvent) => {
+        if (disabled) return
         if (lastPointers.current.size === 0) return
 
         lastPointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
@@ -97,9 +102,10 @@ export function useZoomPan(options: ZoomPanOptions = {}) {
             }
             lastPinchDistance.current = distance
         }
-    }, [isDragging, zoom, maxZoom, minZoom])
+    }, [isDragging, zoom, maxZoom, minZoom, disabled])
 
     const onPointerUp = useCallback((e: React.PointerEvent) => {
+        if (disabled) return
         lastPointers.current.delete(e.pointerId)
         
         if (lastPointers.current.size < 2) {
@@ -116,9 +122,10 @@ export function useZoomPan(options: ZoomPanOptions = {}) {
                 lastPanPos.current = remaining
             }
         }
-    }, [])
+    }, [disabled])
 
     const onWheel = useCallback((e: React.WheelEvent) => {
+        if (disabled) return
         if (e.ctrlKey) {
             e.preventDefault()
             const delta = e.deltaY > 0 ? -0.1 : 0.1
@@ -126,7 +133,7 @@ export function useZoomPan(options: ZoomPanOptions = {}) {
             setZoom(nextZoom)
             if (nextZoom <= 1) setPanOffset({ x: 0, y: 0 })
         }
-    }, [maxZoom, minZoom, zoom])
+    }, [maxZoom, minZoom, zoom, disabled])
 
 
     return {

@@ -5,6 +5,8 @@ import type { AnnotationObject } from '@/types'
 
 interface PickableImageSequenceViewerProps {
   urls: string[]
+  mediaTypes?: ('image' | 'video')[] // Parallel to urls — media type per frame
+  fileNames?: string[] // Original file names from Drive — parallel to urls
   fps?: number
   onFrameChange?: (frame: number) => void
   defaultViewMode?: 'video' | 'carousel' | 'grid'

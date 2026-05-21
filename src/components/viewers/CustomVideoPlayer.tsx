@@ -18,7 +18,6 @@ export interface CustomVideoPlayerRef {
     seekTo: (time: number) => void
     pause: () => void
 }
-
 interface CustomVideoPlayerProps {
     src: string
     comments: Comment[]
@@ -35,6 +34,8 @@ interface CustomVideoPlayerProps {
     autoPlay?: boolean
     muted?: boolean
     loop?: boolean
+    onError?: (e: any) => void
+    dropPinCoordinates?: any
 }
 
 export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVideoPlayerProps>(({
@@ -52,7 +53,9 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
     minimal = false,
     autoPlay = false,
     muted = false,
-    loop = false
+    loop = false,
+    onError,
+    dropPinCoordinates
 }, ref) => {
     const { t } = useTranslation()
     // Resolve source URL (Drive vs Direct)
@@ -110,8 +113,25 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
         }
     }, [onFullscreenChange])
 
+    const dropPinCoordinatesRef = useRef(dropPinCoordinates)
+    useEffect(() => {
+        dropPinCoordinatesRef.current = dropPinCoordinates
+    }, [dropPinCoordinates])
+
+    // Pause video automatically when user drops a pin or drags a region to start commenting
+    useEffect(() => {
+        if (dropPinCoordinates && videoRef.current && !videoRef.current.paused) {
+            videoRef.current.pause()
+            setIsPlaying(false)
+            onPause?.()
+        }
+    }, [dropPinCoordinates, onPause])
+
     // Toggle functions with useCallback for keyboard shortcuts
     const togglePlayPause = useCallback(async () => {
+        if (dropPinCoordinatesRef.current) {
+            return
+        }
         if (videoRef.current) {
             try {
                 if (videoRef.current.paused) {
@@ -126,7 +146,7 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
                 }
             }
         }
-    }, [])
+    }, [t])
 
     const toggleMute = useCallback(() => {
         if (videoRef.current) {
@@ -302,6 +322,12 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
         }
 
         const handlePlay = () => {
+            if (dropPinCoordinatesRef.current && videoRef.current) {
+                videoRef.current.pause()
+                setIsPlaying(false)
+                onPause?.()
+                return
+            }
             setIsPlaying(true)
             onPlay?.()
         }
@@ -550,6 +576,7 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
                 overlayOpacity={overlayOpacity}
                 onClick={minimal ? () => {} : togglePlayPause}
                 onDoubleClick={minimal ? () => {} : toggleFullscreen}
+                onError={onError}
             />
 
             {/* Hidden canvas for frame export */}

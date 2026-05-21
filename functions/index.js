@@ -939,7 +939,7 @@ exports.listDriveFolder = functions.https.onCall(async (data, context) => {
     const drive = google.drive({ version: 'v3', auth });
 
     const response = await drive.files.list({
-      q: `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`,
+      q: `'${folderId}' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false`,
       fields: 'files(id, name, mimeType, thumbnailLink, webContentLink, modifiedTime)',
       orderBy: 'name',
       pageSize: 500,
@@ -954,7 +954,7 @@ exports.listDriveFolder = functions.https.onCall(async (data, context) => {
       modifiedTime: f.modifiedTime || null,
     }));
 
-    console.log(`✅ Listed ${files.length} image files from Drive folder ${folderId}`);
+    console.log(`✅ Listed ${files.length} media files (images + videos) from Drive folder ${folderId}`);
     return { files };
   } catch (error) {
     console.error('❌ Drive API error:', error.message || error);

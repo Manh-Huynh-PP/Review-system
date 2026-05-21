@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
@@ -22,7 +23,8 @@ import {
   Settings,
   Loader2,
   Minimize2,
-  Filter
+  Filter,
+  ExternalLink
 } from 'lucide-react'
 import {
   ToggleGroup,
@@ -35,7 +37,8 @@ import { useSequenceScrubber } from '@/hooks/useSequenceScrubber'
 import { AnnotationCanvasKonva } from '@/components/annotations/AnnotationCanvasKonva'
 import { AnnotationToolbar } from '@/components/annotations/AnnotationToolbar'
 import type { AnnotationObject } from '@/types'
-import { normalizeDriveUrl } from '@/utils/googleDrive'
+import { getDriveVideoThumbnailUrl, isDriveVideoUrl, extractDriveVideoId, normalizeDriveUrl, getDirectDownloadUrl, getDriveEmbedUrl } from '@/utils/googleDrive'
+import { CustomVideoPlayer } from './CustomVideoPlayer'
 import { SpatialCommentOverlay } from '@/components/comments/SpatialCommentOverlay'
 
 // DnD Kit imports
@@ -59,6 +62,8 @@ import { CSS } from '@dnd-kit/utilities'
 
 interface ImageSequenceViewerProps {
   urls: string[]
+  mediaTypes?: ('image' | 'video')[] // Parallel to urls — media type per frame
+  fileNames?: string[] // Original file names from Drive — parallel to urls
   fps?: number
   onFrameChange?: (frame: number) => void
   defaultViewMode?: 'video' | 'carousel' | 'grid'
@@ -107,8 +112,40 @@ interface ImageSequenceViewerProps {
 
 type ViewMode = 'video' | 'carousel' | 'grid'
 
+// Helper component to play Drive videos securely with fallback
+function SequenceDriveVideoPlayer({ videoId, videoName }: { videoId: string, videoName: string }) {
+  const [error, setError] = useState(false)
+  const directUrl = `https://drive.google.com/open?id=${videoId}` // CustomVideoPlayer will resolve this to uc?export=download
+
+  if (!error) {
+    return (
+      <CustomVideoPlayer
+        src={directUrl}
+        comments={[]}
+        onTimeUpdate={() => {}}
+        onCommentMarkerClick={() => {}}
+        onError={() => setError(true)}
+        className="w-full h-full pointer-events-auto"
+        autoPlay
+      />
+    )
+  }
+
+  // Fallback to iframe if CustomVideoPlayer fails (e.g. >100MB virus scan redirect)
+  return (
+    <iframe
+      src={`https://drive.google.com/file/d/${videoId}/preview`}
+      className="w-full h-full border-0 pointer-events-auto"
+      allow="autoplay"
+      title={videoName || "Google Drive Preview"}
+    />
+  )
+}
+
 export function ImageSequenceViewer({
   urls,
+  mediaTypes,
+  fileNames,
   fps = 24,
   onFrameChange,
   defaultViewMode = 'video',
@@ -157,6 +194,10 @@ export function ImageSequenceViewer({
   const [currentFrame, setCurrentFrame] = useState(externalCurrentFrame !== undefined ? externalCurrentFrame : 0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLooping, setIsLooping] = useState(true)
+  // Video dialog state — for playing Drive videos in a full overlay
+  const [videoDialogId, setVideoDialogId] = useState<string | null>(null)
+  const [videoDialogName, setVideoDialogName] = useState<string>('')
+  const [carouselVideoErrors, setCarouselVideoErrors] = useState<Record<number, boolean>>({})
   const {
     zoom,
     panOffset,
@@ -171,9 +212,24 @@ export function ImageSequenceViewer({
   const [loadedCount, setLoadedCount] = useState(0)
 
   // Normalize URLs at the component level to handle legacy 'uc' links
+  // For drive-video:// URLs, resolve to thumbnail for image contexts
   const normalizedUrls = useMemo(() => {
-    return urls.map(url => normalizeDriveUrl(url, 2000, lastModified))
+    return urls.map((url) => {
+      if (isDriveVideoUrl(url)) {
+        // For video mode / image preload: use video thumbnail
+        const videoId = extractDriveVideoId(url)
+        return videoId ? getDriveVideoThumbnailUrl(videoId) : url
+      }
+      return normalizeDriveUrl(url, 2000, lastModified)
+    })
   }, [urls, lastModified])
+
+  // Build effective media types: use provided mediaTypes if available,
+  // otherwise infer from URL patterns (drive-video:// = video, else image)
+  const effectiveMediaTypes = useMemo(() => {
+    if (mediaTypes && mediaTypes.length === urls.length) return mediaTypes
+    return urls.map(url => isDriveVideoUrl(url) ? 'video' as const : 'image' as const)
+  }, [mediaTypes, urls])
 
   const frameCount = normalizedUrls.length
 
@@ -271,10 +327,21 @@ export function ImageSequenceViewer({
   }, [externalCurrentFrame])
 
   // Preload images in small batches with retry to avoid Google Drive rate-limiting (429)
+  // Skip preloading for video frames (they use iframe embed, not <img>)
   useEffect(() => {
     setImagesLoaded(false)
     setLoadedCount(0)
     let cancelled = false
+
+    // Filter to only image URLs for preloading (video frames don't need image preload)
+    const imageUrlsToPreload = normalizedUrls.filter((_, i) => effectiveMediaTypes[i] !== 'video')
+
+    // If no images to preload (all videos), mark as loaded immediately
+    if (imageUrlsToPreload.length === 0) {
+      setImagesLoaded(true)
+      setLoadedCount(normalizedUrls.length)
+      return
+    }
 
     /**
      * Load a single image with retry + exponential backoff.
@@ -313,9 +380,9 @@ export function ImageSequenceViewer({
     const BATCH_SIZE = 3
     const loadAllBatched = async () => {
       let loadCount = 0
-      for (let i = 0; i < normalizedUrls.length; i += BATCH_SIZE) {
+      for (let i = 0; i < imageUrlsToPreload.length; i += BATCH_SIZE) {
         if (cancelled) return
-        const batch = normalizedUrls.slice(i, i + BATCH_SIZE)
+        const batch = imageUrlsToPreload.slice(i, i + BATCH_SIZE)
         await Promise.all(batch.map(url => loadImageWithRetry(url)))
         loadCount += batch.length
         if (!cancelled) setLoadedCount(loadCount)
@@ -325,7 +392,7 @@ export function ImageSequenceViewer({
 
     loadAllBatched()
     return () => { cancelled = true }
-  }, [normalizedUrls])
+  }, [normalizedUrls, effectiveMediaTypes])
 
   // Initialize fast-image-sequence
   useEffect(() => {
@@ -630,16 +697,52 @@ export function ImageSequenceViewer({
                 />
               )}
 
-              {/* Regular Image - Carousel Mode */}
+              {/* Regular Image / Video - Carousel Mode */}
               {viewMode === 'carousel' && (
-                <img
-                  src={normalizedUrls[currentFrame]}
-                  alt={`Frame ${currentFrame + 1}`}
-                  className="w-full h-full object-contain max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh] select-none"
-                  draggable={false}
-                  onDragStart={(e) => e.preventDefault()}
-                  referrerPolicy="no-referrer"
-                />
+                effectiveMediaTypes[currentFrame] === 'video' && isDriveVideoUrl(urls[currentFrame]) ? (() => {
+                  const videoId = extractDriveVideoId(urls[currentFrame])!
+                  const hasError = carouselVideoErrors[currentFrame]
+                  return videoId && !hasError ? (
+                    <div className="w-full h-full max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh] flex items-center justify-center bg-black rounded-md overflow-hidden relative">
+                      <video
+                        src={getDirectDownloadUrl(videoId)}
+                        className="w-full h-full object-contain"
+                        controls
+                        onError={() => {
+                          console.warn(`Direct stream for carousel frame ${currentFrame} failed, using iframe`);
+                          setCarouselVideoErrors(prev => ({ ...prev, [currentFrame]: true }))
+                        }}
+                      />
+                      <a
+                        href={`https://drive.google.com/file/d/${videoId}/view`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded transition-colors z-10"
+                        title="Mở trong Google Drive"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  ) : (
+                    <iframe
+                      src={getDriveEmbedUrl(videoId)}
+                      className="w-full h-full max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh] select-none rounded-md"
+                      allow="autoplay; encrypted-media"
+                      allowFullScreen
+                      style={{ border: 'none', aspectRatio: '16/9' }}
+                      title={`Video Frame ${currentFrame + 1}`}
+                    />
+                  )
+                })() : (
+                  <img
+                    src={normalizedUrls[currentFrame]}
+                    alt={`Frame ${currentFrame + 1}`}
+                    className="w-full h-full object-contain max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh] select-none"
+                    draggable={false}
+                    onDragStart={(e) => e.preventDefault()}
+                    referrerPolicy="no-referrer"
+                  />
+                )
               )}
 
               <SpatialCommentOverlay
@@ -976,11 +1079,22 @@ export function ImageSequenceViewer({
                         onFrameChange?.(originalIndex)
                       }}
                       onViewDetail={() => {
-                        onFrameDetailView?.(originalIndex)
+                        // Video frames: open video dialog instead of detail view
+                        if (effectiveMediaTypes[originalIndex] === 'video' && isDriveVideoUrl(urls[originalIndex])) {
+                          const videoId = extractDriveVideoId(urls[originalIndex])
+                          if (videoId) {
+                            setVideoDialogId(videoId)
+                            setVideoDialogName(fileNames?.[originalIndex] || `Video ${originalIndex + 1}`)
+                          }
+                        } else {
+                          onFrameDetailView?.(originalIndex)
+                        }
                       }}
                       onCaptionChange={(caption) => onCaptionChange?.(file.id, file.currentVersion, originalIndex, caption)}
                       onToggleDelete={() => toggleFrameSelection(originalIndex)}
                       renderOverlay={renderFrameOverlay}
+                      isVideo={effectiveMediaTypes[originalIndex] === 'video'}
+                      fileName={fileNames?.[originalIndex]}
                     />
                   ))}
                 </div>
@@ -1002,10 +1116,21 @@ export function ImageSequenceViewer({
                     onFrameChange?.(index)
                   }}
                   onViewDetail={() => {
-                    onFrameDetailView?.(index)
+                    // Video frames: open video dialog instead of detail view
+                    if (effectiveMediaTypes[index] === 'video' && isDriveVideoUrl(urls[index])) {
+                      const videoId = extractDriveVideoId(urls[index])
+                      if (videoId) {
+                        setVideoDialogId(videoId)
+                        setVideoDialogName(fileNames?.[index] || `Video ${index + 1}`)
+                      }
+                    } else {
+                      onFrameDetailView?.(index)
+                    }
                   }}
                   onCaptionChange={(caption) => onCaptionChange?.(file.id, file.currentVersion, index, caption)}
                   renderOverlay={renderFrameOverlay}
+                  isVideo={effectiveMediaTypes[index] === 'video'}
+                  fileName={fileNames?.[index]}
                 />
               ))}
             </div>
@@ -1037,6 +1162,67 @@ export function ImageSequenceViewer({
           </Button>
         </div>
       )}
+
+      {/* Video Dialog Overlay — opens when clicking a video frame in grid */}
+      {videoDialogId && typeof document !== 'undefined' && createPortal(
+        <div 
+          className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-sm flex items-center justify-center p-2 md:p-4"
+          onClick={() => { setVideoDialogName(''); setVideoDialogId(null) }}
+        >
+          <div 
+            className="relative w-full max-w-[90vw] 2xl:max-w-[85vw] overflow-hidden rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="relative z-[100] flex items-center justify-between px-4 py-2.5 bg-black/60 backdrop-blur-sm rounded-t-lg pointer-events-auto">
+              <div className="flex items-center gap-2 min-w-0">
+                <Film className="w-4 h-4 text-blue-400 shrink-0" />
+                <span className="text-sm font-medium truncate text-white/90">{videoDialogName}</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {videoDialogId && (
+                  <a 
+                    href={`https://drive.google.com/file/d/${videoDialogId}/view`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors text-white/60 hover:text-white"
+                    title="Mở trong Google Drive"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                )}
+                {videoDialogId && (
+                  <button 
+                    onClick={() => {
+                      const url = `https://drive.google.com/file/d/${videoDialogId.trim()}/preview`;
+                      navigator.clipboard.writeText(url);
+                      alert("Đã copy link vào clipboard! Hãy paste vào tab mới để thử.");
+                    }}
+                    className="h-8 px-3 text-xs bg-white/20 hover:bg-white/30 rounded-md flex items-center transition-colors text-white"
+                  >
+                    Copy Link
+                  </button>
+                )}
+                <button 
+                  onClick={() => { setVideoDialogName(''); setVideoDialogId(null) }}
+                  className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors text-white/60 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            {/* Video content using smart fallback (CustomVideoPlayer -> iframe) */}
+            <div className="w-full bg-black overflow-hidden flex flex-col relative" style={{ aspectRatio: '16/9' }}>
+              {videoDialogId && (
+                <div className="absolute inset-0">
+                  <SequenceDriveVideoPlayer videoId={videoDialogId.trim()} videoName={videoDialogName} />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }
@@ -1052,7 +1238,9 @@ function GridFrameCard({
   onSelect,
   onViewDetail,
   onCaptionChange,
-  renderOverlay
+  renderOverlay,
+  isVideo = false,
+  fileName
 }: {
   url: string
   frameNumber: number
@@ -1064,6 +1252,8 @@ function GridFrameCard({
   onViewDetail: () => void
   onCaptionChange?: (caption: string) => void
   renderOverlay?: (frameIndex: number) => React.ReactNode
+  isVideo?: boolean
+  fileName?: string
 }) {
   const { t } = useTranslation()
   const [isEditingCaption, setIsEditingCaption] = useState(false)
@@ -1108,18 +1298,55 @@ function GridFrameCard({
         : 'border-border hover:border-primary/50 hover:shadow-md'
         }`}
     >
-      {/* Image */}
+      {/* Image / Video Thumbnail */}
       <div
         onClick={onSelect}
         className="w-full relative overflow-hidden bg-muted/30 group/image cursor-pointer"
       >
-        <img
-          src={url}
-          alt={`Frame ${frameNumber + 1}`}
-          className="w-full h-auto transition-transform group-hover/image:scale-105"
-        />
-        <div className="absolute top-2 left-2 bg-background/90 backdrop-blur-sm border border-border/50 px-2 py-1 rounded text-xs font-mono">
-          {String(frameNumber + 1).padStart(3, '0')} / {String(frameCount).padStart(3, '0')}
+        {isVideo ? (
+          <>
+            {/* Video: show thumbnail image with natural aspect ratio + play overlay */}
+            <img
+              src={url}
+              alt={fileName || `Video ${frameNumber + 1}`}
+              className="w-full h-auto"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                // Fallback: if thumbnail fails, show a placeholder
+                (e.target as HTMLImageElement).style.display = 'none'
+              }}
+            />
+            {/* Play button overlay */}
+            <div
+              className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover/image:bg-black/0 transition-colors cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation()
+                onViewDetail()
+              }}
+            >
+              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 transition-transform group-hover/image:scale-110">
+                <Play className="w-6 h-6 text-white fill-current ml-1" />
+              </div>
+            </div>
+          </>
+        ) : (
+          <img
+            src={url}
+            alt={`Frame ${frameNumber + 1}`}
+            className="w-full h-auto transition-transform group-hover/image:scale-105"
+          />
+        )}
+
+        {/* Badge: filename for video, frame number for image */}
+        <div className="absolute top-2 left-2 bg-background/90 backdrop-blur-sm border border-border/50 px-2 py-1 rounded text-xs font-mono max-w-[80%]">
+          {isVideo ? (
+            <span className="flex items-center gap-1 truncate">
+              <Film className="w-3 h-3 shrink-0 text-blue-500" />
+              <span className="truncate">{fileName || `Video ${frameNumber + 1}`}</span>
+            </span>
+          ) : (
+            <>{String(frameNumber + 1).padStart(3, '0')} / {String(frameCount).padStart(3, '0')}</>
+          )}
         </div>
 
         {/* Custom Overlay (Extension Point) */}
@@ -1224,7 +1451,9 @@ function SortableGridFrameCard({
   onViewDetail: _onViewDetail,
   onCaptionChange: _onCaptionChange,
   onToggleDelete,
-  renderOverlay
+  renderOverlay,
+  isVideo = false,
+  fileName
 }: {
   id: number
   url: string
@@ -1240,6 +1469,8 @@ function SortableGridFrameCard({
   onCaptionChange?: (caption: string) => void
   onToggleDelete: () => void
   renderOverlay?: (frameIndex: number) => React.ReactNode
+  isVideo?: boolean
+  fileName?: string
 }) {
   const { t } = useTranslation()
   const {
@@ -1299,18 +1530,36 @@ function SortableGridFrameCard({
         {isSelectedForDelete && <Check className="w-4 h-4" />}
       </button>
 
-      {/* Image */}
+      {/* Image / Video Thumbnail */}
       <div
         onClick={onSelect}
         className="w-full relative overflow-hidden bg-muted/30 group/image cursor-pointer"
       >
-        <img
-          src={url}
-          alt={`Frame ${frameNumber + 1}`}
-          className="w-full h-auto"
-        />
-        <div className="absolute bottom-2 left-2 bg-background/90 backdrop-blur-sm border border-border/50 px-2 py-1 rounded text-xs font-mono pointer-events-none">
-          {String(frameNumber + 1).padStart(3, '0')} / {String(frameCount).padStart(3, '0')}
+        {isVideo ? (
+          <img
+            src={url}
+            alt={fileName || `Video ${frameNumber + 1}`}
+            className="w-full h-auto"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <img
+            src={url}
+            alt={`Frame ${frameNumber + 1}`}
+            className="w-full h-auto"
+          />
+        )}
+
+        {/* Badge: filename for video, frame number for image */}
+        <div className="absolute bottom-2 left-2 bg-background/90 backdrop-blur-sm border border-border/50 px-2 py-1 rounded text-xs font-mono pointer-events-none max-w-[80%]">
+          {isVideo ? (
+            <span className="flex items-center gap-1 truncate">
+              <Film className="w-3 h-3 shrink-0 text-blue-500" />
+              <span className="truncate">{fileName || `Video ${frameNumber + 1}`}</span>
+            </span>
+          ) : (
+            <>{String(frameNumber + 1).padStart(3, '0')} / {String(frameCount).padStart(3, '0')}</>
+          )}
         </div>
 
         {/* View Detail & Add Caption Overlay */}

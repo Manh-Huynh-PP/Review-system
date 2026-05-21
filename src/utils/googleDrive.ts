@@ -118,7 +118,41 @@ export function normalizeDriveUrl(url: string, size: number = 2000, t?: string |
  * For videos, export=download is more effective for HTML5 <video> tag
  */
 export function getDirectDownloadUrl(fileId: string): string {
-  return `https://drive.google.com/u/0/uc?id=${fileId}&export=download`
+  return `https://drive.google.com/uc?id=${fileId}&export=download`
+}
+
+/**
+ * Get an embeddable preview URL for a Google Drive file (video/document).
+ * Uses the /preview endpoint which works inside iframes without CORS issues.
+ */
+export function getDriveEmbedUrl(fileId: string): string {
+  return `https://drive.google.com/file/d/${fileId}/preview`
+}
+
+/**
+ * Get a thumbnail URL for a Google Drive video file.
+ * Uses lh3.googleusercontent.com which provides CORS-friendly thumbnails.
+ * @param fileId - Google Drive file ID
+ * @param size - Thumbnail width (default 800, keep small for performance)
+ */
+export function getDriveVideoThumbnailUrl(fileId: string, size: number = 800): string {
+  return `https://lh3.googleusercontent.com/d/${fileId}=w${size}`
+}
+
+/**
+ * Check if a URL is a Drive video reference (custom scheme used internally).
+ * Format: `drive-video://{fileId}`
+ */
+export function isDriveVideoUrl(url: string): boolean {
+  return url.startsWith('drive-video://')
+}
+
+/**
+ * Extract the Drive file ID from a drive-video:// URL.
+ */
+export function extractDriveVideoId(url: string): string | null {
+  if (!url.startsWith('drive-video://')) return null
+  return url.replace('drive-video://', '')
 }
 
 /**

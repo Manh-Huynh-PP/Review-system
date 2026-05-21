@@ -14,6 +14,7 @@ interface VideoDisplayAreaProps {
     overlayOpacity: number
     onClick: () => void
     onDoubleClick: () => void
+    onError?: (e: any) => void
 }
 
 const VideoDisplayAreaComponent = forwardRef<HTMLVideoElement, VideoDisplayAreaProps>(({
@@ -26,7 +27,8 @@ const VideoDisplayAreaComponent = forwardRef<HTMLVideoElement, VideoDisplayAreaP
     guideColor,
     overlayOpacity,
     onClick,
-    onDoubleClick
+    onDoubleClick,
+    onError
 }, ref) => {
     // Drive links don't support CORS headers, so we must disable crossOrigin for them
     // This means we won't be able to export frames for Drive videos (tainted canvas),
@@ -50,6 +52,7 @@ const VideoDisplayAreaComponent = forwardRef<HTMLVideoElement, VideoDisplayAreaP
                 } : undefined}
                 onClick={onClick}
                 onDoubleClick={onDoubleClick}
+                onError={onError}
             >
                 {src && <source src={src} type="video/mp4" />}
             </video>

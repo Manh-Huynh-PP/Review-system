@@ -1165,27 +1165,56 @@ export const useFileStore = create<FileState>((set, get) => ({
         throw new Error('Folder trống hoặc không thể truy cập. Đảm bảo folder đã được chia sẻ công khai.')
       }
 
-      // Filter to only image files
-      const imageFiles = driveFiles.filter(f =>
+      // Accept both image and video files
+      const mediaFiles = driveFiles.filter(f =>
         f.mimeType.startsWith('image/') ||
-        /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(f.name)
+        f.mimeType.startsWith('video/') ||
+        /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(f.name) ||
+        /\.(mp4|webm|mov|avi|mkv|m4v)$/i.test(f.name)
       )
 
-      if (imageFiles.length === 0) {
-        throw new Error('Không tìm thấy ảnh nào trong folder Google Drive.')
+      if (mediaFiles.length === 0) {
+        throw new Error('Không tìm thấy ảnh hoặc video nào trong folder Google Drive.')
       }
 
-      // Generate direct URLs for all images with cache busting
-      const sequenceUrls = imageFiles.map(f => normalizeDriveUrl(`https://drive.google.com/open?id=${f.id}`, 2000, f.modifiedTime))
+      // Build parallel arrays: URLs and media types
+      const sequenceMediaTypes: ('image' | 'video')[] = mediaFiles.map(f =>
+        f.mimeType.startsWith('video/') || /\.(mp4|webm|mov|avi|mkv|m4v)$/i.test(f.name)
+          ? 'video' as const
+          : 'image' as const
+      )
+
+      // For images: use normalized thumbnail URL
+      // For videos: use custom drive-video:// scheme (resolved at viewer level to iframe embed)
+      const sequenceUrls = mediaFiles.map((f, i) => {
+        if (sequenceMediaTypes[i] === 'video') {
+          return `drive-video://${f.id}`
+        }
+        return normalizeDriveUrl(`https://drive.google.com/open?id=${f.id}`, 2000, f.modifiedTime)
+      })
       set({ uploadProgress: 80 })
 
-      // Get the latest modified time among all images to use as lastModified metadata
-      const latestModified = Math.max(...imageFiles.map(f => f.modifiedTime ? new Date(f.modifiedTime).getTime() : 0))
+      // Get the latest modified time among all files to use as lastModified metadata
+      const latestModified = Math.max(...mediaFiles.map(f => f.modifiedTime ? new Date(f.modifiedTime).getTime() : 0))
+
+      // Find first image for thumbnail (prefer image over video)
+      const firstImageIndex = sequenceMediaTypes.indexOf('image')
+      const thumbnailUrl = firstImageIndex >= 0
+        ? normalizeDriveUrl(sequenceUrls[firstImageIndex], 2000, mediaFiles[firstImageIndex].modifiedTime)
+        : `https://lh3.googleusercontent.com/d/${mediaFiles[0].id}=w800` // Video thumbnail fallback
+
+      const imageCount = sequenceMediaTypes.filter(t => t === 'image').length
+      const videoCount = sequenceMediaTypes.filter(t => t === 'video').length
+
+      // Collect original file names for display in grid badges
+      const sequenceFileNames = mediaFiles.map(f => f.name)
 
       const fileId = generateId()
       const newVersion: FileVersion = {
-        url: normalizeDriveUrl(sequenceUrls[0], 2000, imageFiles[0].modifiedTime), // First image as thumbnail with cache buster
+        url: thumbnailUrl,
         sequenceUrls,
+        sequenceMediaTypes,
+        sequenceFileNames,
         frameCount: sequenceUrls.length,
         version: 1,
         uploadedAt: Timestamp.now(),
@@ -1213,7 +1242,10 @@ export const useFileStore = create<FileState>((set, get) => ({
       })
 
       set({ uploadProgress: 100 })
-      toast.success(`Đã thêm Drive folder "${name}" với ${imageFiles.length} ảnh`)
+      const parts = []
+      if (imageCount > 0) parts.push(`${imageCount} ảnh`)
+      if (videoCount > 0) parts.push(`${videoCount} video`)
+      toast.success(`Đã thêm Drive folder "${name}" với ${parts.join(' và ')}`)
     } catch (error: any) {
       console.error('❌ Drive folder import failed:', error)
       const errorMessage = 'Nhập folder Drive thất bại: ' + (error.message || 'Lỗi không xác định')

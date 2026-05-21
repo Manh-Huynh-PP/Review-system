@@ -217,9 +217,9 @@ export function ExternalLinkUploader({ projectId, onUploadComplete }: ExternalLi
           <div className="text-xs text-purple-700 dark:text-purple-300 space-y-1">
             <div className="font-medium">Google Drive Folder</div>
             <ul className="list-disc list-inside space-y-0.5 text-purple-600 dark:text-purple-400">
-              <li>Tất cả ảnh trong folder sẽ hiển thị dưới dạng Image Sequence Grid</li>
+              <li>Tất cả ảnh và video trong folder sẽ hiển thị dưới dạng Sequence Grid</li>
               <li>Folder phải được chia sẻ công khai ("Anyone with the link")</li>
-              <li>Chỉ hỗ trợ file ảnh (JPG, PNG, WebP, GIF)</li>
+              <li>Hỗ trợ ảnh (JPG, PNG, WebP, GIF) và video (MP4, MOV, WebM)</li>
             </ul>
           </div>
         </div>

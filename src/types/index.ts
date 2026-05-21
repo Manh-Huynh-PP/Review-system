@@ -87,6 +87,8 @@ export interface FileVersion {
   version: number
   uploadedAt: Timestamp
   sequenceUrls?: string[] // For image sequences
+  sequenceMediaTypes?: ('image' | 'video')[] // Media type per frame (image or video) - parallel to sequenceUrls
+  sequenceFileNames?: string[] // Original file names from Drive - parallel to sequenceUrls
   frameCount?: number // Number of frames in sequence
   frameCaptions?: Record<number, string> // Captions for each frame (frame index -> caption text)
   thumbnailUrl?: string // Custom thumbnail for 3D models

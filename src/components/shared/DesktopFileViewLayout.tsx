@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Filter } from 'lucide-react'
+import { Filter, Hand, MessageSquare } from 'lucide-react'
 import { FileViewHeader } from './FileViewHeader'
 import { DesktopCommentsSidebar } from './DesktopCommentsSidebar'
 import { FloatingCommentCard } from '@/components/comments/FloatingCommentCard'
@@ -113,7 +113,7 @@ export const DesktopFileViewLayout: React.FC<DesktopFileViewLayoutProps> = (prop
     onEditComment, onDeleteComment,
     currentTime, currentTimeRef, currentFrame, commentWidth,
     portalContainer, fullscreenPortalTarget,
-    isDropPinMode, dropPinCoordinates, setDropPinCoordinates
+    isDropPinMode, setIsDropPinMode, dropPinCoordinates, setDropPinCoordinates
   } = props
 
   const { t } = useTranslation(['fileView', 'common'])
@@ -146,6 +146,39 @@ export const DesktopFileViewLayout: React.FC<DesktopFileViewLayoutProps> = (prop
           <div className="flex-1 overflow-y-auto flex flex-col bg-background/50">
             <div className="p-2 border-b flex items-center justify-between sticky top-0 z-10 bg-background/95">
               <div className="flex items-center gap-2">
+                {(file.type === 'video' || file.type === 'sequence') && setIsDropPinMode && (
+                  <div id="desktop-mode-switcher" className="flex items-center bg-muted/50 p-0.5 rounded-lg border">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className={`h-7 px-3 gap-1.5 rounded-md transition-all ${
+                        !isDropPinMode
+                          ? "bg-background shadow-sm text-foreground font-medium"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                      onClick={() => {
+                        setIsDropPinMode(false)
+                        setDropPinCoordinates?.(null)
+                      }}
+                    >
+                      <Hand className="h-3.5 w-3.5" />
+                      <span className="text-xs">{t('fileView:toolbar.move')}</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className={`h-7 px-3 gap-1.5 rounded-md transition-all ${
+                        isDropPinMode
+                          ? "bg-background shadow-sm text-foreground font-medium"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                      onClick={() => setIsDropPinMode(true)}
+                    >
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      <span className="text-xs">{t('fileView:toolbar.comment')}</span>
+                    </Button>
+                  </div>
+                )}
               </div>
               {file.type === 'video' && (
                 <Button 
@@ -208,7 +241,8 @@ export const DesktopFileViewLayout: React.FC<DesktopFileViewLayoutProps> = (prop
                 onResolveToggle={onResolveToggle} handleTimestampClick={handleTimestampClick} 
                 handleViewAnnotation={handleViewAnnotation} onAddComment={onAddComment} 
                 onEditComment={onEditComment} onDeleteComment={onDeleteComment} 
-                commentWidth={commentWidth} 
+                commentWidth={commentWidth} setIsDropPinMode={setIsDropPinMode}
+                isDropPinMode={isDropPinMode}
               />
             </div>
           )}
@@ -222,6 +256,7 @@ export const DesktopFileViewLayout: React.FC<DesktopFileViewLayoutProps> = (prop
             onResolveToggle={onResolveToggle} handleTimestampClick={handleTimestampClick} 
             handleViewAnnotation={handleViewAnnotation} onAddComment={onAddComment} 
             onEditComment={onEditComment} onDeleteComment={onDeleteComment} 
+            setIsDropPinMode={setIsDropPinMode} isDropPinMode={isDropPinMode}
           />
         )}
         {/* Legacy AnnotationToolbar deprecated */}

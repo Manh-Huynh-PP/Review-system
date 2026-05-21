@@ -143,6 +143,11 @@
   pointer-events: auto !important;
 }
 
+/* Hide the custom drop pin tooltip cursor during the tour */
+.tour-running .drop-pin-tooltip {
+  display: none !important;
+}
+
 /* Đảm bảo popup của tour và các nút bên trong luôn có thể tương tác */
 .driver-popover,
 .driver-popover * {

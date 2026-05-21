@@ -5,6 +5,7 @@ import { formatFileSize } from '@/lib/utils'
 import { FileImage, Video, Box, Film, FileText, ShieldAlert } from 'lucide-react'
 import { startFileTour, hasSeenTour } from '@/lib/fileTours'
 import { UploadDialog } from '@/components/files/UploadDialog'
+import { UploadProgressPopup } from '@/components/files/UploadProgressPopup'
 import { useZoomPan } from '@/hooks/useZoomPan'
 import { PickableImageSequenceViewer } from '@/components/viewers/PickableImageSequenceViewer'
 import { AnnotationCanvasKonva } from '@/components/annotations/AnnotationCanvasKonva'
@@ -113,7 +114,7 @@ export function FileViewDialogShared(props: Props) {
   const [annotationTool, setAnnotationTool] = useState<'pen' | 'rect' | 'arrow' | 'select' | 'eraser'>('pen')
   const [annotationColor, setAnnotationColor] = useState('#ffff00')
   const [annotationStrokeWidth, setAnnotationStrokeWidth] = useState(2)
-  const [isDropPinMode, setIsDropPinMode] = useState(true)
+  const [isDropPinMode, setIsDropPinMode] = useState(file?.type === 'image')
   const [dropPinCoordinates, setDropPinCoordinates] = useState<DropPinCoordinates | null>(null)
   const [annotationData, setAnnotationData] = useState<AnnotationObject[] | null>(null)
   const [annotationHistory, setAnnotationHistory] = useState<AnnotationObject[][]>([])
@@ -212,6 +213,16 @@ export function FileViewDialogShared(props: Props) {
     } 
   }, [file?.currentVersion, file?.id])
 
+  // Disable pin/region comment cursor when upload dialog opens
+  // Reset droppedFiles when dialog closes to prevent stale re-uploads
+  useEffect(() => {
+    if (showUploadDialog) {
+      setIsDropPinMode(false)
+      setDropPinCoordinates(null)
+    } else {
+      setDroppedFiles([])
+    }
+  }, [showUploadDialog])
 
   const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); if (isAdmin && zoom <= 1) setIsDragOver(true) }, [isAdmin, zoom])
   const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOver(false) }, [])
@@ -399,7 +410,7 @@ export function FileViewDialogShared(props: Props) {
       const driveInfo = driveFileId ? { id: driveFileId } : null
       return <StandardVideoPreview file={file} effectiveUrl={effectiveUrl} allFileComments={allFileComments} fileComments={fileComments} currentTime={currentTime} videoFps={videoFps} videoDuration={videoDuration} navMode={navMode} setNavMode={setNavMode} isPlaying={isPlaying} driveInfo={driveInfo} handleTimeUpdate={handleTimeUpdate} handleCommentMarkerClick={c => { setCurrentTime(c.timestamp || 0); if (c.annotationData) handleViewAnnotation(c.annotationData, c) }} handleFullscreenChange={handleFullscreenChange} handleLoadedMetadata={handleLoadedMetadata} handleVideoPlay={handleVideoPlay} handleVideoPause={handleVideoPause} renderAnnotationOverlay={renderAnnotationOverlay} handleNextFrame={() => setCurrentTime(p => Math.min(videoDuration, p + 1/videoFps))} handlePrevFrame={() => setCurrentTime(p => Math.max(0, p - 1/videoFps))} handleSkipForward={() => setCurrentTime(p => Math.min(videoDuration, p+5))} handleSkipBackward={() => setCurrentTime(p => Math.max(0, p-5))} handleNextMarker={() => { const n = m.find(x => x.timestamp! > currentTime); if (n) setCurrentTime(n.timestamp!) }} handlePrevMarker={() => { const p = [...m].reverse().find(x => x.timestamp! < currentTime); if (p) setCurrentTime(p.timestamp!) }} handleFirstMarker={() => m.length > 0 && setCurrentTime(m[0].timestamp!)} handleLastMarker={() => m.length > 0 && setCurrentTime(m[m.length-1].timestamp!)} isDropPinMode={isDropPinMode} dropPinCoordinates={dropPinCoordinates} setDropPinCoordinates={setDropPinCoordinates} />
     }
-    if (file.type === 'model') return <div className="relative h-[70vh] w-full"><Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground">{t('common:status.loading')}</div>}><GLBViewer ref={glbViewerRef} url={effectiveUrl} className="w-full h-full" initialCameraState={current?.cameraState} isAdmin={isAdmin} initialRenderSettings={current?.renderSettings} onSaveSettings={handleSaveRenderSettings} /></Suspense><SpatialCommentOverlay comments={fileComments} isDropPinMode={isDropPinMode} dropPinCoordinates={dropPinCoordinates} setDropPinCoordinates={setDropPinCoordinates} />{renderAnnotationOverlay()}{isAdmin && <div className="absolute top-4 right-4"><Button disabled={savingThumbnail} onClick={async () => { const cam = glbViewerRef.current?.getCameraState(); const snap = glbViewerRef.current?.captureScreenshot(); if (cam && snap) { setSavingThumbnail(true); try { await useFileStore.getState().setModelThumbnail(_projectId, file.id, currentVersion, snap, cam) } finally { setSavingThumbnail(false) } } }}>{savingThumbnail ? t('common:status.loading') : 'Set Thumbnail'}</Button></div>}</div>
+    if (file.type === 'model') return <div className="relative h-[70vh] w-full"><Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground">{t('common:status.loading')}</div>}><GLBViewer ref={glbViewerRef} url={effectiveUrl} className="w-full h-full" initialCameraState={current?.cameraState} isAdmin={isAdmin} initialRenderSettings={current?.renderSettings} onSaveSettings={handleSaveRenderSettings} disableOrbitControls={isDropPinMode} isDropPinMode={isDropPinMode} setIsDropPinMode={setIsDropPinMode} /></Suspense><SpatialCommentOverlay comments={fileComments} isDropPinMode={isDropPinMode} dropPinCoordinates={dropPinCoordinates} setDropPinCoordinates={setDropPinCoordinates} />{renderAnnotationOverlay()}{isAdmin && <div className="absolute top-4 right-4"><Button disabled={savingThumbnail} onClick={async () => { const cam = glbViewerRef.current?.getCameraState(); const snap = glbViewerRef.current?.captureScreenshot(); if (cam && snap) { setSavingThumbnail(true); try { await useFileStore.getState().setModelThumbnail(_projectId, file.id, currentVersion, snap, cam) } finally { setSavingThumbnail(false) } } }}>{savingThumbnail ? t('common:status.loading') : 'Set Thumbnail'}</Button></div>}</div>
     return <div className="p-8 text-center text-muted-foreground">Không hỗ trợ xem loại file này</div>
   }
 
@@ -516,6 +527,9 @@ export function FileViewDialogShared(props: Props) {
         return <FileViewDialogShared file={{ ...file, type: frameType as any, name: `${file.name} - F${frameDetailView + 1}` }} projectId={_projectId} resolvedUrl={resolvedFrameUrl} open={frameDetailView !== null} onOpenChange={o => !o && setFrameDetailView(null)} comments={allFileComments.filter(c => c.timestamp === frameDetailView)} currentUserName={currentUserName} onUserNameChange={onUserNameChange} onAddComment={async (usr, cn, _t, p, a, att) => onAddComment(usr, cn, frameDetailView, p, a, att)} onResolveToggle={onResolveToggle} onEditComment={onEditComment} onDeleteComment={onDeleteComment} isAdmin={isAdmin} onCaptionChange={onCaptionChange ? async (fid, v, _fr, cap) => onCaptionChange(fid, v, frameDetailView, cap) : undefined} sequenceContext={{ totalFrames: u.length, currentFrameIndex: frameDetailView, frameCaptions: current?.frameCaptions, onNavigateFrame: idx => setFrameDetailView(idx) }} initialFullscreen={sequenceFullscreen.isFullscreen} portalContainer={sequenceFullscreen.isFullscreen ? (sequenceFullscreenRef.current || (typeof document !== 'undefined' ? (document.fullscreenElement as HTMLElement) : undefined)) : undefined} />
       })()}
       <UploadDialog projectId={_projectId} existingFileId={file.id} existingFileType={file.type} open={showUploadDialog} onOpenChange={setShowUploadDialog} initialFiles={droppedFiles} trigger={<span className="hidden" />} />
+      {isAdmin && (
+        <UploadProgressPopup />
+      )}
       <DragDropUpdateOverlay isDragOver={isDragOver} />
 
       {/* Confirmation Dialogs */}

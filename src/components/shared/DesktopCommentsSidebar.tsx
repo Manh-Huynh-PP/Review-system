@@ -27,6 +27,9 @@ interface Props {
   
   // Sidebar Resize
   commentWidth?: number
+
+  setIsDropPinMode?: (val: boolean) => void
+  isDropPinMode?: boolean
 }
 
 export function DesktopCommentsSidebar({
@@ -46,14 +49,16 @@ export function DesktopCommentsSidebar({
   onAddComment,
   onEditComment,
   onDeleteComment,
-  commentWidth = 350
+  commentWidth = 320,
+  setIsDropPinMode,
+  isDropPinMode
 }: Props) {
   const { t } = useTranslation()
   const isLocked = file.isCommentsLocked || project?.isCommentsLocked || isArchived
 
   if (isFullscreen) {
     return (
-      <div className="fixed top-0 right-0 left-[75vw] w-[25vw] h-screen flex flex-col bg-background border-l border-border z-50">
+      <div className="fixed top-0 right-0 left-[75vw] w-[25vw] h-screen flex flex-col bg-background border-l border-border z-50 group">
         <div className="p-3 border-b flex items-center justify-between bg-muted/10">
           <div className="text-sm font-medium">{t('fileView:comments.title')}</div>
           <Button
@@ -89,6 +94,19 @@ export function DesktopCommentsSidebar({
               {showOnlyCurrentTimeComments && <div className="text-xs mt-2">{t('fileView:comments.filteringByTime')}</div>}
             </div>
           )}
+          
+          {fileComments.length > 0 && !isDropPinMode && setIsDropPinMode && (
+            <div className="sticky bottom-0 mt-4 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none pb-4 bg-gradient-to-t from-background via-background/80 to-transparent pt-8 z-10">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="border-dashed border-2 bg-background/80 hover:bg-muted text-muted-foreground hover:text-foreground shadow-md gap-2 pointer-events-auto rounded-full px-6 backdrop-blur-sm"
+                onClick={() => setIsDropPinMode(true)}
+              >
+                {t('fileView:toolbar.commentNow')}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -97,7 +115,7 @@ export function DesktopCommentsSidebar({
   return (
     <div
       id="comments-sidebar"
-      className="w-full sm:w-[var(--comment-width)] flex-shrink-0 flex flex-col bg-background border-t sm:border-t-0 sm:border-l h-[38vh] sm:h-auto sm:max-h-none transition-[width] duration-0"
+      className="w-full sm:w-[var(--comment-width)] flex-shrink-0 flex flex-col bg-background border-t sm:border-t-0 sm:border-l h-[38vh] sm:h-auto sm:max-h-none transition-[width] duration-0 group relative"
       ref={(el) => {
         if (!el) return
         el.style.setProperty('--comment-width', `${commentWidth}px`)
@@ -139,10 +157,35 @@ export function DesktopCommentsSidebar({
           showVersionBadge={viewAllVersions}
         />
         {fileComments.length === 0 && (
-          <div className="text-center text-muted-foreground py-8 whitespace-pre-line px-4 leading-relaxed">
-            {t('fileView:comments.empty')}
+          <div className="text-center text-muted-foreground py-8 whitespace-pre-line px-4 leading-relaxed flex flex-col items-center">
+            <div className="text-4xl mb-4 opacity-50">💬</div>
+            <div>{t('fileView:comments.empty')}</div>
             {showOnlyCurrentTimeComments && <div className="text-xs mt-2">{t('fileView:comments.filteringByTime')}</div>}
             {viewAllVersions && <div className="text-xs mt-2">{t('fileView:comments.allVersionsEnabled')}</div>}
+            
+            {setIsDropPinMode && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-6 border-dashed border-2 bg-muted/30 hover:bg-muted/60 text-muted-foreground hover:text-foreground gap-2 w-full max-w-[200px]"
+                onClick={() => setIsDropPinMode(true)}
+              >
+                {t('fileView:toolbar.commentNow')}
+              </Button>
+            )}
+          </div>
+        )}
+        
+        {fileComments.length > 0 && !isDropPinMode && setIsDropPinMode && (
+            <div className="sticky bottom-0 mt-4 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none pb-4 bg-gradient-to-t from-background via-background/80 to-transparent pt-8 z-10">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="border-dashed border-2 bg-background/80 hover:bg-muted text-muted-foreground hover:text-foreground shadow-md gap-2 pointer-events-auto rounded-full px-6 backdrop-blur-sm"
+              onClick={() => setIsDropPinMode(true)}
+            >
+              {t('fileView:toolbar.commentNow')}
+            </Button>
           </div>
         )}
       </div>

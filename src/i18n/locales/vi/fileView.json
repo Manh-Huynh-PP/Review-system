@@ -41,7 +41,10 @@
     "dropPin": "Ghim vị trí",
     "dropPinActive": "Hủy ghim",
     "moveMode": "Di chuyển & Thu phóng",
-    "commentMode": "Ghim & Vẽ bình luận"
+    "commentMode": "Ghim & Vẽ bình luận",
+    "move": "Di chuyển",
+    "comment": "Góp ý",
+    "commentNow": "Góp ý ngay"
   },
   "comments": {
     "dropPinHint": "Click để ghim · Kéo thả để vẽ vùng",

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Minus, Plus, RotateCcw, Minimize2, Maximize2, ChevronLeft, ChevronRight, Hand, BoxSelect } from 'lucide-react'
+import { Minus, Plus, RotateCcw, Minimize2, Maximize2, ChevronLeft, ChevronRight, Hand, MessageSquare } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { FramePickOverlay } from '@/components/viewers/FramePickOverlay'
@@ -116,7 +116,7 @@ export function StandardImagePreview({
               onClick={() => setIsDropPinMode?.(true)}
               title={t('fileView:toolbar.commentMode')}
             >
-              <BoxSelect className="h-4 w-4 shrink-0" />
+              <MessageSquare className="h-4 w-4 shrink-0" />
               {isExpanded && <span className="text-xs font-medium truncate">{t('fileView:toolbar.commentMode')}</span>}
             </Button>
           </div>

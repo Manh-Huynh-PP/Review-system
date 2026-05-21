@@ -98,6 +98,26 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
       }
     }
   ]
+  
+  const desktopModeSwitcherStep = {
+    element: '#desktop-mode-switcher',
+    popover: {
+      title: t('tours:common.modeSwitcher.title'),
+      description: t('tours:common.modeSwitcher.description'),
+      side: 'bottom',
+      align: 'start'
+    }
+  }
+
+  const modelCommentModeStep = {
+    element: '#model-comment-mode',
+    popover: {
+      title: t('tours:common.modeSwitcher.title'),
+      description: t('tours:common.modeSwitcher.description'),
+      side: 'right',
+      align: 'center'
+    }
+  }
 
   // Common mobile helper steps
   const mobileCommentModeStep = {
@@ -124,6 +144,7 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
   if (fileType === 'image') {
     if (isMobile) {
       steps = [
+        mobileCommentModeStep,
         {
           element: '#preview-container',
           popover: {
@@ -133,13 +154,10 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
             align: 'center'
           }
         },
-        mobileCommentModeStep,
         mobileViewToggleStep
       ]
     } else {
       steps = [
-        ...headerSteps,
-        compareStep,
         {
           element: '#image-mode-selector',
           popover: {
@@ -149,6 +167,8 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
             align: 'start'
           }
         },
+        ...headerSteps,
+        compareStep,
         {
           element: '#preview-container',
           popover: {
@@ -169,6 +189,7 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
   else if (fileType === 'video') {
     if (isMobile) {
       steps = [
+        mobileCommentModeStep,
         {
           element: '#preview-container',
           popover: {
@@ -205,11 +226,11 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
             align: 'center'
           }
         },
-        mobileCommentModeStep,
         mobileViewToggleStep
       ]
     } else {
       steps = [
+        desktopModeSwitcherStep,
         ...headerSteps,
         {
           element: '#header-video-compare-btn',
@@ -285,6 +306,7 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
   else if (fileType === 'sequence') {
     if (isMobile) {
       steps = [
+        mobileCommentModeStep,
         {
           element: '#preview-container',
           popover: {
@@ -305,11 +327,11 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
             align: 'center'
           }
         },
-        mobileCommentModeStep,
         mobileViewToggleStep
       ]
     } else {
       steps = [
+        desktopModeSwitcherStep,
         ...headerSteps,
         {
           element: '#preview-container',
@@ -344,6 +366,7 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
   else if (fileType === 'pdf') {
     if (isMobile) {
       steps = [
+        mobileCommentModeStep,
         {
           element: '#preview-container',
           popover: {
@@ -353,7 +376,6 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
             align: 'center'
           }
         },
-        mobileCommentModeStep,
         mobileViewToggleStep
       ]
     } else {
@@ -379,6 +401,7 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
   else if (fileType === 'model') {
     if (isMobile) {
       steps = [
+        mobileCommentModeStep,
         {
           element: '#preview-container',
           popover: {
@@ -433,11 +456,11 @@ export async function startFileTour({ fileType, isMobile, sequenceViewMode = 'vi
             align: 'center'
           }
         },
-        mobileCommentModeStep,
         mobileViewToggleStep
       ]
     } else {
       steps = [
+        modelCommentModeStep,
         ...headerSteps,
         {
           element: '#preview-container',

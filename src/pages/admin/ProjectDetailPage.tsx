@@ -4,6 +4,7 @@ import { useProjectStore } from '@/stores/projects'
 import { useFileStore } from '@/stores/files'
 import { useCommentStore } from '@/stores/comments'
 import { UploadDialog } from '@/components/files/UploadDialog'
+import { UploadProgressPopup } from '@/components/files/UploadProgressPopup'
 import { ExternalLinkDialog } from '@/components/files/ExternalLinkDialog'
 import { FilesList } from '@/components/files/FilesList'
 import { db } from '@/lib/firebase'
@@ -19,6 +20,7 @@ import { ArchiveLinksDropdown } from '@/components/projects/ArchiveLinksDropdown
 import { FileFilters, type SortOption, type SortDirection, type ViewMode } from '@/components/files/FileFilters'
 import { Download, CheckSquare } from 'lucide-react'
 import { useBulkDownload } from '@/hooks/useBulkDownload'
+
 import { cn } from '@/lib/utils'
 
 
@@ -209,6 +211,7 @@ export default function ProjectDetailPage() {
                 open={showLinkDialog}
                 onOpenChange={setShowLinkDialog}
               />
+              <UploadProgressPopup />
             </>
           )}
 

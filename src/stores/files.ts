@@ -31,7 +31,7 @@ interface FileState {
 
   subscribeToFiles: (projectId: string) => void
   loadFiles: (projectId: string) => void
-  uploadFile: (projectId: string, file: File, existingFileId?: string) => Promise<void>
+  uploadFile: (projectId: string, file: File, existingFileId?: string, onProgress?: (progress: number) => void) => Promise<void>
   uploadSequence: (projectId: string, files: File[], name: string, fps?: number, existingFileId?: string) => Promise<void>
   deleteFile: (projectId: string, fileId: string) => Promise<void> // Soft delete (move to trash)
   trashFile: (projectId: string, fileId: string) => Promise<void> // Alias for deleteFile
@@ -117,7 +117,16 @@ export const useFileStore = create<FileState>((set, get) => ({
     get().subscribeToFiles(projectId)
   },
 
-  uploadFile: async (projectId: string, file: File, existingFileId?: string) => {
+  uploadFile: async (projectId: string, file: File, existingFileId?: string, onProgress?: (progress: number) => void) => {
+    // Prevent concurrent uploads for the same existingFileId (defense against double-invocation)
+    const lockKey = existingFileId || `new_${file.name}_${file.size}`
+    const uploadLocks = (window as any).__uploadLocks || new Set<string>()
+    ;(window as any).__uploadLocks = uploadLocks
+    if (uploadLocks.has(lockKey)) {
+      console.warn(`⚠️ Upload already in progress for ${lockKey}, skipping duplicate`)
+      throw new Error('Upload đang được xử lý, vui lòng đợi.')
+    }
+    uploadLocks.add(lockKey)
 
     set({ uploading: true, uploadProgress: 0, error: null })
 
@@ -126,6 +135,7 @@ export const useFileStore = create<FileState>((set, get) => ({
       const errorMessage = `Phát hiện file nghi ngờ có mã độc: ${file.name}. Upload bị hủy.`
       set({ uploading: false, error: errorMessage })
       toast.error(errorMessage)
+      uploadLocks.delete(lockKey)
       return // Stop execution
     }
 
@@ -163,6 +173,7 @@ export const useFileStore = create<FileState>((set, get) => ({
           try {
             const progress = snapshot.totalBytes ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100) : 0
             set({ uploadProgress: progress })
+            if (onProgress) onProgress(progress)
           } catch (e) {
             // ignore
           }
@@ -341,6 +352,9 @@ export const useFileStore = create<FileState>((set, get) => ({
     } finally {
       // finalize
       set({ uploading: false, uploadProgress: 0 })
+      // Release upload lock
+      const locks = (window as any).__uploadLocks as Set<string> | undefined
+      if (locks) locks.delete(lockKey)
     }
   },
 

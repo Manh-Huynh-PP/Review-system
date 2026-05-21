@@ -2,13 +2,16 @@ import { useRef, useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { useFileStore } from '@/stores/files'
-import { formatFileSize } from '@/lib/utils'
+import { useUploadProgressStore } from '@/stores/uploadProgress'
+import { formatFileSize, generateId } from '@/lib/utils'
 import { Upload, X, CheckCircle, AlertCircle, FileImage, Video, Box, File as FileIcon } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 interface FileUploaderProps {
   projectId: string
   existingFileId?: string
   onUploadComplete?: () => void
+  onUploadingChange?: (isUploading: boolean) => void
   initialFiles?: File[]
 }
 
@@ -41,8 +44,10 @@ const ALLOWED_TYPES = {
 
 
 
-export function FileUploader({ projectId, existingFileId, onUploadComplete, initialFiles }: FileUploaderProps) {
-  const { uploadFile, uploadProgress } = useFileStore()
+export function FileUploader({ projectId, existingFileId, onUploadComplete, onUploadingChange, initialFiles }: FileUploaderProps) {
+  const { uploadFile } = useFileStore()
+  const { addTask, updateTask } = useUploadProgressStore()
+  const uploadTaskIdRef = useRef<string>('')
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -83,26 +88,26 @@ export function FileUploader({ projectId, existingFileId, onUploadComplete, init
     return null
   }
 
-  // Auto-process initial files
-  useEffect(() => {
-    if (initialFiles && initialFiles.length > 0 && uploadQueue.length > 0 && !isUploading && currentUploadIndex === -1) {
-      processFiles(initialFiles)
-    }
-  }, []) // Run once on mount
+  // Guard to prevent StrictMode double-invocation from uploading twice
+  const hasAutoProcessed = useRef(false)
+  const prevInitialFilesRef = useRef<File[] | undefined>(initialFiles)
 
-  // Auto-process initial files
-  useEffect(() => {
-    if (initialFiles && initialFiles.length > 0 && uploadQueue.length > 0 && !isUploading && currentUploadIndex === -1) {
-      processFiles(initialFiles)
-    }
-  }, []) // Run once on mount
+  // Reset guard when initialFiles reference changes (new drag-drop)
+  if (initialFiles !== prevInitialFilesRef.current) {
+    prevInitialFilesRef.current = initialFiles
+    hasAutoProcessed.current = false
+  }
 
-  // Auto-process initial files
+  // Auto-process initial files + sync queue when initialFiles changes
   useEffect(() => {
-    if (initialFiles && initialFiles.length > 0 && uploadQueue.length > 0 && !isUploading && currentUploadIndex === -1) {
+    if (hasAutoProcessed.current) return
+    if (initialFiles && initialFiles.length > 0 && !isUploading && currentUploadIndex === -1) {
+      // Sync uploadQueue to reflect new files in UI (useState initializer only runs once)
+      setUploadQueue(initialFiles.map(file => ({ file, status: 'pending' as const, progress: 0 })))
+      hasAutoProcessed.current = true
       processFiles(initialFiles)
     }
-  }, []) // Run once on mount
+  }, [initialFiles]) // Re-run when initialFiles changes
 
   const processFiles = async (files: File[]) => {
     if (files.length === 0) return
@@ -130,12 +135,33 @@ export function FileUploader({ projectId, existingFileId, onUploadComplete, init
 
     if (errors.length > 0) {
       console.warn('⚠️ Some files failed validation:', errors)
+      toast.error(`${errors.length} file bị bỏ qua:\n${errors.join('\n')}`, { duration: 5000 })
     }
 
     setUploadQueue(validFiles)
     setIsUploading(true)
+    onUploadingChange?.(true)
 
-    // Upload files sequentially
+    // Register upload task in global store for popup tracking
+    const taskId = generateId()
+    uploadTaskIdRef.current = taskId
+    addTask({
+      id: taskId,
+      projectId,
+      fileName: validFiles[0]?.file.name || 'Unknown',
+      fileType: 'single',
+      existingFileId,
+      status: 'uploading',
+      progress: 0,
+      totalFiles: validFiles.length,
+      completedFiles: 0,
+      startedAt: Date.now()
+    })
+
+    // Upload files sequentially — track results with local counters (not stale state)
+    let successCount = 0
+    let errorCount = 0
+
     for (let i = 0; i < validFiles.length; i++) {
       setCurrentUploadIndex(i)
       let item = validFiles[i]
@@ -149,14 +175,30 @@ export function FileUploader({ projectId, existingFileId, onUploadComplete, init
         ))
 
         console.log(`🎯 Uploading file ${i + 1}/${validFiles.length}: ${fileToUpload.name}`)
-        await uploadFile(projectId, fileToUpload, existingFileId)
+        await uploadFile(projectId, fileToUpload, existingFileId, (fileProgress) => {
+          // Calculate smooth overall progress
+          const overallProgress = Math.round(((i * 100) + fileProgress) / validFiles.length)
+          updateTask(uploadTaskIdRef.current, { progress: Math.min(overallProgress, 99) })
+          
+          // Also update the individual file progress in the queue
+          setUploadQueue(prev => prev.map((f, idx) =>
+            idx === i ? { ...f, progress: fileProgress } : f
+          ))
+        })
 
         // Update status to success
+        successCount++
         setUploadQueue(prev => prev.map((f, idx) =>
           idx === i ? { ...f, status: 'success', progress: 100 } : f
         ))
         console.log(`✅ File ${i + 1}/${validFiles.length} uploaded successfully`)
+        updateTask(uploadTaskIdRef.current, {
+          completedFiles: i + 1,
+          progress: Math.round(((i + 1) / validFiles.length) * 100),
+          fileName: i + 1 < validFiles.length ? validFiles[i + 1]?.file.name || '' : validFiles[i].file.name
+        })
       } catch (err: any) {
+        errorCount++
         console.error(`💥 Upload error for ${item.file.name}:`, err)
         setUploadQueue(prev => prev.map((f, idx) =>
           idx === i ? { ...f, status: 'error', error: err.message || 'Upload thất bại' } : f
@@ -166,14 +208,16 @@ export function FileUploader({ projectId, existingFileId, onUploadComplete, init
 
     setIsUploading(false)
     setCurrentUploadIndex(-1)
+    onUploadingChange?.(false)
+
+    // Update global task status using local counters (not stale closure state)
+    updateTask(uploadTaskIdRef.current, {
+      status: errorCount > 0 ? 'error' : 'success',
+      progress: 100
+    })
     if (inputRef.current) inputRef.current.value = ''
 
-    const allSuccessful = validFiles.every((_, idx) => {
-      const current = uploadQueue[idx]
-      return current?.status === 'success'
-    })
-
-    if (allSuccessful || validFiles.length === 1) {
+    if (successCount === validFiles.length) {
       setTimeout(() => {
         onUploadComplete?.()
       }, 1000)
@@ -241,9 +285,9 @@ export function FileUploader({ projectId, existingFileId, onUploadComplete, init
               {uploadQueue[currentUploadIndex]?.file.name}
             </div>
             <div className="max-w-xs mx-auto mb-2">
-              <Progress value={uploadProgress} className="h-2" />
+              <Progress value={uploadQueue[currentUploadIndex]?.progress ?? 0} className="h-2" />
             </div>
-            <div className="text-xs text-muted-foreground">{uploadProgress}%</div>
+            <div className="text-xs text-muted-foreground">{uploadQueue[currentUploadIndex]?.progress ?? 0}%</div>
 
           </div>
         ) : uploadQueue.length > 0 ? (

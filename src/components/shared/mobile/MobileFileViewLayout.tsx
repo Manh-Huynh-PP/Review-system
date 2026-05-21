@@ -9,7 +9,7 @@ import {
     Clock,
     ChevronDown,
     Layers,
-    MapPin
+    MessageSquare
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { formatFileSize } from '@/lib/utils'
@@ -23,6 +23,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useTranslation } from 'react-i18next'
 
 interface MobileFileViewLayoutProps {
     // File info
@@ -108,6 +109,7 @@ function MobileFileViewLayoutComponent({
     dropPinCoordinates,
     setDropPinCoordinates,
 }: MobileFileViewLayoutProps) {
+    const { t } = useTranslation()
     const [activeView, setActiveView] = useState<'file' | 'comments'>('file')
 
     const uploadDate = current?.uploadedAt?.toDate ? current.uploadedAt.toDate() : new Date()
@@ -199,7 +201,7 @@ function MobileFileViewLayoutComponent({
                             if (!nextMode) setDropPinCoordinates?.(null);
                         }}
                     >
-                        <MapPin className="w-4 h-4" />
+                        <MessageSquare className="w-4 h-4" />
                     </Button>
                     <Button
                         variant="ghost"
@@ -321,12 +323,25 @@ function MobileFileViewLayoutComponent({
                             showVersionBadge={viewAllVersions}
                         />
                         {comments.length === 0 && (
-                            <div className="text-center text-muted-foreground py-12">
-                                <div className="text-4xl mb-2">💬</div>
+                            <div className="text-center text-muted-foreground py-12 flex flex-col items-center">
+                                <div className="text-4xl mb-2 opacity-50">💬</div>
                                 <div>Chưa có bình luận nào</div>
-                                <div className="text-xs mt-1 text-muted-foreground/60">
+                                <div className="text-xs mt-1 mb-6 text-muted-foreground/60">
                                     Hãy là người đầu tiên bình luận
                                 </div>
+                                {setIsDropPinMode && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="border-dashed border-2 bg-muted/30 hover:bg-muted/60 text-muted-foreground hover:text-foreground gap-2"
+                                        onClick={() => {
+                                            setIsDropPinMode(true)
+                                            setActiveView('file')
+                                        }}
+                                    >
+                                        {t('fileView:toolbar.commentNow')}
+                                    </Button>
+                                )}
                             </div>
                         )}
                     </div>

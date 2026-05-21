@@ -4,7 +4,7 @@ import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls, Environment, Html, useGLTF, Center, useMatcapTexture, useAnimations, useProgress } from '@react-three/drei'
 import { Button } from '@/components/ui/button'
 import toast from 'react-hot-toast'
-import { Rotate3d, Box, Sun, Moon, RefreshCcw, Lightbulb, Camera, Circle, Film, Play, Pause, Hand, Move, Save, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Rotate3d, Box, Sun, Moon, RefreshCcw, Lightbulb, Camera, Circle, Film, Play, Pause, Hand, Move, Save, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import * as THREE from 'three'
 
@@ -47,6 +47,9 @@ interface GLBViewerProps {
     gamma?: number
   }
   onSaveSettings?: (settings: any) => Promise<void>
+  disableOrbitControls?: boolean
+  isDropPinMode?: boolean
+  setIsDropPinMode?: (value: boolean) => void
 }
 
 type RenderMode = 'standard' | 'wireframe' | 'matcap'
@@ -260,6 +263,7 @@ const SceneContent = forwardRef<GLBViewerRef, {
   interactionMode?: 'rotate' | 'pan'
   exposure: number
   gamma: number
+  disableOrbitControls?: boolean
 }>((props, ref) => {
   const { camera, gl } = useThree()
 
@@ -366,6 +370,7 @@ const SceneContent = forwardRef<GLBViewerRef, {
       <OrbitControls
         ref={controlsRef}
         autoRotate={props.autoRotate}
+        enabled={!props.disableOrbitControls}
         enablePan={true}
         enableZoom={true}
         enableRotate={true}
@@ -408,7 +413,10 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
   showMobileToolbar = false,
   isAdmin = false,
   initialRenderSettings,
-  onSaveSettings
+  onSaveSettings,
+  disableOrbitControls,
+  isDropPinMode,
+  setIsDropPinMode
 }, ref) => {
   const { t } = useTranslation()
   // Initialize state with defaults or provided settings
@@ -657,6 +665,7 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
             interactionMode={interactionMode}
             exposure={exposure}
             gamma={gamma}
+            disableOrbitControls={disableOrbitControls}
           />
 
         </Suspense>
@@ -685,16 +694,35 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
             </Button>
           </div>
 
-          {/* Mode Toggle - Rotate vs Pan */}
+          {/* Mode Toggle - Comment / Rotate / Pan */}
           <Button
-            id="model-interaction-mode"
-            variant={interactionMode === 'rotate' ? "secondary" : "ghost"}
+            id="model-comment-mode"
+            variant={isDropPinMode ? "secondary" : "ghost"}
             size={isExpanded ? "sm" : "icon"}
             className={cn(
               "h-9 rounded-lg transition-all duration-300",
               isExpanded ? "justify-start px-3 gap-2" : "justify-center w-full px-0"
             )}
             onClick={() => {
+              setIsDropPinMode?.(true);
+              if (!isExpanded) toast(t('fileView:toolbar.comment'), { icon: '💬', duration: 1500 });
+            }}
+            title={t('fileView:toolbar.comment')}
+          >
+            <MessageSquare className="h-4 w-4 shrink-0" />
+            {isExpanded && <span className="text-xs font-medium truncate">{t('fileView:toolbar.comment')}</span>}
+          </Button>
+
+          <Button
+            id="model-interaction-mode"
+            variant={!isDropPinMode && interactionMode === 'rotate' ? "secondary" : "ghost"}
+            size={isExpanded ? "sm" : "icon"}
+            className={cn(
+              "h-9 rounded-lg transition-all duration-300",
+              isExpanded ? "justify-start px-3 gap-2" : "justify-center w-full px-0"
+            )}
+            onClick={() => {
+              setIsDropPinMode?.(false);
               setInteractionMode('rotate');
               if (!isExpanded) toast(t('fileView:glb.toolbar.rotate'), { icon: '🔄', duration: 1500 });
             }}
@@ -706,13 +734,14 @@ export const GLBViewer = forwardRef<GLBViewerRef, GLBViewerProps>(({
 
           <Button
             id="model-pan-mode"
-            variant={interactionMode === 'pan' ? "secondary" : "ghost"}
+            variant={!isDropPinMode && interactionMode === 'pan' ? "secondary" : "ghost"}
             size={isExpanded ? "sm" : "icon"}
             className={cn(
               "h-9 rounded-lg transition-all duration-300",
               isExpanded ? "justify-start px-3 gap-2" : "justify-center w-full px-0"
             )}
             onClick={() => {
+              setIsDropPinMode?.(false);
               setInteractionMode('pan');
               if (!isExpanded) toast(t('fileView:glb.toolbar.pan'), { icon: '↔️', duration: 1500 });
             }}

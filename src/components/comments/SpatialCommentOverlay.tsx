@@ -332,12 +332,12 @@ export function SpatialCommentOverlay({
   return (
     <div
       ref={containerRef}
-      className={`absolute inset-0 z-20 pointer-events-none ${isDropPinMode ? 'cursor-crosshair' : ''}`}
+      className={`absolute inset-0 z-40 pointer-events-none ${isDropPinMode ? 'cursor-crosshair' : ''}`}
     >
       {/* Tooltip for drop pin — rendered via portal to escape DialogContent's transform context */}
       {isDropPinMode && mousePos.visible && !activeCommentId && !dropPinCoordinates && !isDragging && createPortal(
         <div 
-          className="fixed z-[9999] pointer-events-none flex items-center gap-1.5 px-2 py-1.5 bg-gray-900/90 backdrop-blur-sm text-white text-[11px] font-medium rounded-md shadow-lg border border-white/10"
+          className="drop-pin-tooltip fixed z-[9999] pointer-events-none flex items-center gap-1.5 px-2 py-1.5 bg-gray-900/90 backdrop-blur-sm text-white text-[11px] font-medium rounded-md shadow-lg border border-white/10"
           style={{ left: mousePos.x + 8, top: mousePos.y + 8 }}
         >
           <MessageSquare className="w-3.5 h-3.5 text-blue-400" />

@@ -34,7 +34,10 @@
     "dropPin": "Drop Pin",
     "dropPinActive": "Cancel Pin",
     "moveMode": "Move & Zoom",
-    "commentMode": "Pin & Region Comment"
+    "commentMode": "Pin & Region Comment",
+    "move": "Move",
+    "comment": "Comment",
+    "commentNow": "Comment Now"
   },
   "comments": {
     "dropPinHint": "Click to pin · Drag to draw region",

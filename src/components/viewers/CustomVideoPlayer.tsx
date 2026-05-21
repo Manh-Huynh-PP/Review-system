@@ -36,6 +36,7 @@ interface CustomVideoPlayerProps {
     loop?: boolean
     onError?: (e: any) => void
     dropPinCoordinates?: any
+    isDropPinMode?: boolean
 }
 
 export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVideoPlayerProps>(({
@@ -55,7 +56,8 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
     muted = false,
     loop = false,
     onError,
-    dropPinCoordinates
+    dropPinCoordinates,
+    isDropPinMode
 }, ref) => {
     const { t } = useTranslation()
     // Resolve source URL (Drive vs Direct)
@@ -574,7 +576,7 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
                 videoRatio={videoRatio}
                 guideColor={guideColor}
                 overlayOpacity={overlayOpacity}
-                onClick={minimal ? () => {} : togglePlayPause}
+                onClick={minimal ? () => {} : (isDropPinMode ? () => {} : togglePlayPause)}
                 onDoubleClick={minimal ? () => {} : toggleFullscreen}
                 onError={onError}
             />

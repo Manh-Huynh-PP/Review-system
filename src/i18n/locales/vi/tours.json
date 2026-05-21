@@ -31,12 +31,16 @@
     "mobileViewToggle": {
       "title": "Chuyển đổi góc nhìn",
       "description": "Nhấn để chuyển đổi giữa tab Xem file và tab Danh sách bình luận."
+    },
+    "modeSwitcher": {
+      "title": "Bật/Tắt Góp ý",
+      "description": "Chuyển sang 'Góp ý' (icon bóng thoại) để ghim bình luận lên tệp, hoặc 'Di chuyển' (icon bàn tay) để điều khiển và thao tác."
     }
   },
   "image": {
     "modeSwitcher": {
       "title": "Chế độ tương tác",
-      "description": "Chuyển sang chế độ 'Ghim & Vẽ bình luận' (icon ô vuông) để bắt đầu nhận xét, hoặc 'Di chuyển & Thu phóng' (icon bàn tay) để phóng to/thu nhỏ ảnh."
+      "description": "Chuyển sang chế độ 'Ghim & Vẽ bình luận' (icon bóng thoại) để bắt đầu nhận xét, hoặc 'Di chuyển & Thu phóng' (icon bàn tay) để phóng to/thu nhỏ ảnh."
     },
     "spatialComment": {
       "title": "Ghim & Vẽ bình luận",

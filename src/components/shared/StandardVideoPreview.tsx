@@ -100,6 +100,7 @@ export function StandardVideoPreview({
               onPause={handleVideoPause}
               className="w-full h-full"
               dropPinCoordinates={dropPinCoordinates}
+              isDropPinMode={isDropPinMode}
               onError={() => {
                 if (isDriveVideo) {
                   console.warn("Direct stream failed for CustomVideoPlayer, falling back to iframe");

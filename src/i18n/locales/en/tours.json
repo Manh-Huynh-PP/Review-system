@@ -31,6 +31,10 @@
     "mobileViewToggle": {
       "title": "Switch Views",
       "description": "Tap to switch between the File tab and the Comments list tab."
+    },
+    "modeSwitcher": {
+      "title": "Toggle Comments",
+      "description": "Switch to 'Comment' (speech bubble icon) to pin comments on the file, or 'Move' (hand icon) to control and navigate."
     }
   },
   "image": {

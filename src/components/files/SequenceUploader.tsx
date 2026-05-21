@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { useFileStore } from '@/stores/files'
-import { formatFileSize } from '@/lib/utils'
+import { useUploadProgressStore } from '@/stores/uploadProgress'
+import { formatFileSize, generateId } from '@/lib/utils'
 import { Upload, X, Film, FolderOpen, AlertCircle } from 'lucide-react'
 
 interface SequenceUploaderProps {
@@ -12,10 +13,12 @@ interface SequenceUploaderProps {
   existingFileId?: string
   initialFiles?: File[]
   onUploadComplete?: () => void
+  onUploadingChange?: (isUploading: boolean) => void
 }
 
-export function SequenceUploader({ projectId, existingFileId, initialFiles, onUploadComplete }: SequenceUploaderProps) {
+export function SequenceUploader({ projectId, existingFileId, initialFiles, onUploadComplete, onUploadingChange }: SequenceUploaderProps) {
   const { uploadSequence, uploading, uploadProgress, files } = useFileStore()
+  const { addTask, updateTask } = useUploadProgressStore()
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [sequenceName, setSequenceName] = useState('')
@@ -35,11 +38,12 @@ export function SequenceUploader({ projectId, existingFileId, initialFiles, onUp
         const sorted = [...initialFiles].sort((a, b) => a.name.localeCompare(b.name))
         setSelectedFiles(sorted)
 
-        // Auto-generate name if needed
-        if (!sequenceName) {
+        // Auto-generate name if needed (use setter callback to avoid stale closure)
+        setSequenceName(prev => {
+          if (prev) return prev // Don't overwrite if already set
           const baseName = sorted[0].name.replace(/\d+\..*$/, '').replace(/[_-]$/, '')
-          setSequenceName(baseName || 'Image Sequence')
-        }
+          return baseName || 'Image Sequence'
+        })
       }
     }
 
@@ -56,7 +60,8 @@ export function SequenceUploader({ projectId, existingFileId, initialFiles, onUp
         }
       }
     }
-  }, [existingFileId, files, initialFiles, sequenceName])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingFileId, files, initialFiles])
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -94,6 +99,22 @@ export function SequenceUploader({ projectId, existingFileId, initialFiles, onUp
       return
     }
 
+    // Register upload task in global store
+    const taskId = generateId()
+    addTask({
+      id: taskId,
+      projectId,
+      fileName: sequenceName.trim(),
+      fileType: 'sequence',
+      existingFileId,
+      status: 'uploading',
+      progress: 0,
+      totalFiles: selectedFiles.length,
+      completedFiles: 0,
+      startedAt: Date.now()
+    })
+    onUploadingChange?.(true)
+
     try {
       await uploadSequence(projectId, selectedFiles, sequenceName.trim(), fps, existingFileId)
       setSelectedFiles([])
@@ -101,9 +122,13 @@ export function SequenceUploader({ projectId, existingFileId, initialFiles, onUp
       setFps(24)
       setError(null)
       if (inputRef.current) inputRef.current.value = ''
+      updateTask(taskId, { status: 'success', progress: 100, completedFiles: selectedFiles.length })
+      onUploadingChange?.(false)
       onUploadComplete?.()
     } catch (err: any) {
       setError(err.message || 'Upload thất bại')
+      updateTask(taskId, { status: 'error', error: err.message || 'Upload thất bại' })
+      onUploadingChange?.(false)
     }
   }
 

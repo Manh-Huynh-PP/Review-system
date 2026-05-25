@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { useFileStore } from '@/stores/files'
+import { useUploadProgressStore } from '@/stores/uploadProgress'
+import { generateId } from '@/lib/utils'
 import {
   Link2, CheckCircle, AlertCircle, FileImage, Video, FileText, FolderOpen, Loader2, ExternalLink
 } from 'lucide-react'
@@ -26,6 +28,7 @@ const typeLabels: Record<string, { label: string; icon: React.ReactNode; color: 
 
 export function ExternalLinkUploader({ projectId, onUploadComplete }: ExternalLinkUploaderProps) {
   const { addExternalLink, addDriveFolderAsSequence, uploading, uploadProgress } = useFileStore()
+  const { addTask, updateTask } = useUploadProgressStore()
 
   const [url, setUrl] = useState('')
   const [name, setName] = useState('')
@@ -33,6 +36,14 @@ export function ExternalLinkUploader({ projectId, onUploadComplete }: ExternalLi
   const [manualType, setManualType] = useState<FileType | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [currentTaskId, setCurrentTaskId] = useState<string | null>(null)
+
+  // Sync progress to global popup
+  useEffect(() => {
+    if (currentTaskId && uploading) {
+      updateTask(currentTaskId, { progress: uploadProgress })
+    }
+  }, [uploadProgress, uploading, currentTaskId, updateTask])
 
   // Auto-detect type when URL changes
   useEffect(() => {
@@ -106,11 +117,27 @@ export function ExternalLinkUploader({ projectId, onUploadComplete }: ExternalLi
 
     setError(null)
 
+    const taskId = generateId()
+    setCurrentTaskId(taskId)
+    addTask({
+      id: taskId,
+      projectId,
+      fileName: detectedType === 'google_drive_folder' ? `Drive Folder: ${name.trim()}` : name.trim(),
+      fileType: detectedType === 'google_drive_folder' ? 'sequence' : 'single',
+      status: 'uploading',
+      progress: 0,
+      totalFiles: 1,
+      completedFiles: 0,
+      startedAt: Date.now()
+    })
+
     try {
       if (detectedType === 'google_drive_folder') {
         const driveInfo = parseDriveUrl(trimmedUrl)
         if (!driveInfo || driveInfo.type !== 'folder') {
+          updateTask(taskId, { status: 'error', error: 'Không thể nhận diện folder ID từ URL' })
           setError('Không thể nhận diện folder ID từ URL')
+          setCurrentTaskId(null)
           return
         }
         await addDriveFolderAsSequence(projectId, driveInfo.id, name.trim())
@@ -118,12 +145,16 @@ export function ExternalLinkUploader({ projectId, onUploadComplete }: ExternalLi
         await addExternalLink(projectId, trimmedUrl, name.trim(), getEffectiveType())
       }
 
+      updateTask(taskId, { status: 'success', progress: 100, completedFiles: 1 })
       setSuccess(true)
       setTimeout(() => {
         onUploadComplete?.()
       }, 1000)
     } catch (err: any) {
+      updateTask(taskId, { status: 'error', error: err.message || 'Thêm link thất bại' })
       setError(err.message || 'Thêm link thất bại')
+    } finally {
+      setCurrentTaskId(null)
     }
   }
 

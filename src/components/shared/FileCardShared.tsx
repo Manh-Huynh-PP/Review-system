@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { useTranslation } from 'react-i18next'
 import { useFileStore } from '@/stores/files'
 import { normalizeDriveUrl } from '@/utils/googleDrive'
+import { useState } from 'react'
 
 interface FileCardSharedProps {
   file: FileType
@@ -16,6 +17,7 @@ interface FileCardSharedProps {
   onClick: () => void
   onDelete?: () => void
   onToggleLock?: () => void
+  onDropFiles?: (files: File[]) => void
   isLocked?: boolean
   isAdmin?: boolean
   compact?: boolean
@@ -36,11 +38,13 @@ export function FileCardShared({
   onClick,
   onDelete,
   onToggleLock,
+  onDropFiles,
   isLocked,
   isAdmin,
   compact = false
 }: FileCardSharedProps) {
   const { t, i18n } = useTranslation(['fileView', 'common'])
+  const [isDragOver, setIsDragOver] = useState(false)
   
   const getFileTypeLabel = (type: string) => {
     if (type === 'image') return t('types.image')
@@ -161,15 +165,61 @@ export function FileCardShared({
     borderColor: `color-mix(in srgb, ${file.cardBackgroundColor}, transparent 60%)`,
   } : {};
 
+  const handleDragEnter = (e: React.DragEvent) => {
+    if (!isAdmin || !onDropFiles) return
+    e.preventDefault()
+    e.stopPropagation()
+    if (!isDragOver) setIsDragOver(true)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!isAdmin || !onDropFiles) return
+    e.preventDefault()
+    e.stopPropagation()
+    if (!isDragOver) setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!isAdmin || !onDropFiles) return
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    if (!isAdmin || !onDropFiles) return
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragOver(false)
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length > 0) {
+      onDropFiles(files)
+    }
+  }
+
   return (
     <div
       onClick={onClick}
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
       className={cn(
         "group relative rounded-xl border bg-card overflow-hidden transition-all duration-300 cursor-pointer flex flex-col",
-        file.cardBackgroundColor ? "border-opacity-50" : "hover:border-primary/50"
+        file.cardBackgroundColor ? "border-opacity-50" : "hover:border-primary/50",
+        isDragOver && "ring-2 ring-primary border-primary scale-[1.02] shadow-xl z-10"
       )}
       style={cardStyle}
     >
+
+      {/* Drag Overlay Indicator */}
+      {isDragOver && (
+        <div className="absolute inset-0 bg-primary/10 backdrop-blur-[2px] z-50 flex items-center justify-center pointer-events-none">
+          <Badge className="text-sm px-4 py-2 pointer-events-none shadow-lg animate-in zoom-in">
+            Tải lên phiên bản mới
+          </Badge>
+        </div>
+      )}
 
       {/* Thumbnail Container */}
       <div 

@@ -1334,6 +1334,7 @@ function GridFrameCard({
             src={url}
             alt={`Frame ${frameNumber + 1}`}
             className="w-full h-auto transition-transform group-hover/image:scale-105"
+            referrerPolicy="no-referrer"
           />
         )}
 
@@ -1547,6 +1548,7 @@ function SortableGridFrameCard({
             src={url}
             alt={`Frame ${frameNumber + 1}`}
             className="w-full h-auto"
+            referrerPolicy="no-referrer"
           />
         )}
 

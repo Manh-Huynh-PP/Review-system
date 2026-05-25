@@ -37,15 +37,17 @@ interface KanbanViewProps {
   columnOrder?: string[]
   onFileClick: (file: FileType) => void
   onColumnOrderChange?: (newOrder: string[]) => void
+  onDropFiles?: (fileId: string, files: File[]) => void
 }
 
 interface KanbanCardProps {
   file: FileType
   onClick: () => void
   isAdmin: boolean
+  onDropFiles?: (files: File[]) => void
 }
 
-function KanbanCard({ file, onClick, isAdmin }: KanbanCardProps) {
+function KanbanCard({ file, onClick, isAdmin, onDropFiles }: KanbanCardProps) {
   const { deleteFile, toggleFileLock } = useFileStore()
   const {
     attributes,
@@ -84,6 +86,7 @@ function KanbanCard({ file, onClick, isAdmin }: KanbanCardProps) {
         isLocked={file.isCommentsLocked}
         onDelete={() => deleteFile(file.projectId, file.id)}
         onToggleLock={() => toggleFileLock(file.projectId, file.id, !file.isCommentsLocked)}
+        onDropFiles={onDropFiles}
       />
     </div>
   )
@@ -96,7 +99,8 @@ function KanbanColumn({
   files, 
   onFileClick, 
   isAdmin,
-  isLast
+  isLast,
+  onDropFiles
 }: { 
   id: string, 
   title: string, 
@@ -104,7 +108,8 @@ function KanbanColumn({
   files: FileType[], 
   onFileClick: (file: FileType) => void,
   isAdmin: boolean,
-  isLast?: boolean
+  isLast?: boolean,
+  onDropFiles?: (fileId: string, files: File[]) => void
 }) {
   const { 
     attributes, 
@@ -168,6 +173,7 @@ function KanbanColumn({
                 file={file} 
                 onClick={() => onFileClick(file)} 
                 isAdmin={isAdmin}
+                onDropFiles={onDropFiles ? (files) => onDropFiles(file.id, files) : undefined}
               />
             </div>
           ))}
@@ -184,7 +190,8 @@ export function KanbanView({
   colorLabels = {}, 
   columnOrder = [],
   onFileClick,
-  onColumnOrderChange
+  onColumnOrderChange,
+  onDropFiles
 }: KanbanViewProps) {
   const { updateFileBackgroundColor } = useFileStore()
   const [activeFile, setActiveFile] = useState<FileType | null>(null)
@@ -351,6 +358,7 @@ export function KanbanView({
                 onFileClick={onFileClick}
                 isAdmin={isAdmin}
                 isLast={true}
+                onDropFiles={onDropFiles}
               />
             )}
           </div>
@@ -367,6 +375,7 @@ export function KanbanView({
                 onFileClick={onFileClick}
                 isAdmin={isAdmin}
                 isLast={idx === columns.length - 1}
+                onDropFiles={onDropFiles}
               />
             ))}
           </SortableContext>

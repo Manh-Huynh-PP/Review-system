@@ -47,6 +47,10 @@ export default function ProjectDetailPage() {
     return (localStorage.getItem('filesViewMode') as ViewMode) || 'grid'
   })
   
+  // Drag & drop states
+  const [isDragActive, setIsDragActive] = useState(false)
+  const [initialDroppedFiles, setInitialDroppedFiles] = useState<File[]>([])
+  
   // Save view mode preference
   useEffect(() => {
     localStorage.setItem('filesViewMode', viewMode)
@@ -118,8 +122,63 @@ export default function ProjectDetailPage() {
     return <div className="text-muted-foreground">Đang tải dự án...</div>
   }
 
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!isDragActive) {
+      setIsDragActive(true)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    // Kéo vào chỉ hiển thị nếu chưa có drag active hoặc target là container chính
+    if (!isDragActive) {
+      setIsDragActive(true)
+    }
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return
+    setIsDragActive(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragActive(false)
+
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length > 0) {
+      setInitialDroppedFiles(files)
+      setShowUploadDialog(true)
+    }
+  }
+
   return (
-    <div className="space-y-6">
+    <div 
+      className="space-y-6 relative min-h-[calc(100vh-100px)]"
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drag & Drop Main Overlay */}
+      {isDragActive && (
+        <div className="absolute inset-0 z-50 bg-primary/10 backdrop-blur-sm rounded-xl border-2 border-primary border-dashed flex items-center justify-center pointer-events-none">
+          <div className="bg-card/80 backdrop-blur-md p-8 rounded-2xl shadow-2xl flex flex-col items-center animate-in zoom-in-95">
+            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
+              <Upload className="w-8 h-8 text-primary animate-bounce" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">Thả file vào đây</h3>
+            <p className="text-muted-foreground">Các file sẽ được tải lên dự án này</p>
+          </div>
+        </div>
+      )}
+
       <SubscribersListDialog
         project={project}
         open={showSubscribers}
@@ -203,7 +262,11 @@ export default function ProjectDetailPage() {
               <UploadDialog
                 projectId={projectId}
                 open={showUploadDialog}
-                onOpenChange={setShowUploadDialog}
+                onOpenChange={(open) => {
+                  setShowUploadDialog(open)
+                  if (!open) setInitialDroppedFiles([])
+                }}
+                initialFiles={initialDroppedFiles.length > 0 ? initialDroppedFiles : undefined}
                 trigger={<span className="hidden" />}
               />
               <ExternalLinkDialog

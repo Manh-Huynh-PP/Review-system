@@ -251,6 +251,17 @@ export default function ReviewPage() {
 
 
 
+  // Update page title
+  useEffect(() => {
+    if (project) {
+      document.title = `${project.name} | Review system`
+    }
+
+    return () => {
+      document.title = 'Review system'
+    }
+  }, [project])
+
   // Show name prompt if user doesn't have a name
   useEffect(() => {
     if (!loading && !currentUserName) {

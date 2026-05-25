@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useFileStore } from '@/stores/files'
+import { useUploadProgressStore } from '@/stores/uploadProgress'
 import { useAuthStore } from '@/stores/auth'
 import { useCommentStore } from '@/stores/comments'
 import { useProjectStore } from '@/stores/projects'
@@ -82,6 +83,7 @@ export function FilesList({
   // Multi-select state (Controlled or Uncontrolled)
   const [internalIsSelectionMode, setInternalIsSelectionMode] = useState(false)
   const [internalSelectedFileIds, setInternalSelectedFileIds] = useState<Set<string>>(new Set())
+  const [dragOverListFileId, setDragOverListFileId] = useState<string | null>(null)
   
   const isSelectionMode = externalIsSelectionMode ?? internalIsSelectionMode
 
@@ -260,6 +262,38 @@ export function FilesList({
     await setSequenceViewMode(projectId, fileId, mode)
   }
 
+  const handleDropNewVersion = async (targetFileId: string, droppedFiles: File[]) => {
+    if (user && droppedFiles.length > 0) {
+      const file = droppedFiles[0]
+      const taskId = `drop-${Date.now()}`
+      const { addTask, updateTask, minimize } = useUploadProgressStore.getState()
+      
+      addTask({
+        id: taskId,
+        projectId,
+        fileName: file.name,
+        fileType: 'single',
+        existingFileId: targetFileId,
+        status: 'uploading',
+        progress: 0,
+        totalFiles: 1,
+        completedFiles: 0,
+        startedAt: Date.now()
+      })
+      
+      minimize({ projectId, defaultTab: 'single', existingFileId: targetFileId })
+
+      try {
+        await uploadFile(projectId, file, targetFileId, (progress) => {
+          updateTask(taskId, { progress, status: progress === 100 ? 'success' : 'uploading' })
+        })
+        updateTask(taskId, { status: 'success', progress: 100, completedFiles: 1 })
+      } catch (error: any) {
+        updateTask(taskId, { status: 'error', error: error.message || 'Lỗi tải lên' })
+      }
+    }
+  }
+
   const handleCaptionChange = async (fileId: string, version: number, frame: number, caption: string) => {
     await updateFrameCaption(projectId, fileId, version, frame, caption)
   }
@@ -422,6 +456,7 @@ export function FilesList({
                   onClick={() => isSelectionMode ? toggleFileSelection(file.id) : handleFileClick(file)}
                   onDelete={user && !isSelectionMode ? () => handleDeleteClick(file) : undefined}
                   onToggleLock={user && !isSelectionMode ? () => toggleFileLock(projectId, file.id, !file.isCommentsLocked) : undefined}
+                  onDropFiles={(files) => handleDropNewVersion(file.id, files)}
                   isLocked={file.isCommentsLocked}
                   isAdmin={!!user}
                 />
@@ -473,14 +508,44 @@ export function FilesList({
             return (
               <div
                 key={file.id}
+                onDragOver={(e) => {
+                  if (!user) return
+                  e.preventDefault()
+                  e.stopPropagation()
+                  if (dragOverListFileId !== file.id) setDragOverListFileId(file.id)
+                }}
+                onDragLeave={(e) => {
+                  if (!user) return
+                  e.preventDefault()
+                  e.stopPropagation()
+                  if (dragOverListFileId === file.id) setDragOverListFileId(null)
+                }}
+                onDrop={(e) => {
+                  if (!user) return
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setDragOverListFileId(null)
+                  const files = Array.from(e.dataTransfer.files)
+                  if (files.length > 0) handleDropNewVersion(file.id, files)
+                }}
                 className={cn(
-                  "group relative flex items-center gap-4 p-2.5 rounded-lg border transition-all cursor-pointer hover:bg-muted/30",
+                  "group relative flex items-center gap-4 p-2.5 rounded-lg border transition-all cursor-pointer hover:bg-muted/30 overflow-hidden",
                   isSelected ? "ring-2 ring-primary bg-primary/5 border-primary/50" : "bg-card",
+                  dragOverListFileId === file.id && "ring-2 ring-primary scale-[1.01] shadow-md z-10",
                   file.cardBackgroundColor && "border-opacity-50"
                 )}
                 style={rowStyle}
                 onClick={() => isSelectionMode ? toggleFileSelection(file.id) : handleFileClick(file)}
               >
+
+                {/* Drop Overlay Indicator */}
+                {dragOverListFileId === file.id && (
+                  <div className="absolute inset-0 bg-primary/10 backdrop-blur-[2px] z-50 flex items-center justify-center">
+                    <Badge className="text-xs px-3 py-1 pointer-events-none shadow-sm animate-in zoom-in">
+                      Tải lên phiên bản mới
+                    </Badge>
+                  </div>
+                )}
 
                 {isSelectionMode && (
                   <Checkbox checked={isSelected} onCheckedChange={() => toggleFileSelection(file.id)} className="h-4 w-4 ml-1" onClick={e => e.stopPropagation()} />
@@ -541,6 +606,7 @@ export function FilesList({
           columnOrder={columnOrder}
           onColumnOrderChange={onColumnOrderChange}
           onFileClick={handleFileClick}
+          onDropFiles={handleDropNewVersion}
         />
       )}
 

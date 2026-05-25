@@ -22,6 +22,7 @@ import toast from 'react-hot-toast'
 
 interface FileState {
   files: FileModel[]
+  loadingFiles: boolean
   selectedFile: FileModel | null
   uploading: boolean
   uploadProgress: number
@@ -68,6 +69,7 @@ interface FileState {
 
 export const useFileStore = create<FileState>((set, get) => ({
   files: [],
+  loadingFiles: true,
   selectedFile: null,
   uploading: false,
   uploadProgress: 0,
@@ -81,6 +83,8 @@ export const useFileStore = create<FileState>((set, get) => ({
 
       return
     }
+
+    set({ loadingFiles: true })
 
     const q = query(
       collection(db, 'projects', projectId, 'files'),
@@ -99,10 +103,10 @@ export const useFileStore = create<FileState>((set, get) => ({
       const otherProjectFiles = currentFiles.filter(f => f.projectId !== projectId)
       const allFiles = [...otherProjectFiles, ...projectFiles]
 
-      set({ files: allFiles, error: null })
+      set({ files: allFiles, error: null, loadingFiles: false })
     }, (error) => {
       const errorMessage = 'Lỗi tải file: ' + error.message
-      set({ error: errorMessage })
+      set({ error: errorMessage, loadingFiles: false })
       toast.error(errorMessage)
     })
 

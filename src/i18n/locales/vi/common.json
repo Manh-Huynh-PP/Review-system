@@ -9,11 +9,13 @@
     "save": "Lưu thay đổi",
     "delete": "Xóa",
     "view": "Xem",
+    "viewDetail": "Xem chi tiết",
     "lock": "Khóa bình luận",
     "unlock": "Mở khóa bình luận",
     "retry": "Thử lại",
     "close": "Đóng",
-    "back": "Quay lại"
+    "back": "Quay lại",
+    "searchFiles": "Tìm kiếm file..."
   },
   "status": {
     "loading": "Đang tải...",

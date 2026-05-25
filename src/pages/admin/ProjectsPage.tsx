@@ -19,7 +19,7 @@ type SortOption = 'newest' | 'oldest' | 'name' | 'deadline' | 'updated'
 type ViewMode = 'list' | 'thumbnails'
 
 export default function ProjectsPage() {
-  const { projects, subscribeToProjects, isSubscribed } = useProjectStore()
+  const { projects, subscribeToProjects, loadingProjects, isSubscribed } = useProjectStore()
   const { subscribeToFiles, cleanup: cleanupFiles } = useFileStore()
   const user = useAuthStore(s => s.user)
   const [searchQuery, setSearchQuery] = useState('')
@@ -226,18 +226,32 @@ export default function ProjectsPage() {
           ? 'grid gap-4'
           : 'grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
       }>
-        {filteredAndSortedProjects.map(p => (
-          <ProjectCard key={p.id} project={p} viewMode={viewMode} />
-        ))}
-        {filteredAndSortedProjects.length === 0 && projects.length > 0 && (
-          <p className="text-muted-foreground text-center py-8 col-span-full">
-            Không tìm thấy dự án phù hợp
-          </p>
-        )}
-        {projects.length === 0 && (
-          <p className="text-muted-foreground text-center py-8 col-span-full">
-            Chưa có dự án nào. Hãy tạo dự án mới.
-          </p>
+        {loadingProjects ? (
+          viewMode === 'list' ? (
+            [...Array(5)].map((_, i) => (
+              <div key={i} className="h-[72px] w-full bg-muted/40 rounded-lg animate-pulse border" />
+            ))
+          ) : (
+            [...Array(8)].map((_, i) => (
+              <div key={i} className="h-[210px] w-full bg-muted/40 rounded-xl animate-pulse border" />
+            ))
+          )
+        ) : (
+          <>
+            {filteredAndSortedProjects.map(p => (
+              <ProjectCard key={p.id} project={p} viewMode={viewMode} />
+            ))}
+            {filteredAndSortedProjects.length === 0 && projects.length > 0 && (
+              <p className="text-muted-foreground text-center py-8 col-span-full">
+                Không tìm thấy dự án phù hợp
+              </p>
+            )}
+            {projects.length === 0 && (
+              <p className="text-muted-foreground text-center py-8 col-span-full">
+                Chưa có dự án nào. Hãy tạo dự án mới.
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>

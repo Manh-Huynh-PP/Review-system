@@ -1,4 +1,5 @@
 import { Search, X, ArrowUpDown, FileType, Calendar, Download, Grid3x3, List, Columns } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -47,6 +48,7 @@ export function FileFilters({
   colorLabels = {},
   children
 }: FileFiltersProps) {
+  const { t } = useTranslation(['common'])
 
   const toggleColor = (color: string) => {
     if (selectedColors.includes(color)) {
@@ -68,7 +70,7 @@ export function FileFilters({
         <div className="relative flex-1 max-w-full md:max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Tìm kiếm file..."
+            placeholder={t('actions.searchFiles')}
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             className="pl-10 pr-10 h-10 bg-card/50 backdrop-blur-sm border-primary/10 focus-visible:ring-primary/20 transition-all"

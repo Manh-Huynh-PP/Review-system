@@ -31,7 +31,9 @@ export default function ProjectDetailPage() {
   const { handleBulkDownload } = useBulkDownload()
   const comments = useCommentStore(s => s.comments)
 
-  const [project, setProject] = useState(projects.find(p => p.id === projectId) || null)
+  const initialProject = useMemo(() => projects.find(p => p.id === projectId) || null, [projects, projectId])
+  const [project, setProject] = useState(initialProject)
+  const [isChecking, setIsChecking] = useState(!initialProject)
   const [sortBy, setSortBy] = useState<SortOption>('date')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [searchTerm, setSearchTerm] = useState('')
@@ -96,11 +98,15 @@ export default function ProjectDetailPage() {
     if (!projectId) return
     const ref = doc(db, 'projects', projectId)
     const off = onSnapshot(ref, (snap) => {
+      setIsChecking(false)
       if (snap.exists()) {
         setProject({ id: snap.id, ...(snap.data() as any) })
       } else {
         setProject(null)
       }
+    }, (error) => {
+      console.error('Error subscribing to project:', error)
+      setIsChecking(false)
     })
     return off
   }, [projectId])
@@ -118,8 +124,59 @@ export default function ProjectDetailPage() {
 
 
 
+  if (isChecking) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-2">
+            <div className="h-8 bg-muted rounded w-48" />
+            <div className="h-4 bg-muted rounded w-24" />
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="h-10 bg-muted rounded w-24" />
+            <div className="h-10 bg-muted rounded w-28" />
+            <div className="h-10 bg-muted rounded w-28" />
+          </div>
+        </div>
+
+        {/* Filters Skeleton */}
+        <div className="h-14 bg-muted/20 rounded-xl border border-primary/5" />
+
+        {/* Files List Skeleton */}
+        <div className="rounded-xl border bg-card overflow-hidden p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="rounded-xl border bg-card overflow-hidden">
+                <div className="aspect-video bg-muted" />
+                <div className="p-4 space-y-3">
+                  <div className="h-4 bg-muted rounded w-3/4" />
+                  <div className="flex justify-between">
+                    <div className="h-3 bg-muted rounded w-1/4" />
+                    <div className="h-3 bg-muted rounded w-1/4" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (!project) {
-    return <div className="text-muted-foreground">Đang tải dự án...</div>
+    return (
+      <div className="min-h-[400px] flex flex-col items-center justify-center text-center space-y-4">
+        <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+          <svg className="w-8 h-8 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-bold">Không tìm thấy dự án</h2>
+        <p className="text-muted-foreground max-w-sm">Dự án này không tồn tại hoặc đã bị xóa vĩnh viễn.</p>
+        <Button onClick={() => window.history.back()} variant="outline">Quay lại</Button>
+      </div>
+    )
   }
 
   const handleDragEnter = (e: React.DragEvent) => {

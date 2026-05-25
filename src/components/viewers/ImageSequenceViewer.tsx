@@ -1367,7 +1367,7 @@ function GridFrameCard({
         >
           <div className="bg-background/90 text-foreground px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 hover:bg-background transition-colors transform scale-90 group-hover/image:scale-100 transition-transform shadow-sm cursor-pointer pointer-events-auto">
             <Maximize2 className="w-3 h-3" />
-            Xem chi tiết
+            {t('common:actions.viewDetail')}
           </div>
           {isAdmin && !caption && (
             <div 
@@ -1574,7 +1574,7 @@ function SortableGridFrameCard({
         >
           <div className="bg-background/90 text-foreground px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 hover:bg-background transition-colors transform scale-90 group-hover/image:scale-100 transition-transform shadow-sm cursor-pointer pointer-events-auto">
             <Maximize2 className="w-3 h-3" />
-            Xem chi tiết
+            {t('common:actions.viewDetail')}
           </div>
           {_isAdmin && !caption && (
             <div 

@@ -51,9 +51,24 @@ export default function ReviewPage() {
   const { theme, toggleTheme } = useThemeStore()
   const { projectId, fileId } = useParams<{ projectId: string; fileId?: string }>()
   const { project, fetchProject } = useProjectStore()
-  const { files, subscribeToFiles, cleanup: cleanupFiles } = useFileStore()
+  const { files, loadingFiles, subscribeToFiles, cleanup: cleanupFiles } = useFileStore()
   const { subscribeToComments, cleanup: cleanupComments } = useCommentStore()
   const { user } = useAuthStore()
+
+  const projectFiles = useMemo(() => {
+    return files.filter(f => f.projectId === projectId && !f.isTrashed)
+  }, [files, projectId])
+
+  const [isVerifyingEmpty, setIsVerifyingEmpty] = useState(true)
+
+  useEffect(() => {
+    if (!loadingFiles && projectFiles.length === 0) {
+      const timer = setTimeout(() => setIsVerifyingEmpty(false), 800)
+      return () => clearTimeout(timer)
+    } else {
+      setIsVerifyingEmpty(true)
+    }
+  }, [loadingFiles, projectFiles.length])
 
   const [currentUserName, setCurrentUserName] = useState(() => {
     return localStorage.getItem('reviewUserName') || ''
@@ -494,8 +509,6 @@ export default function ReviewPage() {
     )
   }
 
-  const projectFiles = files.filter(f => f.projectId === projectId && !f.isTrashed)
-
   const isArchived = project.status === 'archived'
 
   return (
@@ -864,15 +877,7 @@ export default function ReviewPage() {
 
       {/* Content */}
       <div className="container mx-auto px-4 py-8">
-        {projectFiles.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
-              <span className="text-2xl">📁</span>
-            </div>
-            <div className="text-lg font-medium mb-2">{t('common:status.noDocuments')}</div>
-            <div className="text-sm text-muted-foreground">{t('common:status.noDocumentsDesc')}</div>
-          </div>
-        ) : (
+        {loadingFiles || isVerifyingEmpty || projectFiles.length > 0 ? (
           <div className="space-y-6">
             {/* Filters */}
             <div className="bg-card/30 backdrop-blur-sm p-4 rounded-xl border border-primary/5 shadow-sm">
@@ -910,6 +915,14 @@ export default function ReviewPage() {
                 />
               </div>
             </div>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+              <span className="text-2xl">📁</span>
+            </div>
+            <div className="text-lg font-medium mb-2">{t('common:status.noDocuments')}</div>
+            <div className="text-sm text-muted-foreground">{t('common:status.noDocumentsDesc')}</div>
           </div>
         )}
       </div>

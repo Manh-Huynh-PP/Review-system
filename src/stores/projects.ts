@@ -22,6 +22,7 @@ interface ProjectState {
   project: Project | null
   selectedProject: Project | null
   loading: boolean
+  loadingProjects: boolean
   isSubscribed: boolean
   currentAdminEmail: string | null
   unsubscribe: Unsubscribe | null
@@ -45,6 +46,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   project: null,
   selectedProject: null,
   loading: false,
+  loadingProjects: true,
   isSubscribed: false,
   currentAdminEmail: null,
   unsubscribe: null,
@@ -84,7 +86,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
 
 
-    set({ isSubscribed: true, currentAdminEmail: adminEmail })
+    set({ isSubscribed: true, currentAdminEmail: adminEmail, loadingProjects: true })
 
     const baseCol = collection(db, 'projects')
 
@@ -101,7 +103,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         ...doc.data()
       })) as Project[]
 
-      set({ projects })
+      set({ projects, loadingProjects: false })
     }, (error: any) => {
       // Graceful fallback while Firestore builds the index
       const msg = String(error?.message || '')
@@ -111,17 +113,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         const off2 = onSnapshot(fallback, (snapshot2) => {
           const projects = snapshot2.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[]
 
-          set({ projects })
+          set({ projects, loadingProjects: false })
         }, (err2) => {
           toast.error('Lỗi tải dự án (fallback): ' + (err2?.message || ''))
           console.error('[projects] fallback error', err2)
-          set({ isSubscribed: false })
+          set({ isSubscribed: false, loadingProjects: false })
         })
         set({ unsubscribe: off2 })
       } else {
         toast.error('Lỗi tải dự án: ' + (error?.message || ''))
         console.error('[projects] onSnapshot error', error)
-        set({ isSubscribed: false })
+        set({ isSubscribed: false, loadingProjects: false })
       }
     })
 
@@ -301,6 +303,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         projects: [],
         selectedProject: null,
         isSubscribed: false,
+        loadingProjects: true,
         currentAdminEmail: null
       })
     }

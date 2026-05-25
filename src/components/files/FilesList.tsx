@@ -66,7 +66,7 @@ export function FilesList({
   columnOrder = [],
   onColumnOrderChange
 }: FilesListProps) {
-  const { files, switchVersion, deleteFile, deleting, uploadFile, setSequenceViewMode, updateFrameCaption, renameFile, toggleFileLock, selectedFile: storeSelectedFile, selectFile: storeSelectFile, updateFileBackgroundColor } = useFileStore()
+  const { files, loadingFiles, switchVersion, deleteFile, deleting, uploadFile, setSequenceViewMode, updateFrameCaption, renameFile, toggleFileLock, selectedFile: storeSelectedFile, selectFile: storeSelectFile, updateFileBackgroundColor } = useFileStore()
   const { comments, subscribeToComments, addComment, toggleResolve, editComment, deleteComment, cleanup: cleanupComments } = useCommentStore()
   const { user } = useAuthStore()
   const project = useProjectStore(s => s.project)
@@ -81,11 +81,24 @@ export function FilesList({
   const [displayLimit, setDisplayLimit] = useState(20)
 
   // Multi-select state (Controlled or Uncontrolled)
-  const [internalIsSelectionMode, setInternalIsSelectionMode] = useState(false)
+  const [isInternalSelectionMode, setInternalIsSelectionMode] = useState(false)
+  const isSelectionMode = externalIsSelectionMode ?? isInternalSelectionMode
+
+  const [isVerifyingEmpty, setIsVerifyingEmpty] = useState(true)
+
+  // Use debounce to prevent "No document yet" from flashing when Firebase returns initial empty array from cache
+  useEffect(() => {
+    if (!loadingFiles && files.length === 0) {
+      const timer = setTimeout(() => setIsVerifyingEmpty(false), 800)
+      return () => clearTimeout(timer)
+    } else {
+      setIsVerifyingEmpty(true)
+    }
+  }, [loadingFiles, files.length])
+
+  // Lấy các file có parentId = undefined (file gốc))
   const [internalSelectedFileIds, setInternalSelectedFileIds] = useState<Set<string>>(new Set())
   const [dragOverListFileId, setDragOverListFileId] = useState<string | null>(null)
-  
-  const isSelectionMode = externalIsSelectionMode ?? internalIsSelectionMode
 
   const selectedFileIds = externalSelectedFileIds ?? internalSelectedFileIds
   const setSelectedFileIds = (update: Set<string> | ((prev: Set<string>) => Set<string>)) => {
@@ -380,6 +393,41 @@ export function FilesList({
     } finally {
       setBulkDeleting(false)
     }
+  }
+
+  if (loadingFiles || (files.length === 0 && isVerifyingEmpty)) {
+    if (viewMode === 'list') {
+      return (
+        <div className="space-y-2 mt-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 p-2.5 rounded-lg border bg-card animate-pulse">
+              <div className="w-14 h-14 rounded bg-muted flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-muted rounded w-1/3" />
+                <div className="h-3 bg-muted rounded w-1/4" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )
+    }
+
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
+        {[...Array(8)].map((_, i) => (
+          <div key={i} className="rounded-xl border bg-card overflow-hidden animate-pulse">
+            <div className="aspect-video bg-muted" />
+            <div className="p-4 space-y-3">
+              <div className="h-4 bg-muted rounded w-3/4" />
+              <div className="flex justify-between">
+                <div className="h-3 bg-muted rounded w-1/4" />
+                <div className="h-3 bg-muted rounded w-1/4" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
   }
 
   if (!filteredAndSortedFiles.length) {

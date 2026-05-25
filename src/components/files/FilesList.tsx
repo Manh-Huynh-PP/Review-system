@@ -40,6 +40,9 @@ interface FilesListProps {
   colorLabels?: Record<string, string>
   columnOrder?: string[]
   onColumnOrderChange?: (newOrder: string[]) => void
+  thumbnailSize?: 'sm' | 'md' | 'lg'
+  selectedTypes?: string[]
+  onCardDragStateChange?: (isDragging: boolean, isDropped?: boolean) => void
 }
 
 const getFileTypeLabel = (type: string) => {
@@ -64,7 +67,10 @@ export function FilesList({
   onSelectedFileIdsChange,
   colorLabels = {},
   columnOrder = [],
-  onColumnOrderChange
+  onColumnOrderChange,
+  thumbnailSize = 'md',
+  selectedTypes = [],
+  onCardDragStateChange
 }: FilesListProps) {
   const { files, loadingFiles, switchVersion, deleteFile, deleting, uploadFile, setSequenceViewMode, updateFrameCaption, renameFile, toggleFileLock, selectedFile: storeSelectedFile, selectFile: storeSelectFile, updateFileBackgroundColor } = useFileStore()
   const { comments, subscribeToComments, addComment, toggleResolve, editComment, deleteComment, cleanup: cleanupComments } = useCommentStore()
@@ -341,6 +347,11 @@ export function FilesList({
       })
     }
 
+    // Filter by file type
+    if (selectedTypes.length > 0) {
+      filtered = filtered.filter(file => selectedTypes.includes(file.type))
+    }
+
     const sorted = [...filtered].sort((a, b) => {
       let compareValue = 0
       switch (sortBy) {
@@ -358,7 +369,7 @@ export function FilesList({
       return sortDirection === 'asc' ? compareValue : -compareValue
     })
     return sorted
-  }, [files, sortBy, sortDirection, searchTerm, selectedColors])
+  }, [files, sortBy, sortDirection, searchTerm, selectedColors, selectedTypes])
 
   const displayedFiles = filteredAndSortedFiles.slice(0, displayLimit)
   const hasMore = filteredAndSortedFiles.length > displayLimit
@@ -412,8 +423,15 @@ export function FilesList({
       )
     }
 
+    const gridColsClass = cn(
+      "grid mt-4",
+      thumbnailSize === 'sm' && "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4",
+      thumbnailSize === 'md' && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6",
+      thumbnailSize === 'lg' && "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8"
+    )
+
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-4">
+      <div className={gridColsClass}>
         {[...Array(8)].map((_, i) => (
           <div key={i} className="rounded-xl border bg-card overflow-hidden animate-pulse">
             <div className="aspect-video bg-muted" />
@@ -483,7 +501,12 @@ export function FilesList({
       )}
 
       {viewMode === 'grid' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className={cn(
+          "grid",
+          thumbnailSize === 'sm' && "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4",
+          thumbnailSize === 'md' && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6",
+          thumbnailSize === 'lg' && "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8"
+        )}>
           {displayedFiles.map((file) => {
             const current = file.versions.find(v => v.version === file.currentVersion) || file.versions[0]
             const effectiveUrl = resolvedUrls[getKey(file.id, current?.version ?? 1)] ?? current?.url
@@ -505,6 +528,7 @@ export function FilesList({
                   onDelete={user && !isSelectionMode ? () => handleDeleteClick(file) : undefined}
                   onToggleLock={user && !isSelectionMode ? () => toggleFileLock(projectId, file.id, !file.isCommentsLocked) : undefined}
                   onDropFiles={(files) => handleDropNewVersion(file.id, files)}
+                  onDragStateChange={onCardDragStateChange}
                   isLocked={file.isCommentsLocked}
                   isAdmin={!!user}
                 />
@@ -560,19 +584,26 @@ export function FilesList({
                   if (!user) return
                   e.preventDefault()
                   e.stopPropagation()
-                  if (dragOverListFileId !== file.id) setDragOverListFileId(file.id)
+                  if (dragOverListFileId !== file.id) {
+                    setDragOverListFileId(file.id)
+                    onCardDragStateChange?.(true)
+                  }
                 }}
                 onDragLeave={(e) => {
                   if (!user) return
                   e.preventDefault()
                   e.stopPropagation()
-                  if (dragOverListFileId === file.id) setDragOverListFileId(null)
+                  if (dragOverListFileId === file.id) {
+                    setDragOverListFileId(null)
+                    onCardDragStateChange?.(false, false)
+                  }
                 }}
                 onDrop={(e) => {
                   if (!user) return
                   e.preventDefault()
                   e.stopPropagation()
                   setDragOverListFileId(null)
+                  onCardDragStateChange?.(false, true)
                   const files = Array.from(e.dataTransfer.files)
                   if (files.length > 0) handleDropNewVersion(file.id, files)
                 }}
@@ -655,6 +686,7 @@ export function FilesList({
           onColumnOrderChange={onColumnOrderChange}
           onFileClick={handleFileClick}
           onDropFiles={handleDropNewVersion}
+          onCardDragStateChange={onCardDragStateChange}
         />
       )}
 

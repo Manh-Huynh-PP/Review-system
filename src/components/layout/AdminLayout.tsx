@@ -62,7 +62,7 @@ export function AdminLayout() {
     <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Compact Header */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-14 items-center justify-between px-3 sm:px-4">
+        <div className="max-w-[1600px] w-full mx-auto flex h-14 items-center justify-between px-3 sm:px-6">
           {/* Left: Logo + Mobile Menu */}
           <div className="flex items-center gap-2">
             {/* Mobile Menu Button */}
@@ -252,7 +252,7 @@ export function AdminLayout() {
         </DialogContent>
       </Dialog>
 
-      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
+      <main className="max-w-[1600px] w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 md:py-8">
         <Outlet />
       </main>
     </div>

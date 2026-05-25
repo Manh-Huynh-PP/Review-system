@@ -1,6 +1,6 @@
 // Force Vite HMR re-index
 import { Badge } from '@/components/ui/badge'
-import { FileImage, Video, Box, FileText, MessageSquare, Lock, Play, Trash2 } from 'lucide-react'
+import { FileImage, Video, Box, FileText, MessageSquare, Lock, Play, Trash2, RefreshCw } from 'lucide-react'
 import type { File as FileType } from '@/types'
 import { cn } from '@/lib/utils'
 import { CardColorPicker } from './CardColorPicker'
@@ -18,6 +18,7 @@ interface FileCardSharedProps {
   onDelete?: () => void
   onToggleLock?: () => void
   onDropFiles?: (files: File[]) => void
+  onDragStateChange?: (isDragging: boolean, isDropped?: boolean) => void
   isLocked?: boolean
   isAdmin?: boolean
   compact?: boolean
@@ -39,6 +40,7 @@ export function FileCardShared({
   onDelete,
   onToggleLock,
   onDropFiles,
+  onDragStateChange,
   isLocked,
   isAdmin,
   compact = false
@@ -169,14 +171,20 @@ export function FileCardShared({
     if (!isAdmin || !onDropFiles) return
     e.preventDefault()
     e.stopPropagation()
-    if (!isDragOver) setIsDragOver(true)
+    if (!isDragOver) {
+      setIsDragOver(true)
+      onDragStateChange?.(true)
+    }
   }
 
   const handleDragOver = (e: React.DragEvent) => {
     if (!isAdmin || !onDropFiles) return
     e.preventDefault()
     e.stopPropagation()
-    if (!isDragOver) setIsDragOver(true)
+    if (!isDragOver) {
+      setIsDragOver(true)
+      onDragStateChange?.(true)
+    }
   }
 
   const handleDragLeave = (e: React.DragEvent) => {
@@ -184,6 +192,7 @@ export function FileCardShared({
     e.preventDefault()
     e.stopPropagation()
     setIsDragOver(false)
+    onDragStateChange?.(false, false)
   }
 
   const handleDrop = (e: React.DragEvent) => {
@@ -191,6 +200,7 @@ export function FileCardShared({
     e.preventDefault()
     e.stopPropagation()
     setIsDragOver(false)
+    onDragStateChange?.(false, true)
     const files = Array.from(e.dataTransfer.files)
     if (files.length > 0) {
       onDropFiles(files)
@@ -214,10 +224,13 @@ export function FileCardShared({
 
       {/* Drag Overlay Indicator */}
       {isDragOver && (
-        <div className="absolute inset-0 bg-primary/10 backdrop-blur-[2px] z-50 flex items-center justify-center pointer-events-none">
-          <Badge className="text-sm px-4 py-2 pointer-events-none shadow-lg animate-in zoom-in">
-            Tải lên phiên bản mới
-          </Badge>
+        <div className="absolute inset-0 bg-zinc-100/70 dark:bg-zinc-900/70 backdrop-blur-[2px] z-50 flex items-center justify-center pointer-events-none p-2 rounded-xl">
+          <div className="absolute inset-1.5 border-2 border-dashed border-zinc-400/80 dark:border-zinc-600/80 rounded-lg flex items-center justify-center">
+            <Badge className="bg-zinc-200/95 dark:bg-zinc-800/95 hover:bg-zinc-200/95 text-zinc-800 dark:text-zinc-200 border border-zinc-300/80 dark:border-zinc-700/80 text-[11px] px-3 py-1.5 pointer-events-none shadow-md animate-in zoom-in font-bold flex items-center gap-1.5">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '3s' }} />
+              {t('common:dragDrop.uploadNewVersion')}
+            </Badge>
+          </div>
         </div>
       )}
 

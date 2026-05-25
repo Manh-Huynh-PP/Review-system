@@ -28,5 +28,41 @@
     "version": "Phiên bản",
     "current": "hiện tại",
     "date": "Ngày tải lên"
+  },
+  "filters": {
+    "title": "Bộ lọc & Sắp xếp",
+    "search": "Tìm kiếm",
+    "viewMode": "Chế độ xem",
+    "viewGrid": "Lưới",
+    "viewList": "D.Sách",
+    "viewKanban": "Kanban",
+    "tagColors": "Màu sắc thẻ",
+    "sortBy": "Sắp xếp theo",
+    "sortOrder": "Thứ tự sắp xếp",
+    "sortAscending": "Tăng dần",
+    "sortDescending": "Giảm dần",
+    "fileName": "Tên file",
+    "uploadDate": "Ngày tải lên",
+    "fileType": "Loại file",
+    "fileSize": "Kích thước",
+    "thumbnailSize": "Kích thước thumbnail",
+    "sizeSmall": "Nhỏ",
+    "sizeMedium": "Vừa",
+    "sizeLarge": "Lớn",
+    "fileTypes": "Loại file",
+    "typeImage": "Hình ảnh",
+    "typeVideo": "Video",
+    "typeModel": "Mô hình 3D",
+    "typeSequence": "Image Sequence",
+    "typePdf": "PDF",
+    "typeFile": "Tệp tin",
+    "clearAll": "Xóa bộ lọc",
+    "activeFilters": "Đang lọc: {{count}}"
+  },
+  "dragDrop": {
+    "uploadNewFile": "Tải lên tài liệu mới",
+    "uploadNewFileDesc": "Thả vào khoảng trống để thêm vào dự án",
+    "uploadNewVersion": "Tải lên phiên bản mới",
+    "uploadNewVersionDesc": "Thả vào tệp để cập nhật phiên bản"
   }
 }

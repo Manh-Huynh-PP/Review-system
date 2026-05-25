@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dialog"
 import { useBulkDownload } from '@/hooks/useBulkDownload'
 import { DownloadProgressDialog } from '@/components/dashboard/DownloadProgressDialog'
-import { Archive, ExternalLink, Menu, Globe } from 'lucide-react'
+import { Archive, ExternalLink, Menu, Globe, SlidersHorizontal } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
@@ -60,6 +60,7 @@ export default function ReviewPage() {
   }, [files, projectId])
 
   const [isVerifyingEmpty, setIsVerifyingEmpty] = useState(true)
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false)
 
   useEffect(() => {
     if (!loadingFiles && projectFiles.length === 0) {
@@ -114,6 +115,18 @@ export default function ReviewPage() {
   const [sortBy, setSortBy] = useState<SortOption>('date')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [selectedColors, setSelectedColors] = useState<string[]>([])
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([])
+
+  const availableTypes = useMemo(() => {
+    if (!files || !projectId) return []
+    const projectFiles = files.filter(f => f.projectId === projectId && !f.isTrashed)
+    const types = new Set<string>()
+    projectFiles.forEach(f => {
+      if (f.type) types.add(f.type)
+    })
+    return Array.from(types)
+  }, [files, projectId])
+
 
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     return (localStorage.getItem('filesViewMode') as ViewMode) || 'grid'
@@ -122,6 +135,14 @@ export default function ReviewPage() {
   useEffect(() => {
     localStorage.setItem('filesViewMode', viewMode)
   }, [viewMode])
+
+  const [thumbnailSize, setThumbnailSize] = useState<'sm' | 'md' | 'lg'>(() => {
+    return (localStorage.getItem('filesThumbnailSize') as 'sm' | 'md' | 'lg') || 'md'
+  })
+
+  useEffect(() => {
+    localStorage.setItem('filesThumbnailSize', thumbnailSize)
+  }, [thumbnailSize])
 
   const availableColors = useMemo(() => {
     if (!files || !projectId) return []
@@ -876,11 +897,33 @@ export default function ReviewPage() {
       )}
 
       {/* Content */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="max-w-[1600px] w-full mx-auto px-4 lg:px-6 py-8">
         {loadingFiles || isVerifyingEmpty || projectFiles.length > 0 ? (
-          <div className="space-y-6">
-            {/* Filters */}
-            <div className="bg-card/30 backdrop-blur-sm p-4 rounded-xl border border-primary/5 shadow-sm">
+          <div className="flex flex-col lg:flex-row gap-4 items-start">
+            
+            {/* Mobile Filter Toggle */}
+            <div className="lg:hidden flex items-center justify-between bg-card p-3 rounded-lg border w-full">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsMobileFiltersOpen(true)}
+                className="gap-2 text-xs font-bold"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                <span>{t('common:filters.title')}</span>
+                {(searchTerm || selectedColors.length > 0 || selectedTypes.length > 0) && (
+                  <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[10px] h-4 bg-primary/20 text-primary border-transparent">
+                    {(searchTerm ? 1 : 0) + selectedColors.length + selectedTypes.length}
+                  </Badge>
+                )}
+              </Button>
+              <div className="text-xs text-muted-foreground font-medium">
+                {projectFiles.length} {t('common:status.noDocumentsDesc').includes('file') ? 'files' : 'tài liệu'}
+              </div>
+            </div>
+
+            {/* Desktop Sidebar (Filters) */}
+            <aside className="hidden lg:block w-60 shrink-0 lg:sticky lg:top-6 h-fit bg-card/30 backdrop-blur-sm p-5 rounded-xl border border-primary/5 shadow-sm">
               <FileFilters
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
@@ -894,12 +937,42 @@ export default function ReviewPage() {
                 onColorsChange={setSelectedColors}
                 availableColors={availableColors}
                 colorLabels={project?.colorLabels}
-              >
-              </FileFilters>
-            </div>
+                thumbnailSize={thumbnailSize}
+                onThumbnailSizeChange={setThumbnailSize}
+                availableTypes={availableTypes}
+                selectedTypes={selectedTypes}
+                onTypesChange={setSelectedTypes}
+              />
+            </aside>
 
-            {/* Files List */}
-            <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+            {/* Mobile Sidebar Drawer (Overlay) */}
+            {isMobileFiltersOpen && (
+              <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-md p-6 overflow-y-auto lg:hidden animate-in fade-in slide-in-from-bottom-5">
+                <FileFilters
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  sortBy={sortBy}
+                  onSortChange={setSortBy}
+                  sortDirection={sortDirection}
+                  onSortDirectionToggle={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+                  viewMode={viewMode}
+                  onViewModeChange={setViewMode}
+                  selectedColors={selectedColors}
+                  onColorsChange={setSelectedColors}
+                  availableColors={availableColors}
+                  colorLabels={project?.colorLabels}
+                  onClose={() => setIsMobileFiltersOpen(false)}
+                  thumbnailSize={thumbnailSize}
+                  onThumbnailSizeChange={setThumbnailSize}
+                  availableTypes={availableTypes}
+                  selectedTypes={selectedTypes}
+                  onTypesChange={setSelectedTypes}
+                />
+              </div>
+            )}
+
+            {/* Files List Content */}
+            <main className="flex-1 min-w-0 w-full bg-card rounded-xl border shadow-sm overflow-hidden">
               <div className={cn(
                 viewMode !== 'kanban' && "p-6"
               )}>
@@ -912,9 +985,11 @@ export default function ReviewPage() {
                   viewMode={viewMode}
                   colorLabels={project?.colorLabels}
                   columnOrder={project?.kanbanColumnOrder}
+                  thumbnailSize={thumbnailSize}
+                  selectedTypes={selectedTypes}
                 />
               </div>
-            </div>
+            </main>
           </div>
         ) : (
           <div className="text-center py-12">

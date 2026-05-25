@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useProjectStore } from '@/stores/projects'
 import { useFileStore } from '@/stores/files'
@@ -7,14 +7,16 @@ import { UploadDialog } from '@/components/files/UploadDialog'
 import { UploadProgressPopup } from '@/components/files/UploadProgressPopup'
 import { ExternalLinkDialog } from '@/components/files/ExternalLinkDialog'
 import { FilesList } from '@/components/files/FilesList'
+import { DragTooltip } from '@/components/files/DragTooltip'
 import { db } from '@/lib/firebase'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Share2, Check, Mail, Link, Settings, Upload, ChevronDown, Plus, Link2 } from 'lucide-react'
+import { Share2, Check, Mail, Link, Settings, Upload, ChevronDown, Plus, Link2, SlidersHorizontal } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { ProjectEditDialog } from '@/components/projects/ProjectEditDialog'
 import { ProjectShareDialog } from '@/components/dashboard/ProjectShareDialog'
+import { Badge } from '@/components/ui/badge'
 import { SubscribersListDialog } from '@/components/projects/SubscribersListDialog'
 import { ArchiveLinksDropdown } from '@/components/projects/ArchiveLinksDropdown'
 import { FileFilters, type SortOption, type SortDirection, type ViewMode } from '@/components/files/FileFilters'
@@ -43,7 +45,9 @@ export default function ProjectDetailPage() {
   const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [showLinkDialog, setShowLinkDialog] = useState(false)
   const [selectedColors, setSelectedColors] = useState<string[]>([])
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [isSelectionMode, setIsSelectionMode] = useState(false)
+
   const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set())
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     return (localStorage.getItem('filesViewMode') as ViewMode) || 'grid'
@@ -51,14 +55,43 @@ export default function ProjectDetailPage() {
   
   // Drag & drop states
   const [isDragActive, setIsDragActive] = useState(false)
+  const [isDraggingOverCard, setIsDraggingOverCard] = useState(false)
+  const dragCounter = useRef(0)
   const [initialDroppedFiles, setInitialDroppedFiles] = useState<File[]>([])
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false)
   
   // Save view mode preference
   useEffect(() => {
     localStorage.setItem('filesViewMode', viewMode)
   }, [viewMode])
+
+  const [thumbnailSize, setThumbnailSize] = useState<'sm' | 'md' | 'lg'>(() => {
+    return (localStorage.getItem('filesThumbnailSize') as 'sm' | 'md' | 'lg') || 'md'
+  })
+
+  useEffect(() => {
+    localStorage.setItem('filesThumbnailSize', thumbnailSize)
+  }, [thumbnailSize])
   
   const files = useFileStore(s => s.files)
+
+  const availableTypes = useMemo(() => {
+    if (!files || !projectId) return []
+    const projectFiles = files.filter(f => f.projectId === projectId && !f.isTrashed)
+    const types = new Set<string>()
+    projectFiles.forEach(f => {
+      if (f.type) types.add(f.type)
+    })
+    return Array.from(types)
+  }, [files, projectId])
+
+  const handleCardDragStateChange = (isDragging: boolean, isDropped?: boolean) => {
+    setIsDraggingOverCard(isDragging)
+    if (isDropped) {
+      setIsDragActive(false)
+      dragCounter.current = 0
+    }
+  }
   
   const availableColors = useMemo(() => {
     if (!files || !projectId) return []
@@ -122,7 +155,52 @@ export default function ProjectDetailPage() {
     }
   }, [project])
 
+  useEffect(() => {
+    const handleWindowDragEnter = (e: DragEvent) => {
+      e.preventDefault()
+      dragCounter.current++
+      if (dragCounter.current === 1) {
+        setIsDragActive(true)
+      }
+    }
 
+    const handleWindowDragOver = (e: DragEvent) => {
+      e.preventDefault()
+    }
+
+    const handleWindowDragLeave = (e: DragEvent) => {
+      e.preventDefault()
+      dragCounter.current--
+      if (dragCounter.current === 0) {
+        setIsDragActive(false)
+      }
+    }
+
+    const handleWindowDrop = (e: DragEvent) => {
+      e.preventDefault()
+      dragCounter.current = 0
+      setIsDragActive(false)
+      setIsDraggingOverCard(false)
+
+      const files = Array.from(e.dataTransfer?.files || [])
+      if (files.length > 0) {
+        setInitialDroppedFiles(files)
+        setShowUploadDialog(true)
+      }
+    }
+
+    window.addEventListener('dragenter', handleWindowDragEnter)
+    window.addEventListener('dragover', handleWindowDragOver)
+    window.addEventListener('dragleave', handleWindowDragLeave)
+    window.addEventListener('drop', handleWindowDrop)
+
+    return () => {
+      window.removeEventListener('dragenter', handleWindowDragEnter)
+      window.removeEventListener('dragover', handleWindowDragOver)
+      window.removeEventListener('dragleave', handleWindowDragLeave)
+      window.removeEventListener('drop', handleWindowDrop)
+    }
+  }, [])
 
   if (isChecking) {
     return (
@@ -179,62 +257,11 @@ export default function ProjectDetailPage() {
     )
   }
 
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (!isDragActive) {
-      setIsDragActive(true)
-    }
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    // Kéo vào chỉ hiển thị nếu chưa có drag active hoặc target là container chính
-    if (!isDragActive) {
-      setIsDragActive(true)
-    }
-  }
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.currentTarget.contains(e.relatedTarget as Node)) return
-    setIsDragActive(false)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragActive(false)
-
-    const files = Array.from(e.dataTransfer.files)
-    if (files.length > 0) {
-      setInitialDroppedFiles(files)
-      setShowUploadDialog(true)
-    }
-  }
-
   return (
     <div 
       className="space-y-6 relative min-h-[calc(100vh-100px)]"
-      onDragEnter={handleDragEnter}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
     >
-      {/* Drag & Drop Main Overlay */}
-      {isDragActive && (
-        <div className="absolute inset-0 z-50 bg-primary/10 backdrop-blur-sm rounded-xl border-2 border-primary border-dashed flex items-center justify-center pointer-events-none">
-          <div className="bg-card/80 backdrop-blur-md p-8 rounded-2xl shadow-2xl flex flex-col items-center animate-in zoom-in-95">
-            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
-              <Upload className="w-8 h-8 text-primary animate-bounce" />
-            </div>
-            <h3 className="text-xl font-bold mb-2">Thả file vào đây</h3>
-            <p className="text-muted-foreground">Các file sẽ được tải lên dự án này</p>
-          </div>
-        </div>
-      )}
+
 
       <SubscribersListDialog
         project={project}
@@ -338,22 +365,27 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
-      {/* Filters and Controls */}
-      <div className="bg-card/30 backdrop-blur-sm p-4 rounded-xl border border-primary/5 shadow-sm">
-        <FileFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          sortBy={sortBy}
-          onSortChange={setSortBy}
-          sortDirection={sortDirection}
-          onSortDirectionToggle={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          selectedColors={selectedColors}
-          onColorsChange={setSelectedColors}
-          availableColors={availableColors}
-          colorLabels={project?.colorLabels}
-        >
+      {/* 2-Column Layout */}
+      <div className="flex flex-col lg:flex-row gap-4 items-start">
+        
+        {/* Mobile Toolbar & Filter Toggle */}
+        <div className="lg:hidden flex items-center justify-between bg-card p-3 rounded-lg border w-full">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsMobileFiltersOpen(true)}
+            className="gap-2 text-xs font-bold"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            <span>Bộ lọc & Sắp xếp</span>
+            {(searchTerm || selectedColors.length > 0 || selectedTypes.length > 0) && (
+              <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[10px] h-4 bg-primary/20 text-primary border-transparent">
+                {(searchTerm ? 1 : 0) + selectedColors.length + selectedTypes.length}
+              </Badge>
+            )}
+          </Button>
+
+          {/* Action Toolbar on Mobile */}
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -365,7 +397,7 @@ export default function ProjectDetailPage() {
                   : projectFiles
                 handleBulkDownload(filesToDownload.map(f => ({ ...f, projectName: project?.name || 'Project' })), comments)
               }}
-              className="h-10 w-10 border-primary/10 bg-card/50 backdrop-blur-sm hover:bg-card/80"
+              className="h-9 w-9 border-primary/10 bg-card/50"
               title={isSelectionMode && selectedFileIds.size > 0 ? 'Tải về đã chọn' : 'Tải về tất cả'}
             >
               <Download className="w-4 h-4 text-primary/70" />
@@ -376,7 +408,7 @@ export default function ProjectDetailPage() {
               size="icon"
               onClick={() => setIsSelectionMode(!isSelectionMode)}
               className={cn(
-                "h-10 w-10 border-primary/10 bg-card/50 backdrop-blur-sm hover:bg-card/80",
+                "h-9 w-9 border-primary/10 bg-card/50",
                 isSelectionMode && "bg-primary/10 border-primary/20 text-primary"
               )}
               title="Chọn nhiều"
@@ -384,35 +416,146 @@ export default function ProjectDetailPage() {
               <CheckSquare className="w-4 h-4" />
             </Button>
           </div>
-        </FileFilters>
-      </div>
+        </div>
 
-      {/* Files List */}
-      <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-        <div className={cn(
-          viewMode !== 'kanban' && "p-6"
-        )}>
-          {projectId && (
-            <FilesList 
-              projectId={projectId} 
-              sortBy={sortBy} 
-              sortDirection={sortDirection} 
-              searchTerm={searchTerm} 
-              selectedColors={selectedColors}
+        {/* Desktop Sidebar (Filters) */}
+        <aside className="hidden lg:block w-60 shrink-0 lg:sticky lg:top-6 h-fit bg-card/30 backdrop-blur-sm p-5 rounded-xl border border-primary/5 shadow-sm">
+          <FileFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            sortDirection={sortDirection}
+            onSortDirectionToggle={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            selectedColors={selectedColors}
+            onColorsChange={setSelectedColors}
+            availableColors={availableColors}
+            colorLabels={project?.colorLabels}
+            thumbnailSize={thumbnailSize}
+            onThumbnailSizeChange={setThumbnailSize}
+            availableTypes={availableTypes}
+            selectedTypes={selectedTypes}
+            onTypesChange={setSelectedTypes}
+          />
+        </aside>
+
+        {/* Mobile Sidebar Drawer (Overlay) */}
+        {isMobileFiltersOpen && (
+          <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-md p-6 overflow-y-auto lg:hidden animate-in fade-in slide-in-from-bottom-5">
+            <FileFilters
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+              sortDirection={sortDirection}
+              onSortDirectionToggle={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
               viewMode={viewMode}
-              isSelectionMode={isSelectionMode}
-              onSelectionModeChange={setIsSelectionMode}
-              selectedFileIds={selectedFileIds}
-              onSelectedFileIdsChange={setSelectedFileIds}
+              onViewModeChange={setViewMode}
+              selectedColors={selectedColors}
+              onColorsChange={setSelectedColors}
+              availableColors={availableColors}
               colorLabels={project?.colorLabels}
-              columnOrder={project?.kanbanColumnOrder}
-              onColumnOrderChange={(newOrder) => {
-                if (projectId) updateProject(projectId, { kanbanColumnOrder: newOrder })
-              }}
+              onClose={() => setIsMobileFiltersOpen(false)}
+              thumbnailSize={thumbnailSize}
+              onThumbnailSizeChange={setThumbnailSize}
+              availableTypes={availableTypes}
+              selectedTypes={selectedTypes}
+              onTypesChange={setSelectedTypes}
             />
-          )}
+          </div>
+        )}
+
+        {/* Files Content Area */}
+        <div className="flex-1 min-w-0 w-full space-y-4">
+          {/* Desktop Actions Toolbar */}
+          <div className="hidden lg:flex items-center justify-between bg-card p-3 rounded-xl border shadow-sm">
+            <div className="text-xs text-muted-foreground font-medium pl-2">
+              Tìm thấy {files.filter(f => f.projectId === projectId && !f.isTrashed).length} tài liệu
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const projectFiles = files.filter(f => f.projectId === projectId && !f.isTrashed)
+                  const filesToDownload = isSelectionMode && selectedFileIds.size > 0
+                    ? projectFiles.filter(f => selectedFileIds.has(f.id))
+                    : projectFiles
+                  handleBulkDownload(filesToDownload.map(f => ({ ...f, projectName: project?.name || 'Project' })), comments)
+                }}
+                className="h-9 gap-1.5 border-primary/10 bg-card/50 hover:bg-card/80 text-xs font-bold"
+                title={isSelectionMode && selectedFileIds.size > 0 ? 'Tải về đã chọn' : 'Tải về tất cả'}
+              >
+                <Download className="w-4 h-4 text-primary/70" />
+                <span>{isSelectionMode && selectedFileIds.size > 0 ? 'Tải đã chọn' : 'Tải tất cả'}</span>
+              </Button>
+
+              <Button
+                variant={isSelectionMode ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => setIsSelectionMode(!isSelectionMode)}
+                className={cn(
+                  "h-9 gap-1.5 border-primary/10 bg-card/50 hover:bg-card/80 text-xs font-bold",
+                  isSelectionMode && "bg-primary/10 border-primary/20 text-primary"
+                )}
+                title="Chọn nhiều"
+              >
+                <CheckSquare className="w-4 h-4" />
+                <span>Chọn nhiều</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Files List Container */}
+          <div className="bg-card rounded-xl border shadow-sm overflow-hidden relative">
+            {/* Drag & Drop Main Overlay */}
+            {isDragActive && !isDraggingOverCard && (
+              <div className="absolute inset-1 z-50 rounded-lg border-2 border-primary/50 border-dashed bg-primary/[0.01] flex items-center justify-center pointer-events-none animate-in fade-in duration-300">
+                <div className="bg-card/95 border border-primary/10 shadow-xl p-3 rounded-lg flex items-center gap-2.5 max-w-xs transition-all duration-300">
+                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Upload className="w-3.5 h-3.5 text-primary animate-bounce" />
+                  </div>
+                  <div className="text-left">
+                    <h4 className="text-[11px] font-bold text-foreground">Kéo thả vào đây để upload file mới</h4>
+                    <p className="text-[9px] text-muted-foreground">Tải lên tài liệu mới cho dự án</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className={cn(
+              viewMode !== 'kanban' && "p-6"
+            )}>
+              {projectId && (
+                <FilesList 
+                  projectId={projectId} 
+                  sortBy={sortBy} 
+                  sortDirection={sortDirection} 
+                  searchTerm={searchTerm} 
+                  selectedColors={selectedColors}
+                  viewMode={viewMode}
+                  isSelectionMode={isSelectionMode}
+                  onSelectionModeChange={setIsSelectionMode}
+                  selectedFileIds={selectedFileIds}
+                  onSelectedFileIdsChange={setSelectedFileIds}
+                  colorLabels={project?.colorLabels}
+                  columnOrder={project?.kanbanColumnOrder}
+                  onColumnOrderChange={(newOrder) => {
+                    if (projectId) updateProject(projectId, { kanbanColumnOrder: newOrder })
+                  }}
+                  thumbnailSize={thumbnailSize}
+                  selectedTypes={selectedTypes}
+                  onCardDragStateChange={handleCardDragStateChange}
+                />
+              )}
+            </div>
+          </div>
         </div>
       </div>
+      <DragTooltip isActive={isDragActive} isOverCard={isDraggingOverCard} />
     </div>
   )
 }

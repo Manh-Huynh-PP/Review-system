@@ -28,5 +28,41 @@
     "version": "Version",
     "current": "current",
     "date": "Uploaded at"
+  },
+  "filters": {
+    "title": "Filters & Sorting",
+    "search": "Search",
+    "viewMode": "View Mode",
+    "viewGrid": "Grid",
+    "viewList": "List",
+    "viewKanban": "Kanban",
+    "tagColors": "Tag Colors",
+    "sortBy": "Sort by",
+    "sortOrder": "Sort order",
+    "sortAscending": "Ascending",
+    "sortDescending": "Descending",
+    "fileName": "File name",
+    "uploadDate": "Upload date",
+    "fileType": "File type",
+    "fileSize": "File size",
+    "thumbnailSize": "Thumbnail size",
+    "sizeSmall": "Small",
+    "sizeMedium": "Medium",
+    "sizeLarge": "Large",
+    "fileTypes": "File types",
+    "typeImage": "Image",
+    "typeVideo": "Video",
+    "typeModel": "3D Model",
+    "typeSequence": "Image Sequence",
+    "typePdf": "PDF",
+    "typeFile": "File",
+    "clearAll": "Clear filters",
+    "activeFilters": "Active filters: {{count}}"
+  },
+  "dragDrop": {
+    "uploadNewFile": "Upload new document",
+    "uploadNewFileDesc": "Drop into empty area to add to project",
+    "uploadNewVersion": "Upload new version",
+    "uploadNewVersionDesc": "Drop onto file to update its version"
   }
 }

@@ -38,6 +38,7 @@ interface KanbanViewProps {
   onFileClick: (file: FileType) => void
   onColumnOrderChange?: (newOrder: string[]) => void
   onDropFiles?: (fileId: string, files: File[]) => void
+  onCardDragStateChange?: (isDragging: boolean, isDropped?: boolean) => void
 }
 
 interface KanbanCardProps {
@@ -45,9 +46,10 @@ interface KanbanCardProps {
   onClick: () => void
   isAdmin: boolean
   onDropFiles?: (files: File[]) => void
+  onDragStateChange?: (isDragging: boolean, isDropped?: boolean) => void
 }
 
-function KanbanCard({ file, onClick, isAdmin, onDropFiles }: KanbanCardProps) {
+function KanbanCard({ file, onClick, isAdmin, onDropFiles, onDragStateChange }: KanbanCardProps) {
   const { deleteFile, toggleFileLock } = useFileStore()
   const {
     attributes,
@@ -87,6 +89,7 @@ function KanbanCard({ file, onClick, isAdmin, onDropFiles }: KanbanCardProps) {
         onDelete={() => deleteFile(file.projectId, file.id)}
         onToggleLock={() => toggleFileLock(file.projectId, file.id, !file.isCommentsLocked)}
         onDropFiles={onDropFiles}
+        onDragStateChange={onDragStateChange}
       />
     </div>
   )
@@ -100,7 +103,8 @@ function KanbanColumn({
   onFileClick, 
   isAdmin,
   isLast,
-  onDropFiles
+  onDropFiles,
+  onDragStateChange
 }: { 
   id: string, 
   title: string, 
@@ -109,7 +113,8 @@ function KanbanColumn({
   onFileClick: (file: FileType) => void,
   isAdmin: boolean,
   isLast?: boolean,
-  onDropFiles?: (fileId: string, files: File[]) => void
+  onDropFiles?: (fileId: string, files: File[]) => void,
+  onDragStateChange?: (isDragging: boolean, isDropped?: boolean) => void
 }) {
   const { 
     attributes, 
@@ -174,6 +179,7 @@ function KanbanColumn({
                 onClick={() => onFileClick(file)} 
                 isAdmin={isAdmin}
                 onDropFiles={onDropFiles ? (files) => onDropFiles(file.id, files) : undefined}
+                onDragStateChange={onDragStateChange}
               />
             </div>
           ))}
@@ -191,7 +197,8 @@ export function KanbanView({
   columnOrder = [],
   onFileClick,
   onColumnOrderChange,
-  onDropFiles
+  onDropFiles,
+  onCardDragStateChange
 }: KanbanViewProps) {
   const { updateFileBackgroundColor } = useFileStore()
   const [activeFile, setActiveFile] = useState<FileType | null>(null)
@@ -359,6 +366,7 @@ export function KanbanView({
                 isAdmin={isAdmin}
                 isLast={true}
                 onDropFiles={onDropFiles}
+                onDragStateChange={onCardDragStateChange}
               />
             )}
           </div>
@@ -376,6 +384,7 @@ export function KanbanView({
                 isAdmin={isAdmin}
                 isLast={idx === columns.length - 1}
                 onDropFiles={onDropFiles}
+                onDragStateChange={onCardDragStateChange}
               />
             ))}
           </SortableContext>

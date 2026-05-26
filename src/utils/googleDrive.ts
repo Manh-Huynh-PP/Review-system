@@ -108,7 +108,12 @@ export function normalizeDriveUrl(url: string, size: number = 2000, t?: string |
         if (tMatch) timestamp = tMatch[1]
       }
     }
-    return getDriveThumbnailUrl(fileId, size, timestamp)
+
+    // Add a 5-minute block time buster to ensure cache is auto-refreshed every 5 minutes at deploy
+    const timeBuster = Math.floor(Date.now() / (1000 * 60 * 5))
+    const finalTimestamp = timestamp ? `${timestamp}_${timeBuster}` : timeBuster
+
+    return getDriveThumbnailUrl(fileId, size, finalTimestamp)
   }
   return url
 }

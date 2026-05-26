@@ -4,10 +4,12 @@ import { useTranslation } from 'react-i18next'
 import { vi, enUS } from 'date-fns/locale'
 import {
   ChevronLeft, ChevronDown, Download, Trash2, Upload, Clock,
-  HelpCircle, Columns, Share2, Check, Copy, MessageSquare, X, Pencil
+  HelpCircle, Columns, Share2, Check, Copy, MessageSquare, X, Pencil, RefreshCw
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useFileStore } from '@/stores/files'
+import toast from 'react-hot-toast'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
@@ -368,6 +370,26 @@ export function FileViewHeader({
               <span className="sr-only">{t('common:actions.download')}</span>
             </a>
           </Button>
+
+          {isAdmin && file.isExternalLink && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 w-9 px-0"
+              onClick={async () => {
+                const tid = toast.loading('Đang làm mới...')
+                try {
+                  await useFileStore.getState().refreshExternalLink(projectId, file.id)
+                  toast.success('Đã làm mới!', { id: tid })
+                } catch {
+                  toast.error('Thất bại', { id: tid })
+                }
+              }}
+              title={file.type === 'sequence' ? 'Đồng bộ Google Drive Folder' : 'Làm mới cache Google Drive Link'}
+            >
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          )}
         </div>
 
         <Button

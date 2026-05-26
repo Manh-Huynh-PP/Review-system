@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next'
 import { useFileStore } from '@/stores/files'
 import { normalizeDriveUrl } from '@/utils/googleDrive'
 import { useState } from 'react'
+import toast from 'react-hot-toast'
 
 interface FileCardSharedProps {
   file: FileType
@@ -296,6 +297,26 @@ export function FileCardShared({
                   title={t('common:actions.delete')}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              {file.isExternalLink && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    const tid = toast.loading('Đang làm mới...')
+                    try {
+                      await useFileStore.getState().refreshExternalLink(file.projectId, file.id)
+                      toast.success('Đã làm mới!', { id: tid })
+                    } catch {
+                      toast.error('Thất bại', { id: tid })
+                    }
+                  }}
+                  className="h-7 w-7 rounded-full bg-white/10 hover:bg-primary hover:text-white text-white transition-colors"
+                  title="Làm mới link/folder"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
                 </Button>
               )}
               {onToggleLock && (

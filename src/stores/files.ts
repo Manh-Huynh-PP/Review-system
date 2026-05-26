@@ -61,6 +61,7 @@ interface FileState {
   }) => Promise<void>
   addExternalLink: (projectId: string, url: string, name: string, type: FileType) => Promise<void>
   addDriveFolderAsSequence: (projectId: string, folderId: string, name: string) => Promise<void>
+  refreshExternalLink: (projectId: string, fileId: string) => Promise<void>
   cleanupProjectFiles: (projectId: string) => Promise<void>,
   togglePickedFrame: (projectId: string, fileId: string, version: number, frameIndex: number, isPicked: boolean) => Promise<void>,
   updateFileBackgroundColor: (projectId: string, fileId: string, color?: string) => Promise<void>,
@@ -1270,6 +1271,121 @@ export const useFileStore = create<FileState>((set, get) => ({
       set({ error: errorMessage })
       toast.error(errorMessage)
       throw error
+    } finally {
+      set({ uploading: false, uploadProgress: 0 })
+    }
+  },
+
+  refreshExternalLink: async (projectId: string, fileId: string) => {
+    set({ uploading: true, uploadProgress: 0, error: null })
+    try {
+      const fileRef = doc(db, 'projects', projectId, 'files', fileId)
+      const fileDoc = await getDoc(fileRef)
+
+      if (!fileDoc.exists()) throw new Error('File not found')
+
+      const data = fileDoc.data() as FileModel
+
+      if (data.type === 'sequence') {
+        // Drive folder sequence sync
+        const currentVersion = data.versions.find(v => v.version === data.currentVersion) || data.versions[0]
+        if (!currentVersion?.externalUrl) throw new Error('Không tìm thấy link Drive Folder')
+
+        const { parseDriveUrl, listDriveFolder, normalizeDriveUrl } = await import('../utils/googleDrive')
+        const driveInfo = parseDriveUrl(currentVersion.externalUrl)
+        if (!driveInfo || driveInfo.type !== 'folder') {
+          throw new Error('Không thể nhận diện folder ID từ link lưu trữ')
+        }
+
+        set({ uploadProgress: 10 })
+        const driveFiles = await listDriveFolder(driveInfo.id)
+        set({ uploadProgress: 50 })
+
+        if (!driveFiles || driveFiles.length === 0) {
+          throw new Error('Folder trống hoặc không thể truy cập. Đảm bảo folder đã được chia sẻ công khai.')
+        }
+
+        const mediaFiles = driveFiles.filter(f =>
+          f.mimeType.startsWith('image/') ||
+          f.mimeType.startsWith('video/') ||
+          /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(f.name) ||
+          /\.(mp4|webm|mov|avi|mkv|m4v)$/i.test(f.name)
+        )
+
+        if (mediaFiles.length === 0) {
+          throw new Error('Không tìm thấy ảnh hoặc video nào trong folder Google Drive.')
+        }
+
+        const sequenceMediaTypes: ('image' | 'video')[] = mediaFiles.map(f =>
+          f.mimeType.startsWith('video/') || /\.(mp4|webm|mov|avi|mkv|m4v)$/i.test(f.name)
+            ? 'video' as const
+            : 'image' as const
+        )
+
+        const sequenceUrls = mediaFiles.map((f, i) => {
+          if (sequenceMediaTypes[i] === 'video') {
+            return `drive-video://${f.id}`
+          }
+          return normalizeDriveUrl(`https://drive.google.com/open?id=${f.id}`, 2000, f.modifiedTime)
+        })
+        set({ uploadProgress: 80 })
+
+        const latestModified = Math.max(...mediaFiles.map(f => f.modifiedTime ? new Date(f.modifiedTime).getTime() : 0))
+
+        const firstImageIndex = sequenceMediaTypes.indexOf('image')
+        const thumbnailUrl = firstImageIndex >= 0
+          ? normalizeDriveUrl(sequenceUrls[firstImageIndex], 2000, mediaFiles[firstImageIndex].modifiedTime)
+          : `https://lh3.googleusercontent.com/d/${mediaFiles[0].id}=w800`
+
+        const sequenceFileNames = mediaFiles.map(f => f.name)
+
+        const versions = [...data.versions]
+        const versionIndex = versions.findIndex(v => v.version === data.currentVersion)
+        if (versionIndex >= 0) {
+          versions[versionIndex] = {
+            ...versions[versionIndex],
+            url: thumbnailUrl,
+            sequenceUrls,
+            sequenceMediaTypes,
+            sequenceFileNames,
+            frameCount: sequenceUrls.length,
+            metadata: {
+              ...versions[versionIndex].metadata,
+              lastModified: latestModified || Date.now(),
+              duration: sequenceUrls.length / 24
+            }
+          }
+        }
+
+        await updateDoc(fileRef, {
+          versions,
+          updatedAt: Timestamp.now()
+        })
+        set({ uploadProgress: 100 })
+        toast.success('Đồng bộ Drive folder thành công')
+      } else {
+        // Single external link - just update lastModified to bust cache
+        const versions = [...data.versions]
+        const versionIndex = versions.findIndex(v => v.version === data.currentVersion)
+        if (versionIndex >= 0) {
+          versions[versionIndex] = {
+            ...versions[versionIndex],
+            metadata: {
+              ...versions[versionIndex].metadata,
+              lastModified: Date.now()
+            }
+          }
+        }
+
+        await updateDoc(fileRef, {
+          versions,
+          updatedAt: Timestamp.now()
+        })
+        toast.success('Đã làm mới liên kết')
+      }
+    } catch (error: any) {
+      console.error('❌ Refresh external link failed:', error)
+      toast.error('Làm mới liên kết thất bại: ' + (error.message || 'Lỗi không xác định'))
     } finally {
       set({ uploading: false, uploadProgress: 0 })
     }

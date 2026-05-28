@@ -59,8 +59,8 @@ export function FileViewHeader({
   file, current, projectId, currentVersion, uniqueVersions, isAdmin,
   onOpenChange, onRenameFile, onSwitchVersion, deleteVersion,
   onUploadNewVersion, setShowUploadDialog, handleDownload,
-  getFileTypeIcon, getFileTypeLabel, formatFileSize, ensureFileExtension,
-  uploadDate, sequenceContext, latestUrl, latestVersion,
+  getFileTypeIcon, getFileTypeLabel, formatFileSize,
+  uploadDate, sequenceContext,
   handleStartTour, videoComparison, showComments, setShowComments,
   compareMode, setCompareMode, getShareLink, copyShareLink, copied
 }: FileViewHeaderProps) {
@@ -356,19 +356,11 @@ export function FileViewHeader({
             variant="ghost"
             size="sm"
             className="h-9 w-9 px-0"
-            asChild
             title={t('common:actions.download')}
+            onClick={(e) => handleDownload(e as any)}
           >
-            <a
-              href={latestUrl}
-              download={ensureFileExtension(file.name, latestUrl || '', latestVersion?.metadata?.type, file.type)}
-              target="_blank"
-              rel="noreferrer"
-              onClick={handleDownload}
-            >
-              <Download className="w-4 h-4" />
-              <span className="sr-only">{t('common:actions.download')}</span>
-            </a>
+            <Download className="w-4 h-4" />
+            <span className="sr-only">{t('common:actions.download')}</span>
           </Button>
 
           {isAdmin && file.isExternalLink && (

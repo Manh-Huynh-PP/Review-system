@@ -96,10 +96,12 @@ export function useBulkDownload(): UseBulkDownloadReturn {
         try {
             const zip = new JSZip()
 
-            // Calculate total items for progress
+            // Calculate total items for progress (exclude external links — they are opened in new tab, not fetched)
             let totalItems = 0
             for (const file of filesToDownload) {
                 const currentVersion = file.versions.find(v => v.version === file.currentVersion)
+                const isExternal = file.isExternalLink || currentVersion?.isExternal
+                if (isExternal) continue
                 if (file.type === 'sequence' && currentVersion?.sequenceUrls) {
                     totalItems += currentVersion.sequenceUrls.length
                 } else {
@@ -110,12 +112,30 @@ export function useBulkDownload(): UseBulkDownloadReturn {
             let processedItems = 0
             let successCount = 0
             let errorCount = 0
+            let externalLinkCount = 0
 
             for (const file of filesToDownload) {
                 const currentVersion = file.versions.find(v => v.version === file.currentVersion)
                 if (!currentVersion?.url) {
                     console.warn(`No URL found for file: ${file.name}`)
                     errorCount++
+                    continue
+                }
+
+                // Handle external link files: open original URL in new tab
+                // Check both file-level flag and version-level flag for full coverage
+                const isExternal = file.isExternalLink || currentVersion.isExternal
+                if (isExternal) {
+                    // Only use externalUrl (user's original link).
+                    // Do NOT fallback to currentVersion.url — that is a processed/thumbnail URL,
+                    // not the original link (e.g. for Drive Folder it would be the first image, not the folder).
+                    if (currentVersion.externalUrl) {
+                        window.open(currentVersion.externalUrl, '_blank', 'noopener,noreferrer')
+                        externalLinkCount++
+                    } else {
+                        console.warn(`No externalUrl for external file: ${file.name}`)
+                        errorCount++
+                    }
                     continue
                 }
 
@@ -202,13 +222,25 @@ export function useBulkDownload(): UseBulkDownloadReturn {
                 }
             }
 
+            // Show toast for external links opened in new tabs
+            if (externalLinkCount > 0) {
+                toast.success(`Đã mở ${externalLinkCount} link trong tab mới`)
+            }
+
+            // If no storage files were downloaded, skip ZIP generation
             if (successCount === 0) {
-                toast.error('Không thể tải xuống files')
+                if (externalLinkCount === 0) {
+                    // errorCount may include external files without externalUrl (old data)
+                    toast.error(errorCount > 0
+                        ? 'Không thể tải xuống: một số file thiếu link gốc. Hãy xóa và nhập lại.'
+                        : 'Không thể tải xuống files'
+                    )
+                }
                 setIsDownloading(false)
                 return
             }
 
-            // Generate ZIP file
+            // Generate ZIP file for storage files
             setDownloadMessage('Đang nén files...')
             setCurrentDownloadFile('')
             const zipBlob = await zip.generateAsync({

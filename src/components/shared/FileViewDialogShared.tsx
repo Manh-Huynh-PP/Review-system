@@ -257,7 +257,30 @@ export function FileViewDialogShared(props: Props) {
   const ensureFileExtension = (fn: string, u: string, mt?: string, ft?: string) => { const e = getFileExtension(u, mt, ft); return e ? (/\.[a-zA-Z0-9]+$/.test(fn) ? fn.replace(/\.[^.]+$/, e) : `${fn}${e}`) : fn }
 
   const handleDownload = async (e: React.MouseEvent<any>, mu?: string, mv?: any) => {
-    e.preventDefault(); const u = mu || latestUrl; const v = mv || latestVersion; if (!u) return
+    e.preventDefault()
+
+    // Case 1: External link file → open original URL in new tab
+    const currentVersionData = file.versions.find(v => v.version === file.currentVersion) || file.versions[0]
+    const isExternal = file.isExternalLink || currentVersionData?.isExternal
+    if (isExternal) {
+      const linkToOpen = currentVersionData?.externalUrl
+      if (linkToOpen) {
+        window.open(linkToOpen, '_blank', 'noopener,noreferrer')
+        toast.success(t('common:status.success'))
+      } else {
+        toast.error('Không tìm thấy link gốc. Hãy xóa và nhập lại.')
+      }
+      return
+    }
+
+    // Case 2: Sequence file (locally uploaded) → cannot download single frame, use bulk download
+    if (file.type === 'sequence') {
+      toast(`Dùng nút "Tải tất cả" để tải xuống toàn bộ sequence dưới dạng ZIP.`, { icon: 'ℹ️' })
+      return
+    }
+
+    // Case 3: Normal single file → XHR download
+    const u = mu || latestUrl; const v = mv || latestVersion; if (!u) return
     const tid = toast.loading(`${t('common:status.loading')} 0%`)
     try {
       const xhr = new XMLHttpRequest(); xhr.open('GET', u, true); xhr.responseType = 'blob'

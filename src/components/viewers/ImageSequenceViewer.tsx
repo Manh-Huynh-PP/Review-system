@@ -40,6 +40,7 @@ import type { AnnotationObject } from '@/types'
 import { getDriveVideoThumbnailUrl, isDriveVideoUrl, extractDriveVideoId, normalizeDriveUrl, getDirectDownloadUrl, getDriveEmbedUrl } from '@/utils/googleDrive'
 import { CustomVideoPlayer } from './CustomVideoPlayer'
 import { SpatialCommentOverlay } from '@/components/comments/SpatialCommentOverlay'
+import { CarouselCaptionEditor } from './CarouselCaptionEditor'
 
 // DnD Kit imports
 import {
@@ -540,6 +541,34 @@ export function ImageSequenceViewer({
     }
   }
 
+  // Arrow key navigation for carousel & video modes
+  useEffect(() => {
+    if (viewMode === 'grid') return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept if user is typing in an input/textarea
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault()
+        handleNextFrame()
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        handlePrevFrame()
+      } else if (e.key === 'Home') {
+        e.preventDefault()
+        handleFirstFrame()
+      } else if (e.key === 'End') {
+        e.preventDefault()
+        handleLastFrame()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [viewMode, currentFrame, frameCount])
+
 
   // Fullscreen & Scrubbing Hooks
   const imageContainerRef = useRef<HTMLDivElement>(null)
@@ -902,6 +931,14 @@ export function ImageSequenceViewer({
       ) : viewMode === 'carousel' ? (
         /* Carousel Mode Controls */
         <div className="space-y-3 px-4 flex-shrink-0 bg-background/95 backdrop-blur-sm border-t">
+          {/* Caption for current frame */}
+          <CarouselCaptionEditor
+            frameIndex={currentFrame}
+            caption={frameCaptions[currentFrame]}
+            isAdmin={isAdmin}
+            onCaptionChange={(caption) => onCaptionChange?.(file.id, file.currentVersion, currentFrame, caption)}
+          />
+
           {/* Info Bar */}
           <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/30 px-3 py-2 rounded-md">
             <span>{t('fileView:sequence.totalFrames')}: {frameCount}</span>

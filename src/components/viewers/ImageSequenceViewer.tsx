@@ -1369,7 +1369,7 @@ function GridFrameCard({
             <Maximize2 className="w-3 h-3" />
             {t('common:actions.viewDetail')}
           </div>
-          {isAdmin && !caption && (
+          {isAdmin && !caption && !editedCaption && (
             <div 
               className="bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 hover:bg-primary/90 transition-colors transform scale-90 group-hover/image:scale-100 transition-transform shadow-sm cursor-pointer pointer-events-auto"
               onClick={(e) => {
@@ -1385,7 +1385,7 @@ function GridFrameCard({
       </div>
 
       {/* Caption Section */}
-      {(caption || isEditingCaption) && (
+      {(caption || isEditingCaption || editedCaption) && (
         <div className="min-h-[60px] border-t bg-card">
           {isEditingCaption ? (
             <div className="p-2">
@@ -1414,9 +1414,9 @@ function GridFrameCard({
               className="relative group/caption p-2 h-full cursor-text"
               onClick={() => isAdmin && setIsEditingCaption(true)}
             >
-              {caption ? (
+              {(caption || editedCaption) ? (
                 <div className="text-xs text-foreground/90 break-words whitespace-pre-wrap line-clamp-3">
-                  {linkifyText(caption)}
+                  {linkifyText(caption || editedCaption)}
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground/50 italic py-1">
@@ -1474,6 +1474,9 @@ function SortableGridFrameCard({
   fileName?: string
 }) {
   const { t } = useTranslation()
+  const [isEditingCaption, setIsEditingCaption] = useState(false)
+  const [editedCaption, setEditedCaption] = useState(caption || '')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const {
     attributes,
     listeners,
@@ -1482,6 +1485,36 @@ function SortableGridFrameCard({
     transition,
     isDragging,
   } = useSortable({ id })
+
+  useEffect(() => {
+    if (isEditingCaption && textareaRef.current) {
+      textareaRef.current.focus()
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'
+    }
+  }, [isEditingCaption])
+
+  const handleSaveCaption = () => {
+    if (editedCaption !== caption) {
+      _onCaptionChange?.(editedCaption)
+    }
+    setIsEditingCaption(false)
+  }
+
+  const handleCancelEdit = () => {
+    setEditedCaption(caption || '')
+    setIsEditingCaption(false)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSaveCaption()
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      handleCancelEdit()
+    }
+  }
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -1576,18 +1609,12 @@ function SortableGridFrameCard({
             <Maximize2 className="w-3 h-3" />
             {t('common:actions.viewDetail')}
           </div>
-          {_isAdmin && !caption && (
+          {_isAdmin && !caption && !editedCaption && (
             <div 
               className="bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 hover:bg-primary/90 transition-colors transform scale-90 group-hover/image:scale-100 transition-transform shadow-sm cursor-pointer pointer-events-auto"
               onClick={(e) => {
                 e.stopPropagation()
-                // In sortable mode, we might not have direct editing, 
-                // but we can at least show the view detail which allows editing?
-                // Or just show the caption field if they want.
-                // For consistency, I'll try to trigger editing if possible.
-                // But SortableGridFrameCard doesn't have an internal editing state.
-                // So I'll just make it navigate to detail or show a message.
-                _onViewDetail()
+                setIsEditingCaption(true)
               }}
             >
               <Edit2 className="w-3 h-3" />
@@ -1597,12 +1624,53 @@ function SortableGridFrameCard({
         </div>
       </div>
 
-      {/* Compact Caption Preview */}
-      {caption && (
-        <div className="p-2 bg-card border-t min-h-[40px]">
-          <div className="text-xs text-muted-foreground break-words whitespace-pre-wrap line-clamp-2">
-            {linkifyText(caption)}
-          </div>
+      {/* Caption Section */}
+      {(caption || isEditingCaption || editedCaption) && (
+        <div className="min-h-[60px] border-t bg-card">
+          {isEditingCaption ? (
+            <div className="p-2">
+              <textarea
+                ref={textareaRef}
+                value={editedCaption}
+                onChange={(e) => {
+                  setEditedCaption(e.target.value)
+                  e.target.style.height = 'auto'
+                  e.target.style.height = e.target.scrollHeight + 'px'
+                }}
+                onKeyDown={handleKeyDown}
+                onBlur={handleSaveCaption}
+                placeholder={t('fileView:toolbar.addCaption') + '...'}
+                className="w-full text-xs p-2 bg-muted/50 text-foreground placeholder:text-muted-foreground/50 border border-transparent rounded resize-none focus:outline-none focus:ring-1 focus:ring-primary focus:bg-background transition-all"
+                rows={1}
+                maxLength={500}
+              />
+              <div className="flex justify-between items-center mt-1 px-1">
+                <span className="text-[10px] text-muted-foreground">{t('fileView:toolbar.enterToSave')}</span>
+                <span className="text-[10px] text-muted-foreground">{editedCaption.length}/500</span>
+              </div>
+            </div>
+          ) : (
+            <div
+              className="relative group/caption p-2 h-full cursor-text"
+              onClick={() => _isAdmin && setIsEditingCaption(true)}
+            >
+              {(caption || editedCaption) ? (
+                <div className="text-xs text-foreground/90 break-words whitespace-pre-wrap line-clamp-3">
+                  {linkifyText(caption || editedCaption)}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground/50 italic py-1">
+                  {_isAdmin ? t('fileView:toolbar.addCaption') + '...' : t('fileView:toolbar.noCaption')}
+                </p>
+              )}
+
+              {_isAdmin && (
+                <div className="absolute top-1 right-1 opacity-0 group-hover/caption:opacity-100 transition-opacity">
+                  <Edit2 className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

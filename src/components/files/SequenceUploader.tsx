@@ -35,7 +35,7 @@ export function SequenceUploader({ projectId, existingFileId, initialFiles, onUp
         setError(`${invalidFiles.length} file(s) không phải là ảnh`)
       } else {
         // Sort by name for correct frame order
-        const sorted = [...initialFiles].sort((a, b) => a.name.localeCompare(b.name))
+        const sorted = [...initialFiles].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
         setSelectedFiles(sorted)
 
         // Auto-generate name if needed (use setter callback to avoid stale closure)
@@ -77,7 +77,7 @@ export function SequenceUploader({ projectId, existingFileId, initialFiles, onUp
     }
 
     // Sort by name for correct frame order
-    const sorted = files.sort((a, b) => a.name.localeCompare(b.name))
+    const sorted = files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
     setSelectedFiles(sorted)
     setError(null)
 

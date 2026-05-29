@@ -385,7 +385,7 @@ export const useFileStore = create<FileState>((set, get) => ({
       console.log('📁 Generated fileId:', fileId)
 
       // Sort files by name to ensure correct frame order
-      const sortedFiles = [...files].sort((a, b) => a.name.localeCompare(b.name))
+      const sortedFiles = [...files].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
 
       // Get current version
       let currentVersion = 1
@@ -924,7 +924,7 @@ export const useFileStore = create<FileState>((set, get) => ({
         const oldUrls = currentVersion.sequenceUrls || []
 
         // Sort new files by name
-        const sortedFiles = [...files].sort((a, b) => a.name.localeCompare(b.name))
+        const sortedFiles = [...files].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
 
         const newUrls: string[] = []
         let uploadedCount = 0
@@ -1192,6 +1192,10 @@ export const useFileStore = create<FileState>((set, get) => ({
         /\.(mp4|webm|mov|avi|mkv|m4v)$/i.test(f.name)
       )
 
+      // Sort media files by name with natural numeric ordering
+      // so that "frame_2.png" comes before "frame_10.png"
+      mediaFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
+
       if (mediaFiles.length === 0) {
         throw new Error('Không tìm thấy ảnh hoặc video nào trong folder Google Drive.')
       }
@@ -1311,6 +1315,9 @@ export const useFileStore = create<FileState>((set, get) => ({
           /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(f.name) ||
           /\.(mp4|webm|mov|avi|mkv|m4v)$/i.test(f.name)
         )
+
+        // Sort media files by name with natural numeric ordering
+        mediaFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
 
         if (mediaFiles.length === 0) {
           throw new Error('Không tìm thấy ảnh hoặc video nào trong folder Google Drive.')

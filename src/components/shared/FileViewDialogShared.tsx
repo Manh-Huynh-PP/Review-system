@@ -224,9 +224,9 @@ export function FileViewDialogShared(props: Props) {
     }
   }, [showUploadDialog])
 
-  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); if (isAdmin && zoom <= 1) setIsDragOver(true) }, [isAdmin, zoom])
-  const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOver(false) }, [])
-  const handleDrop = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragOver(false); if (isAdmin && zoom <= 1) { const d = Array.from(e.dataTransfer.files); if (d.length > 0) { setDroppedFiles(d); setShowUploadDialog(true) } } }, [isAdmin, zoom])
+  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); if (isAdmin && zoom <= 1) setIsDragOver(true) }, [isAdmin, zoom])
+  const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragOver(false) }, [])
+  const handleDrop = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); if (isAdmin && zoom <= 1) { const d = Array.from(e.dataTransfer.files); if (d.length > 0) { setDroppedFiles(d); setShowUploadDialog(true) } } }, [isAdmin, zoom])
 
   if (!file) return null
 

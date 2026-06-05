@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useThemeStore } from '@/stores/theme'
 import { Sun, Moon } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, getDomainFromUrl, getFaviconUrl } from '@/lib/utils'
 
 export default function ReviewPage() {
   const { t, i18n } = useTranslation(['review', 'common'])
@@ -672,34 +672,42 @@ export default function ReviewPage() {
                 <div className="pt-2 flex flex-wrap gap-2">
                   {[...(project.archiveLinks || []), ...(project.archiveUrl && (!project.archiveLinks || !project.archiveLinks.some(l => l.url === project.archiveUrl)) ? [{ url: project.archiveUrl, title: project.archiveTitle }] : [])]
                     .filter(link => link.url)
-                    .map((link, idx) => (
+                    .map((link, idx) => {
+                      const domain = getDomainFromUrl(link.url);
+                      const faviconUrl = getFaviconUrl(link.url);
+                      return (
                       <a
                         key={idx}
-                        href={link.url}
+                        href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 p-2 rounded-lg border bg-background/50 hover:bg-muted transition-colors group max-w-[250px]"
                       >
-                        <img
-                          src={`https://www.google.com/s2/favicons?domain=${new URL(link.url).hostname}&sz=32`}
-                          alt="Drive Icon"
-                          className="w-5 h-5 flex-shrink-0"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                          }}
-                        />
-                        <ExternalLink className="w-4 h-4 hidden flex-shrink-0" />
+                        {faviconUrl ? (
+                          <img
+                            src={faviconUrl}
+                            alt="Link Icon"
+                            className="w-5 h-5 flex-shrink-0 object-contain drop-shadow-sm"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <ExternalLink className={cn("w-4 h-4 flex-shrink-0", faviconUrl ? "hidden" : "block")} />
                         <div className="flex flex-col text-left min-w-0">
                           <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">
                             {link.title || 'Link lưu trữ dự án'}
                           </span>
-                          <span className="text-[10px] text-muted-foreground truncate">
-                            {new URL(link.url).hostname}
-                          </span>
+                          {domain && (
+                            <span className="text-[10px] text-muted-foreground truncate">
+                              {domain}
+                            </span>
+                          )}
                         </div>
                       </a>
-                    ))}
+                      )
+                    })}
                 </div>
               )}
             </div>

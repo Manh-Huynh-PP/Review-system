@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { HardDrive, ExternalLink, Link2 } from 'lucide-react'
+import { getDomainFromUrl, getFaviconUrl, cn } from '@/lib/utils'
 
 interface ArchiveLinksDropdownProps {
   project: Project
@@ -43,23 +44,41 @@ export function ArchiveLinksDropdown({ project }: ArchiveLinksDropdownProps) {
           Danh sách lưu trữ
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {effectiveLinks.map((link, index) => (
-          <DropdownMenuItem 
-            key={index} 
-            className="cursor-pointer py-3"
-            onClick={() => window.open(link.url, '_blank', 'noopener,noreferrer')}
-          >
-            <div className="flex flex-col gap-0.5 overflow-hidden w-full">
-              <span className="font-medium truncate text-sm">
-                {link.title || `Link ${index + 1}`}
-              </span>
-              <span className="text-[10px] text-muted-foreground truncate font-mono">
-                {link.url}
-              </span>
-            </div>
-            <ExternalLink className="h-3 w-3 ml-2 flex-shrink-0 opacity-50" />
-          </DropdownMenuItem>
-        ))}
+        {effectiveLinks.map((link, index) => {
+          const domain = getDomainFromUrl(link.url);
+          const faviconUrl = getFaviconUrl(link.url);
+          const href = link.url.startsWith('http') ? link.url : `https://${link.url}`;
+          
+          return (
+            <DropdownMenuItem 
+              key={index} 
+              className="cursor-pointer py-3 flex items-center gap-3"
+              onClick={() => window.open(href, '_blank', 'noopener,noreferrer')}
+            >
+              {faviconUrl ? (
+                <img
+                  src={faviconUrl}
+                  alt="Favicon"
+                  className="w-5 h-5 flex-shrink-0 object-contain drop-shadow-sm"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+              ) : null}
+              <ExternalLink className={cn("h-4 w-4 flex-shrink-0 opacity-50", faviconUrl ? "hidden" : "block")} />
+
+              <div className="flex flex-col gap-0.5 overflow-hidden w-full">
+                <span className="font-medium truncate text-sm">
+                  {link.title || `Link ${index + 1}`}
+                </span>
+                <span className="text-[10px] text-muted-foreground truncate font-mono">
+                  {domain || link.url}
+                </span>
+              </div>
+            </DropdownMenuItem>
+          )
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   )

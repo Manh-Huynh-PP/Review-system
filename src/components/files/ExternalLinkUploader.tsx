@@ -91,8 +91,8 @@ export function ExternalLinkUploader({ projectId, onUploadComplete }: ExternalLi
     if (/\.(pdf)/i.test(lowerUrl)) return 'pdf'
     if (/\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(lowerUrl)) return 'image'
     
-    // If we're not sure, and it's a Drive file, default to video/file to trigger the switcher
-    return 'video'
+    // If we're not sure, and it's a Drive file, default to image
+    return 'image'
   }
 
   const handleSubmit = async () => {
@@ -222,7 +222,7 @@ export function ExternalLinkUploader({ projectId, onUploadComplete }: ExternalLi
           <div className="flex gap-2">
             {(['image', 'video', 'pdf'] as FileType[]).map((t) => {
               const info = typeLabels[t]
-              const isActive = (manualType || 'image') === t
+              const isActive = getEffectiveType() === t
               return (
                 <Button
                   key={t}

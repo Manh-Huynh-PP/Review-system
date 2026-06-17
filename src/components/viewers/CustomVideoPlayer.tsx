@@ -11,7 +11,7 @@ import {
 import { VideoDisplayArea } from './VideoDisplayArea'
 import { useIsMobile } from '@/hooks/useIsMobile'
 
-import { parseDriveUrl, getDirectDownloadUrl } from '@/utils/googleDrive'
+import { parseDriveUrl, getDirectDownloadUrl, getDriveVideoThumbnailUrl } from '@/utils/googleDrive'
 
 export interface CustomVideoPlayerRef {
     exportFrame: () => void
@@ -20,6 +20,7 @@ export interface CustomVideoPlayerRef {
 }
 interface CustomVideoPlayerProps {
     src: string
+    poster?: string
     comments: Comment[]
     currentTime?: number
     onTimeUpdate: (time: number) => void
@@ -41,6 +42,7 @@ interface CustomVideoPlayerProps {
 
 export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVideoPlayerProps>(({
     src,
+    poster,
     comments,
     currentTime,
     onTimeUpdate,
@@ -68,6 +70,16 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
         }
         return src
     }, [src])
+
+    // Resolve poster URL (Drive Video Thumbnail vs Explicit Poster)
+    const posterUrl = useMemo(() => {
+        if (poster) return poster
+        const driveInfo = parseDriveUrl(src)
+        if (driveInfo) {
+            return getDriveVideoThumbnailUrl(driveInfo.id)
+        }
+        return undefined
+    }, [src, poster])
 
     const videoRef = useRef<HTMLVideoElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
@@ -569,7 +581,9 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
             <VideoDisplayArea
                 ref={videoRef}
                 src={effectiveSrc}
+                poster={posterUrl}
                 isFullscreen={isFullscreen}
+                isPlaying={isPlaying}
                 isBuffering={isBuffering}
                 activeSafeZone={minimal ? null : activeSafeZone}
                 activeGuides={minimal ? [] : activeGuides}
@@ -579,6 +593,7 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
                 onClick={minimal ? () => {} : (isDropPinMode ? () => {} : togglePlayPause)}
                 onDoubleClick={minimal ? () => {} : toggleFullscreen}
                 onError={onError}
+                isDropPinMode={isDropPinMode}
             />
 
             {/* Hidden canvas for frame export */}

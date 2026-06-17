@@ -9,7 +9,8 @@ import {
     Clock,
     ChevronDown,
     Layers,
-    MessageSquare
+    MessageSquare,
+    ExternalLink
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { formatFileSize } from '@/lib/utils'
@@ -109,7 +110,7 @@ function MobileFileViewLayoutComponent({
     dropPinCoordinates,
     setDropPinCoordinates,
 }: MobileFileViewLayoutProps) {
-    const { t } = useTranslation()
+    const { t } = useTranslation(['fileView', 'common'])
     const [activeView, setActiveView] = useState<'file' | 'comments'>('file')
 
     const uploadDate = current?.uploadedAt?.toDate ? current.uploadedAt.toDate() : new Date()
@@ -177,13 +178,27 @@ function MobileFileViewLayoutComponent({
 
                             <h2 className="font-medium text-sm truncate">{file.name}</h2>
                         </div>
-                        <div className="text-xs text-muted-foreground flex items-center gap-2">
+                        <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
                             <span>{formatFileSize(current?.metadata?.size || 0)}</span>
                             <span>•</span>
                             <span className="flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
                                 {format(uploadDate, 'dd/MM/yyyy')}
                             </span>
+                            {current?.externalUrl && (
+                                <>
+                                    <span>•</span>
+                                    <a
+                                        href={current.externalUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 bg-primary/10 hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 text-primary px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors border border-primary/20"
+                                    >
+                                        <ExternalLink className="w-3 h-3" />
+                                        <span>{t('fileView:toolbar.originalLink')}</span>
+                                    </a>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>

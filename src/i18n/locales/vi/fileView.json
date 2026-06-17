@@ -44,7 +44,8 @@
     "commentMode": "Ghim & Vẽ bình luận",
     "move": "Di chuyển",
     "comment": "Góp ý",
-    "commentNow": "Góp ý ngay"
+    "commentNow": "Góp ý ngay",
+    "originalLink": "Link gốc"
   },
   "comments": {
     "dropPinHint": "Click để ghim · Kéo thả để vẽ vùng",

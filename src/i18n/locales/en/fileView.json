@@ -37,7 +37,8 @@
     "commentMode": "Pin & Region Comment",
     "move": "Move",
     "comment": "Comment",
-    "commentNow": "Comment Now"
+    "commentNow": "Comment Now",
+    "originalLink": "Original link"
   },
   "comments": {
     "dropPinHint": "Click to pin · Drag to draw region",

@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { vi, enUS } from 'date-fns/locale'
 import {
   ChevronLeft, ChevronDown, Download, Trash2, Upload, Clock,
-  HelpCircle, Columns, Share2, Check, Copy, MessageSquare, X, Pencil, RefreshCw
+  HelpCircle, Columns, Share2, Check, Copy, MessageSquare, X, Pencil, RefreshCw,
+  ExternalLink
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -254,6 +255,21 @@ export function FileViewHeader({
               <Clock className="w-3 h-3" />
               {uploadDate && format(uploadDate, 'dd/MM/yyyy HH:mm', { locale: i18n.language.startsWith('vi') ? vi : enUS })}
             </span>
+            {current?.externalUrl && (
+              <>
+                <span>•</span>
+                <a
+                  href={current.externalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 bg-primary/10 hover:bg-primary/20 dark:bg-primary/20 dark:hover:bg-primary/30 text-primary px-1.5 py-0.5 rounded text-xs font-semibold transition-colors border border-primary/20"
+                  title={current.externalUrl}
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>{t('toolbar.originalLink')}</span>
+                </a>
+              </>
+            )}
           </div>
         </div>
       </div>

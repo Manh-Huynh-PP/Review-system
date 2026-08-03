@@ -47,10 +47,10 @@ const VideoDisplayAreaComponent = forwardRef<HTMLVideoElement, VideoDisplayAreaP
             <video
                 key={src}
                 ref={ref}
+                src={src}
                 crossOrigin={crossOrigin}
                 poster={poster}
                 playsInline
-                webkit-playsinline=""
                 preload="auto"
                 className="w-full h-full object-contain bg-black"
                 style={isFullscreen ? {
@@ -59,10 +59,17 @@ const VideoDisplayAreaComponent = forwardRef<HTMLVideoElement, VideoDisplayAreaP
                 } : undefined}
                 onClick={onClick}
                 onDoubleClick={onDoubleClick}
-                onError={onError}
-            >
-                {src && <source src={src} type="video/mp4" />}
-            </video>
+                onError={(e) => {
+                    // Fallback if crossOrigin causes error on mobile WebKit / CDN without CORS
+                    const target = e.currentTarget
+                    if (target.crossOrigin) {
+                        target.removeAttribute('crossorigin')
+                        target.load()
+                    } else if (onError) {
+                        onError(e)
+                    }
+                }}
+            />
 
             {/* Center Play Button Overlay */}
             {!isPlaying && !isBuffering && !isDropPinMode && (
@@ -70,6 +77,11 @@ const VideoDisplayAreaComponent = forwardRef<HTMLVideoElement, VideoDisplayAreaP
                     className="center-play-overlay"
                     onClick={(e) => {
                         e.stopPropagation()
+                        onClick()
+                    }}
+                    onTouchEnd={(e) => {
+                        e.stopPropagation()
+                        e.preventDefault()
                         onClick()
                     }}
                 >

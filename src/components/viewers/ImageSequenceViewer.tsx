@@ -128,6 +128,7 @@ function SequenceDriveVideoPlayer({ videoId, videoName }: { videoId: string, vid
         onError={() => setError(true)}
         className="w-full h-full pointer-events-auto"
         autoPlay
+        muted
       />
     )
   }

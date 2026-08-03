@@ -155,6 +155,17 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
                 }
             } catch (error: any) {
                 console.error('Play/Pause error:', error)
+                if (error.name === 'NotAllowedError' && !videoRef.current.muted) {
+                    // Mobile browser autoplay policy: fallback to muted playback
+                    try {
+                        videoRef.current.muted = true
+                        setIsMuted(true)
+                        await videoRef.current.play()
+                        return
+                    } catch (retryError) {
+                        console.error('Muted play fallback error:', retryError)
+                    }
+                }
                 if (error.name === 'NotSupportedError') {
                     toast.error(t('fileView:video.errors.playback'))
                 }
@@ -363,10 +374,14 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
 
         // Handle auto-play and loop based on props or minimal mode
         if (autoPlay) {
-            video.muted = minimal || muted
+            video.muted = minimal || muted || isMobile
             video.loop = minimal || loop
-            video.play().catch(() => {
-                // Ignore auto-play errors (browser policy)
+            video.play().catch((err) => {
+                if (err.name === 'NotAllowedError' && !video.muted) {
+                    video.muted = true
+                    setIsMuted(true)
+                    video.play().catch(() => {})
+                }
             })
         } else if (minimal && isPlaying) {
             video.pause()

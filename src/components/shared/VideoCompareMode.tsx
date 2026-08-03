@@ -43,6 +43,7 @@ export function VideoCompareMode({
             ref={videoComparison.primaryVideoRef}
             src={effectiveUrl}
             controls
+            playsInline
             className="w-full h-auto max-h-[45vh] object-contain flex-1"
             onPlay={() => videoComparison.handlePrimaryEvent('play')}
             onPause={() => videoComparison.handlePrimaryEvent('pause')}
@@ -93,6 +94,7 @@ export function VideoCompareMode({
             ref={videoComparison.secondaryVideoRef}
             src={videoComparison.secondaryUrl}
             controls
+            playsInline
             className="w-full h-auto max-h-[45vh] object-contain flex-1"
             onPlay={() => videoComparison.handleSecondaryEvent('play')}
             onPause={() => videoComparison.handleSecondaryEvent('pause')}

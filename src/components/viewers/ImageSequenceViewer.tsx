@@ -37,8 +37,7 @@ import { useSequenceScrubber } from '@/hooks/useSequenceScrubber'
 import { AnnotationCanvasKonva } from '@/components/annotations/AnnotationCanvasKonva'
 import { AnnotationToolbar } from '@/components/annotations/AnnotationToolbar'
 import type { AnnotationObject } from '@/types'
-import { getDriveVideoThumbnailUrl, isDriveVideoUrl, extractDriveVideoId, normalizeDriveUrl, getDirectDownloadUrl, getDriveEmbedUrl } from '@/utils/googleDrive'
-import { CustomVideoPlayer } from './CustomVideoPlayer'
+import { getDriveVideoThumbnailUrl, isDriveVideoUrl, extractDriveVideoId, normalizeDriveUrl, getDriveEmbedUrl } from '@/utils/googleDrive'
 import { SpatialCommentOverlay } from '@/components/comments/SpatialCommentOverlay'
 import { CarouselCaptionEditor } from './CarouselCaptionEditor'
 
@@ -113,32 +112,14 @@ interface ImageSequenceViewerProps {
 
 type ViewMode = 'video' | 'carousel' | 'grid'
 
-// Helper component to play Drive videos securely with fallback
+// Helper component to play Drive videos via official iframe embed
 function SequenceDriveVideoPlayer({ videoId, videoName }: { videoId: string, videoName: string }) {
-  const [error, setError] = useState(false)
-  const directUrl = `https://drive.google.com/open?id=${videoId}` // CustomVideoPlayer will resolve this to uc?export=download
-
-  if (!error) {
-    return (
-      <CustomVideoPlayer
-        src={directUrl}
-        comments={[]}
-        onTimeUpdate={() => {}}
-        onCommentMarkerClick={() => {}}
-        onError={() => setError(true)}
-        className="w-full h-full pointer-events-auto"
-        autoPlay
-        muted
-      />
-    )
-  }
-
-  // Fallback to iframe if CustomVideoPlayer fails (e.g. >100MB virus scan redirect)
   return (
     <iframe
       src={`https://drive.google.com/file/d/${videoId}/preview`}
       className="w-full h-full border-0 pointer-events-auto"
-      allow="autoplay"
+      allow="autoplay; encrypted-media; picture-in-picture"
+      allowFullScreen
       title={videoName || "Google Drive Preview"}
     />
   )
@@ -199,7 +180,6 @@ export function ImageSequenceViewer({
   // Video dialog state — for playing Drive videos in a full overlay
   const [videoDialogId, setVideoDialogId] = useState<string | null>(null)
   const [videoDialogName, setVideoDialogName] = useState<string>('')
-  const [carouselVideoErrors, setCarouselVideoErrors] = useState<Record<number, boolean>>({})
   const {
     zoom,
     panOffset,
@@ -731,33 +711,11 @@ export function ImageSequenceViewer({
               {viewMode === 'carousel' && (
                 effectiveMediaTypes[currentFrame] === 'video' && isDriveVideoUrl(urls[currentFrame]) ? (() => {
                   const videoId = extractDriveVideoId(urls[currentFrame])!
-                  const hasError = carouselVideoErrors[currentFrame]
-                  return videoId && !hasError ? (
-                    <div className="w-full h-full max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh] flex items-center justify-center bg-black rounded-md overflow-hidden relative">
-                      <video
-                        src={getDirectDownloadUrl(videoId)}
-                        className="w-full h-full object-contain"
-                        controls
-                        onError={() => {
-                          console.warn(`Direct stream for carousel frame ${currentFrame} failed, using iframe`);
-                          setCarouselVideoErrors(prev => ({ ...prev, [currentFrame]: true }))
-                        }}
-                      />
-                      <a
-                        href={`https://drive.google.com/file/d/${videoId}/view`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded transition-colors z-10"
-                        title="Mở trong Google Drive"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                    </div>
-                  ) : (
+                  return (
                     <iframe
                       src={getDriveEmbedUrl(videoId)}
-                      className="w-full h-full max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh] select-none rounded-md"
-                      allow="autoplay; encrypted-media"
+                      className="w-full h-full max-h-[55dvh] xl:max-h-[50dvh] 2xl:max-h-[45dvh] select-none rounded-md border-0"
+                      allow="autoplay; encrypted-media; picture-in-picture"
                       allowFullScreen
                       style={{ border: 'none', aspectRatio: '16/9' }}
                       title={`Video Frame ${currentFrame + 1}`}

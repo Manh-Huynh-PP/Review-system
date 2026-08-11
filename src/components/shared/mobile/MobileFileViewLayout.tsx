@@ -245,17 +245,15 @@ function MobileFileViewLayoutComponent({
 
 
 
-            {/* Legacy Annotation Status Bar deprecated */}
-            {/* Content area with slide animation */}
-            <div className="flex-1 relative overflow-hidden">
+            {/* Content area */}
+            <div className="flex-1 relative">
                 {/* File View */}
                 <div
-                    className={`absolute inset-0 transition-transform duration-300 ease-out ${activeView === 'file' ? 'translate-x-0' : '-translate-x-full'
-                        }`}
+                    className={`w-full h-full ${activeView === 'file' ? 'block' : 'hidden'}`}
                 >
                     <div 
                         id="preview-container" 
-                        className={`w-full h-full overflow-auto pb-16 relative ${isDropPinMode ? 'cursor-crosshair' : ''}`}
+                        className={`w-full h-full relative ${isDropPinMode ? 'cursor-crosshair' : ''}`}
                     >
                         {renderFilePreview()}
 
@@ -288,8 +286,7 @@ function MobileFileViewLayoutComponent({
 
                 {/* Comments View */}
                 <div
-                    className={`absolute inset-0 flex flex-col transition-transform duration-300 ease-out ${activeView === 'comments' ? 'translate-x-0' : 'translate-x-full'
-                        }`}
+                    className={`w-full h-full flex flex-col ${activeView === 'comments' ? 'flex' : 'hidden'}`}
                 >
                     {/* Comments Header */}
                     <div className="p-3 border-b flex items-center justify-between bg-muted/10 flex-shrink-0">

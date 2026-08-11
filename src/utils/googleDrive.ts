@@ -70,6 +70,12 @@ export function getDirectImageUrl(fileId: string): string {
  */
 export function extractDriveFileId(url: string): string | null {
   if (!url) return null
+
+  // Handle drive-video://ID
+  if (url.startsWith('drive-video://')) {
+    return url.replace('drive-video://', '')
+  }
+
   if (!url.includes('google.com') && !url.includes('googleusercontent.com')) return null
 
   // Handle lh[3-6].googleusercontent.com/d/ID or /drive-viewer/ID
@@ -131,7 +137,7 @@ export function getDirectDownloadUrl(fileId: string): string {
  * Uses the /preview endpoint which works inside iframes without CORS issues.
  */
 export function getDriveEmbedUrl(fileId: string): string {
-  return `https://drive.google.com/file/d/${fileId}/preview`
+  return `https://drive.google.com/file/d/${fileId}/preview?rm=minimal`
 }
 
 /**

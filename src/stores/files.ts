@@ -1119,7 +1119,7 @@ export const useFileStore = create<FileState>((set, get) => ({
       const fileId = generateId()
 
       // Determine provider
-      const { parseDriveUrl, getDirectImageUrl, getDirectDownloadUrl } = await import('../utils/googleDrive')
+      const { parseDriveUrl, getDirectImageUrl } = await import('../utils/googleDrive')
       const driveInfo = parseDriveUrl(url)
       const provider = driveInfo ? 'google_drive' : 'direct'
 
@@ -1128,7 +1128,7 @@ export const useFileStore = create<FileState>((set, get) => ({
       if (driveInfo && driveInfo.type === 'file') {
         viewableUrl = type === 'image'
           ? getDirectImageUrl(driveInfo.id)
-          : getDirectDownloadUrl(driveInfo.id)
+          : url
       }
 
       const newVersion: FileVersion = {

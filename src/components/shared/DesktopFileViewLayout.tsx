@@ -243,6 +243,7 @@ export const DesktopFileViewLayout: React.FC<DesktopFileViewLayoutProps> = (prop
                 onEditComment={onEditComment} onDeleteComment={onDeleteComment} 
                 commentWidth={commentWidth} setIsDropPinMode={setIsDropPinMode}
                 isDropPinMode={isDropPinMode}
+                currentTimestamp={file.type === 'sequence' ? currentFrame : (file.type === 'video' ? currentTime : undefined)}
               />
             </div>
           )}
@@ -257,6 +258,7 @@ export const DesktopFileViewLayout: React.FC<DesktopFileViewLayoutProps> = (prop
             handleViewAnnotation={handleViewAnnotation} onAddComment={onAddComment} 
             onEditComment={onEditComment} onDeleteComment={onDeleteComment} 
             setIsDropPinMode={setIsDropPinMode} isDropPinMode={isDropPinMode}
+            currentTimestamp={file.type === 'sequence' ? currentFrame : (file.type === 'video' ? currentTime : undefined)}
           />
         )}
         {/* Legacy AnnotationToolbar deprecated */}

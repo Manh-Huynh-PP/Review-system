@@ -8,6 +8,7 @@ import { UploadDialog } from '@/components/files/UploadDialog'
 import { UploadProgressPopup } from '@/components/files/UploadProgressPopup'
 import { useZoomPan } from '@/hooks/useZoomPan'
 import { PickableImageSequenceViewer } from '@/components/viewers/PickableImageSequenceViewer'
+import { DriveVideoFolderViewer } from '@/components/viewers/DriveVideoFolderViewer'
 import { AnnotationCanvasKonva } from '@/components/annotations/AnnotationCanvasKonva'
 import { useFileStore } from '@/stores/files'
 import { useVideoComparison } from '@/hooks/useVideoComparison'
@@ -425,6 +426,39 @@ export function FileViewDialogShared(props: Props) {
     }
     if (file.type === 'sequence') {
       const u = optimisticSequenceData?.urls || current?.sequenceUrls || []
+      const mt = current?.sequenceMediaTypes || []
+      const fn = current?.sequenceFileNames || []
+      const videoCount = mt.filter(t => t === 'video').length || u.filter((url, i) => isDriveVideoUrl(url) || extractDriveFileId(url) !== null || /\.(mp4|mov|webm|avi|mkv|m4v)$/i.test(fn[i] || url)).length
+      const videoRatio = u.length > 0 ? videoCount / u.length : 0
+
+      // If items are videos or Drive files, use dedicated DriveVideoFolderViewer
+      if ((videoRatio >= 0.3 || u.some(url => extractDriveFileId(url) !== null)) && u.length > 0) {
+        return (
+          <DriveVideoFolderViewer
+            urls={u}
+            fileNames={current?.sequenceFileNames}
+            mediaTypes={current?.sequenceMediaTypes}
+            currentFrame={currentFrame}
+            onFrameChange={setCurrentFrame}
+            file={{ id: file.id, currentVersion: current.version, projectId: _projectId }}
+            allFileComments={allFileComments}
+            fileComments={fileComments}
+            isAdmin={isAdmin}
+            isDropPinMode={isDropPinMode}
+            dropPinCoordinates={dropPinCoordinates}
+            setDropPinCoordinates={setDropPinCoordinates}
+            externalIsFullscreen={sequenceFullscreen.isFullscreen}
+            onToggleFullscreen={sequenceFullscreen.toggle}
+            externalFullscreenRef={sequenceFullscreenRef as any}
+            lastModified={current?.metadata?.lastModified}
+            onAddComment={onAddComment}
+            currentUserName={currentUserName}
+            onUserNameChange={onUserNameChange}
+            isLocked={file.isCommentsLocked || project?.isCommentsLocked || isArchived}
+          />
+        )
+      }
+
       return <PickableImageSequenceViewer urls={u} mediaTypes={current?.sequenceMediaTypes} fileNames={current?.sequenceFileNames} lastModified={current?.metadata?.lastModified} fps={current?.metadata?.duration && current?.frameCount ? Math.round(current.frameCount / current.metadata.duration) : 24} currentFrame={currentFrame} onFrameChange={setCurrentFrame} className="viewport" isAdmin={isAdmin} defaultViewMode={file.sequenceViewMode || 'video'} onViewModeChange={m => { setSequenceViewMode(m); onSequenceViewModeChange?.(file.id, m) }} frameCaptions={optimisticSequenceData?.captions || effectiveFrameCaptions} onCaptionChange={handleCaptionChangeWithLocalUpdate} file={{ id: file.id, currentVersion: current.version, projectId: _projectId }} isAnnotating={isAnnotating} annotationData={annotationData} annotationTool={annotationTool} annotationColor={annotationColor} annotationStrokeWidth={annotationStrokeWidth} isAnnotationReadOnly={isReadOnly} onAnnotationChange={handleAnnotationChange} onAnnotationUndo={handleAnnotationUndo} onAnnotationRedo={handleAnnotationRedo} onClearAnnotations={handleClearAnnotations} onDoneAnnotating={handleDoneAnnotating} canUndoAnnotation={annotationHistoryIndex > 0} canRedoAnnotation={annotationHistoryIndex < annotationHistory.length - 1} onStartAnnotating={f => { setCurrentFrame(f); setIsAnnotating(true); setIsReadOnly(false) }} onFrameDetailView={f => setFrameDetailView(f)} onReorderFrames={handleReorderFrames} onDeleteFrames={i => deleteSequenceFrames(file.projectId, file.id, current.version, i)} onAddFrames={fls => addSequenceFrames(file.projectId, file.id, current.version, fls)} isUploading={uploading} externalIsFullscreen={sequenceFullscreen.isFullscreen} onToggleFullscreen={sequenceFullscreen.toggle} externalFullscreenRef={sequenceFullscreenRef as any} allFileComments={allFileComments} fileComments={fileComments} isDropPinMode={isDropPinMode} dropPinCoordinates={dropPinCoordinates} setDropPinCoordinates={setDropPinCoordinates} showOnlyCurrentTimeComments={showOnlyCurrentTimeComments} setShowOnlyCurrentTimeComments={setShowOnlyCurrentTimeComments} />
     }
     if (file.type === 'video') {

@@ -1,6 +1,9 @@
-import { Layers } from 'lucide-react'
+import { Layers, Send } from 'lucide-react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 import { CommentsList } from '@/components/comments/CommentsList'
+import toast from 'react-hot-toast'
 
 import { useTranslation } from 'react-i18next'
 
@@ -30,6 +33,9 @@ interface Props {
 
   setIsDropPinMode?: (val: boolean) => void
   isDropPinMode?: boolean
+
+  // Current frame/time for inline comment
+  currentTimestamp?: number
 }
 
 export function DesktopCommentsSidebar({
@@ -51,10 +57,32 @@ export function DesktopCommentsSidebar({
   onDeleteComment,
   commentWidth = 320,
   setIsDropPinMode,
-  isDropPinMode
+  isDropPinMode,
+  currentTimestamp
 }: Props) {
   const { t } = useTranslation()
   const isLocked = file.isCommentsLocked || project?.isCommentsLocked || isArchived
+  const [commentText, setCommentText] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const content = commentText.trim()
+    if (!content || submitting || !onAddComment) return
+    if (content.length < 5) {
+      toast.error('Bình luận phải có ít nhất 5 ký tự')
+      return
+    }
+    setSubmitting(true)
+    try {
+      await onAddComment((currentUserName && currentUserName.trim()) || 'Khách', content, currentTimestamp)
+      setCommentText('')
+    } catch {
+      // Error handled by store toast
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   if (isFullscreen) {
     return (
@@ -108,6 +136,38 @@ export function DesktopCommentsSidebar({
             </div>
           )}
         </div>
+
+        {/* Comment Input — fullscreen */}
+        {onAddComment && !isLocked && (
+          <form onSubmit={handleSubmitComment} className="p-3 border-t border-border bg-card/80 shrink-0">
+            <div className="relative flex flex-col gap-2 rounded-xl border-2 border-primary/30 bg-background p-2.5 focus-within:border-primary transition-all">
+              <Textarea
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSubmitComment(e)
+                  }
+                }}
+                placeholder={currentTimestamp !== undefined ? `Thêm bình luận cho Clip #${currentTimestamp + 1}...` : 'Nhập bình luận...'}
+                className="min-h-[70px] h-20 text-xs bg-transparent border-0 focus-visible:ring-0 resize-none p-0 shadow-none"
+                disabled={submitting}
+              />
+              <div className="flex justify-end pt-1">
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={!commentText.trim() || submitting}
+                  className="h-7 px-3 text-xs font-semibold gap-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  <span>Gửi</span>
+                  <Send className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+          </form>
+        )}
       </div>
     )
   }
@@ -189,6 +249,38 @@ export function DesktopCommentsSidebar({
           </div>
         )}
       </div>
+
+      {/* Comment Input — prominent & twice as tall fixed at bottom */}
+      {onAddComment && !isLocked && (
+        <form onSubmit={handleSubmitComment} className="p-3 border-t border-border bg-card/80 shrink-0">
+          <div className="relative flex flex-col gap-2 rounded-xl border-2 border-primary/30 bg-background p-2.5 focus-within:border-primary transition-all">
+            <Textarea
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSubmitComment(e)
+                }
+              }}
+              placeholder={currentTimestamp !== undefined ? `Thêm bình luận cho Clip #${currentTimestamp + 1}...` : 'Nhập bình luận...'}
+              className="min-h-[70px] h-20 text-xs bg-transparent border-0 focus-visible:ring-0 resize-none p-0 shadow-none"
+              disabled={submitting}
+            />
+            <div className="flex justify-end pt-1">
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!commentText.trim() || submitting}
+                className="h-7 px-3 text-xs font-semibold gap-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <span>Gửi</span>
+                <Send className="w-3 h-3" />
+              </Button>
+            </div>
+          </div>
+        </form>
+      )}
     </div>
   )
 }

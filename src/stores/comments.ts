@@ -97,6 +97,10 @@ export const useCommentStore = create<CommentState>((set, get) => ({
   addComment: async (projectId: string, fileId: string, version: number, userName: string, content: string, timestamp?: number, parentCommentId?: string, annotationData?: string | null, attachments?: File[], avatarUrl?: string, avatarColor?: string, spatialContext?: SpatialContext) => {
     set({ loading: true })
 
+    const validUserName = (userName && userName.trim()) || 'Khách'
+    const validVersion = typeof version === 'number' && !isNaN(version) ? version : 1
+    const validContent = content.trim()
+
     // Generate temporary ID for optimistic update
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
@@ -105,9 +109,9 @@ export const useCommentStore = create<CommentState>((set, get) => ({
       id: tempId,
       projectId,
       fileId,
-      version,
-      userName,
-      content,
+      version: validVersion,
+      userName: validUserName,
+      content: validContent,
       timestamp: timestamp ?? null,
       parentCommentId: parentCommentId ?? null,
       isResolved: false,
@@ -131,9 +135,9 @@ export const useCommentStore = create<CommentState>((set, get) => ({
       // Create comment document in Firestore
       const commentRef = await addDoc(collection(db, 'projects', projectId, 'comments'), {
         fileId,
-        version,
-        userName,
-        content,
+        version: validVersion,
+        userName: validUserName,
+        content: validContent,
         timestamp: timestamp ?? null,
         parentCommentId: parentCommentId ?? null,
         isResolved: false,

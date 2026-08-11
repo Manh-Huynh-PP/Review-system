@@ -71,25 +71,17 @@ export function StandardVideoPreview({
   handleLastMarker
 }: Props) {
   const customVideoPlayerRef = React.useRef<CustomVideoPlayerRef>(null)
-  const [driveVideoError, setDriveVideoError] = React.useState(false)
-
-  // Use direct download URL for Drive videos if no error has occurred yet.
-  // This allows CustomVideoPlayer to provide spatial comments and frame scrubbing!
   const isDriveVideo = !!driveInfo
-  const shouldUseCustomPlayer = !isDriveVideo || (isDriveVideo && !driveVideoError)
-  const playerUrl = isDriveVideo 
-    ? `https://drive.google.com/uc?id=${driveInfo.id}&export=download` 
-    : effectiveUrl
 
   return (
     <div className="space-y-2 sm:space-y-3 w-full h-full flex flex-col">
-      {/* Video Player - Better space utilization */}
+      {/* Video Player Area */}
       <div className="relative bg-black flex-1 min-h-0 overflow-hidden">
-        {shouldUseCustomPlayer ? (
+        {!isDriveVideo ? (
           <>
             <CustomVideoPlayer
               ref={customVideoPlayerRef}
-              src={playerUrl}
+              src={effectiveUrl}
               comments={allFileComments}
               currentTime={currentTime}
               onTimeUpdate={handleTimeUpdate}
@@ -101,12 +93,6 @@ export function StandardVideoPreview({
               className="w-full h-full"
               dropPinCoordinates={dropPinCoordinates}
               isDropPinMode={isDropPinMode}
-              onError={() => {
-                if (isDriveVideo) {
-                  console.warn("Direct stream failed for CustomVideoPlayer, falling back to iframe");
-                  setDriveVideoError(true);
-                }
-              }}
             />
             {/* Spatial Comments */}
             <SpatialCommentOverlay
@@ -116,26 +102,16 @@ export function StandardVideoPreview({
               setDropPinCoordinates={setDropPinCoordinates}
             />
             {!isPlaying && renderAnnotationOverlay()}
-            {/* External Link for Drive */}
-            {isDriveVideo && (
-              <a
-                href={`https://drive.google.com/file/d/${driveInfo.id}/view`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="absolute top-4 right-4 z-50 p-2 bg-black/60 hover:bg-black/80 text-white rounded-md transition-colors"
-                title="Mở trong Google Drive"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-              </a>
-            )}
           </>
         ) : (
           <div className="flex flex-col h-full bg-black relative">
             <div className="flex-1">
               <iframe
                 src={`https://drive.google.com/file/d/${driveInfo.id}/preview`}
-                className="w-full h-full border-0"
-                allow="autoplay"
+                className="w-full h-full border-0 pointer-events-auto"
+                style={{ touchAction: 'manipulation' }}
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                allowFullScreen
                 title="Google Drive Preview"
               />
             </div>

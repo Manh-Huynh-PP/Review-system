@@ -11,7 +11,7 @@ import {
 import { VideoDisplayArea } from './VideoDisplayArea'
 import { useIsMobile } from '@/hooks/useIsMobile'
 
-import { parseDriveUrl, getDirectDownloadUrl, getDriveVideoThumbnailUrl } from '@/utils/googleDrive'
+import { parseDriveUrl, getDriveVideoThumbnailUrl } from '@/utils/googleDrive'
 
 export interface CustomVideoPlayerRef {
     exportFrame: () => void
@@ -62,14 +62,8 @@ export const CustomVideoPlayer = memo(forwardRef<CustomVideoPlayerRef, CustomVid
     isDropPinMode
 }, ref) => {
     const { t } = useTranslation()
-    // Resolve source URL (Drive vs Direct)
-    const effectiveSrc = useMemo(() => {
-        const driveInfo = parseDriveUrl(src)
-        if (driveInfo) {
-            return getDirectDownloadUrl(driveInfo.id)
-        }
-        return src
-    }, [src])
+    // Resolve source URL
+    const effectiveSrc = src
 
     // Resolve poster URL (Drive Video Thumbnail vs Explicit Poster)
     const posterUrl = useMemo(() => {

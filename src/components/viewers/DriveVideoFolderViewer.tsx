@@ -6,8 +6,6 @@ import {
   Play, 
   ChevronLeft, 
   ChevronRight, 
-  Maximize2, 
-  Minimize2, 
   MessageSquare, 
   Search,
   Copy,
@@ -60,8 +58,8 @@ export function DriveVideoFolderViewer({
   allFileComments = [],
   fileComments,
   className = '',
-  externalIsFullscreen,
-  onToggleFullscreen,
+  externalIsFullscreen: _externalIsFullscreen,
+  onToggleFullscreen: _onToggleFullscreen,
   externalFullscreenRef: _externalFullscreenRef,
   lastModified,
   onAddComment: _onAddComment,
@@ -86,8 +84,6 @@ export function DriveVideoFolderViewer({
     togglePickedFrame(file.projectId, file.id, file.currentVersion, index, nextPicked)
     toast.success(nextPicked ? `Đã Pick Clip #${index + 1}` : `Đã bỏ chọn Clip #${index + 1}`)
   }, [file.projectId, file.id, file.currentVersion, pickedFrames, togglePickedFrame])
-
-
 
   useEffect(() => {
     if (externalCurrentFrame !== undefined && externalCurrentFrame !== activeFrame) {
@@ -155,65 +151,135 @@ export function DriveVideoFolderViewer({
     }
   }
 
+  // Shared thumbnail item renderer
+  const renderPlaylistItem = (index: number, compact = false) => {
+    const url = urls[index]
+    const isCurrent = activeFrame === index
+    const isClipVideo = (mediaTypes[index] === 'video') || isDriveVideoUrl(url)
+    const clipVideoId = isDriveVideoUrl(url) ? extractDriveVideoId(url) : null
+    const name = fileNames[index] || (isClipVideo ? `Clip ${index + 1}` : `Frame ${index + 1}`)
+    const commentCount = commentsPerFrame[index] || 0
+    const isPicked = !!pickedFrames[index]
+    const thumbUrl = clipVideoId
+      ? getDriveVideoThumbnailUrl(clipVideoId, 400)
+      : normalizeDriveUrl(url, 400, lastModified)
+
+    const thumbSize = compact ? 'w-16' : 'w-20'
+    const iconSize = compact ? 'w-3.5 h-3.5' : 'w-5 h-5'
+    const playSize = compact ? 'w-1.5 h-1.5' : 'w-2.5 h-2.5'
+
+    return (
+      <div
+        key={index}
+        onClick={() => handleSelectFrame(index)}
+        className={[
+          'rounded-lg border text-left transition-all relative cursor-pointer',
+          isCurrent
+            ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/30'
+            : 'border-border bg-background hover:border-primary/40 hover:bg-muted/50',
+          compact ? 'flex flex-row items-center gap-2 p-1.5' : 'flex flex-row items-center gap-3 p-2',
+        ].join(' ')}
+      >
+        {/* Thumbnail */}
+        <div className={`relative ${thumbSize} aspect-video rounded-md overflow-hidden bg-black shrink-0 border border-border/40`}>
+          <img src={thumbUrl} alt={name} className="w-full h-full object-cover" referrerPolicy="no-referrer"
+            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
+            {isCurrent ? (
+              <div className={`${iconSize} rounded-full bg-primary flex items-center justify-center animate-pulse`}>
+                <Play className={`${playSize} fill-current text-primary-foreground ml-0.5`} />
+              </div>
+            ) : (
+              <div className={`${compact ? 'w-3 h-3' : 'w-4 h-4'} rounded-full bg-black/60 flex items-center justify-center`}>
+                <Play className={`${compact ? 'w-1.5 h-1.5' : 'w-2 h-2'} fill-current text-white ml-px`} />
+              </div>
+            )}
+          </div>
+          <span className={`absolute bottom-0.5 left-0.5 ${compact ? 'text-[8px] px-0.5' : 'text-[9px] px-1'} font-mono font-bold bg-black/80 text-white rounded pointer-events-none`}>
+            #{index + 1}
+          </span>
+          {commentCount > 0 && (
+            <span className={`absolute top-0.5 right-0.5 flex items-center gap-0.5 ${compact ? 'text-[8px] px-0.5' : 'text-[9px] px-1'} font-bold bg-primary text-primary-foreground rounded pointer-events-none`}>
+              <MessageSquare className={compact ? 'w-1.5 h-1.5' : 'w-2 h-2'} />{commentCount}
+            </span>
+          )}
+        </div>
+
+        {/* Info & Pick */}
+        <div className="flex items-center justify-between flex-1 min-w-0">
+          <div className="flex flex-col min-w-0 flex-1 mr-1">
+            <span className={`${compact ? 'text-[11px]' : 'text-xs'} font-medium truncate ${isCurrent ? 'text-primary font-bold' : 'text-foreground'}`}>
+              {name}
+            </span>
+            {!compact && (
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">
+                {isClipVideo ? 'Video' : 'Image'}
+              </span>
+            )}
+          </div>
+          <button type="button" onClick={(e) => handleTogglePick(index, e)}
+            className={`${compact ? 'p-1' : 'p-1.5'} rounded-md transition-all border shrink-0 ${
+              isPicked
+                ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
+                : 'bg-muted/40 hover:bg-rose-500/20 text-muted-foreground hover:text-rose-500 border-border/40'
+            }`}
+            title={isPicked ? "Bỏ chọn clip" : "Pick clip này"}>
+            <Heart className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} ${isPicked ? 'fill-current' : ''}`} />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={`flex flex-col lg:flex-row h-full w-full bg-background text-foreground border-t border-border ${className}`}>
 
-      {/* ── MAIN STAGE: Video Preview & Controls ── */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-[340px] h-full relative bg-black">
+      {/* ── MAIN STAGE ── */}
+      {/* Mobile: overflow-y-auto so entire content (video + nav + thumbnails) scrolls naturally */}
+      {/* Desktop: flex-1 with internal overflow handled by sidebar */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-y-auto lg:overflow-hidden relative bg-background">
 
-        {/* Stage Header */}
-        <div className="flex items-center justify-between px-3 py-1.5 bg-card border-b border-border z-10 shrink-0">
+        {/* Stage Header — sticky on mobile scroll */}
+        <div className="flex items-center justify-between px-3 py-1.5 bg-card border-b border-border z-10 shrink-0 sticky top-0">
           <div className="flex items-center gap-2 min-w-0">
             <FileVideo className="w-4 h-4 text-primary shrink-0" />
-            <span
-              className="text-xs font-semibold truncate text-foreground max-w-[140px] sm:max-w-[280px] lg:max-w-sm"
-              title={activeFileName}
-            >
+            <span className="text-xs font-semibold truncate text-foreground max-w-[140px] sm:max-w-[280px] lg:max-w-sm" title={activeFileName}>
               {activeFileName}
             </span>
           </div>
-
           <div className="flex items-center gap-1 shrink-0">
             <span className="text-[11px] font-mono text-muted-foreground hidden sm:block mr-1">
               {activeFrame + 1} / {urls.length}
             </span>
-
-
+            <button
+              onClick={(e) => handleTogglePick(activeFrame, e)}
+              className={`p-1.5 rounded transition-all border ${
+                pickedFrames[activeFrame]
+                  ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted border-transparent'
+              }`}
+              title={pickedFrames[activeFrame] ? "Đã Pick clip này" : "Pick clip này"}
+            >
+              <Heart className={`w-3.5 h-3.5 ${pickedFrames[activeFrame] ? 'fill-current' : ''}`} />
+            </button>
             {videoId && (
-              <button
-                onClick={handleCopyLink}
+              <button onClick={handleCopyLink}
                 className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                title="Copy link preview"
-              >
-                {copied
-                  ? <Check className="w-3.5 h-3.5 text-green-500" />
-                  : <Copy className="w-3.5 h-3.5" />
-                }
-              </button>
-            )}
-
-            {onToggleFullscreen && (
-              <button
-                onClick={onToggleFullscreen}
-                className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                title={externalIsFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'}
-              >
-                {externalIsFullscreen
-                  ? <Minimize2 className="w-3.5 h-3.5" />
-                  : <Maximize2 className="w-3.5 h-3.5" />
-                }
+                title="Copy link preview">
+                {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
             )}
           </div>
         </div>
 
         {/* Video Player Stage */}
-        <div className="flex-1 min-h-[260px] w-full h-full relative bg-black flex items-center justify-center">
+        {/* Mobile: aspect-video keeps a sane size. Desktop: flex-1 fills remaining space */}
+        <div className="w-full aspect-video lg:aspect-auto lg:flex-1 lg:min-h-0 relative bg-black flex items-center justify-center overflow-hidden shrink-0">
           {isVideo && embedUrl ? (
             <iframe
               key={`drive-embed-${videoId || activeFrame}`}
               src={embedUrl}
-              className="w-full h-full border-0"
+              className="absolute inset-0 w-full h-full border-0"
               allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
               allowFullScreen
               title={activeFileName}
@@ -228,170 +294,53 @@ export function DriveVideoFolderViewer({
           )}
         </div>
 
-
-        {/* Footer Navigation Controls */}
-        <div className="flex items-center justify-between px-3 py-1.5 bg-card border-t border-border shrink-0 z-10">
-          <button
-            onClick={handlePrev}
-            disabled={activeFrame === 0}
-            className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium
-              text-foreground bg-muted hover:bg-muted/80
-              disabled:opacity-40 disabled:cursor-not-allowed transition-colors border border-border/50"
-          >
+        {/* Navigation Controls */}
+        <div className="flex items-center justify-between px-3 py-2 bg-card border-t border-border shrink-0 z-10">
+          <button onClick={handlePrev} disabled={activeFrame === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-foreground bg-muted hover:bg-muted/80 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all border border-border/60">
             <ChevronLeft className="w-4 h-4" />
             <span>Clip Trước</span>
           </button>
-
-          <div className="flex flex-col items-center">
-            <span className="text-xs font-mono font-semibold text-foreground">{activeFrame + 1} / {urls.length}</span>
-          </div>
-
-          <button
-            onClick={handleNext}
-            disabled={activeFrame === urls.length - 1}
-            className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium
-              text-foreground bg-muted hover:bg-muted/80
-              disabled:opacity-40 disabled:cursor-not-allowed transition-colors border border-border/50"
-          >
+          <span className="text-xs font-mono font-bold text-foreground tracking-wide">{activeFrame + 1} / {urls.length}</span>
+          <button onClick={handleNext} disabled={activeFrame === urls.length - 1}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-foreground bg-muted hover:bg-muted/80 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all border border-border/60">
             <span>Clip Sau</span>
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
+
+        {/* ── Mobile Playlist (inline, scrolls with page) ── */}
+        <div className="lg:hidden border-t border-border bg-card">
+          <div className="flex items-center justify-between px-3 py-1.5 border-b border-border">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
+              <Film className="w-3.5 h-3.5 text-primary" />
+              <span>Clips ({urls.length})</span>
+            </div>
+          </div>
+          <div className="flex flex-col p-1.5 gap-1">
+            {filteredIndices.map(index => renderPlaylistItem(index, true))}
+          </div>
+        </div>
       </div>
 
-      {/* ── PLAYLIST SIDEBAR ──
-          Mobile: compact h-20 horizontal thumbnail strip at bottom to maximize video height
-          Desktop: vertical scrollable sidebar (w-80 h-full) */}
-      <div className="w-full lg:w-80 h-20 lg:h-full shrink-0 flex flex-col border-t lg:border-t-0 lg:border-l border-border bg-card">
-
-        {/* Playlist header — desktop only */}
-        <div className="hidden lg:flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
+      {/* ── Desktop Playlist Sidebar ── */}
+      <div className="hidden lg:flex w-80 h-full shrink-0 flex-col border-l border-border bg-card">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
             <Film className="w-4 h-4 text-primary" />
             <span>Danh sách Clips ({urls.length})</span>
           </div>
-          <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
-            {urls.length} items
-          </Badge>
+          <Badge variant="secondary" className="text-[10px] px-2 py-0.5">{urls.length} items</Badge>
         </div>
-
-        {/* Search Input — desktop only */}
         {urls.length > 3 && (
-          <div className="relative hidden lg:block p-2 border-b border-border shrink-0">
+          <div className="relative p-2 border-b border-border shrink-0">
             <Search className="w-3.5 h-3.5 absolute left-4 top-[50%] -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Tìm kiếm clip..."
-              className="h-8 pl-8 text-xs bg-background"
-            />
+            <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Tìm kiếm clip..." className="h-8 pl-8 text-xs bg-background" />
           </div>
         )}
-
-        {/* Playlist Items */}
-        <div className="flex lg:flex-col overflow-x-auto lg:overflow-x-hidden overflow-y-hidden lg:overflow-y-auto p-1.5 lg:p-2 gap-1.5 lg:gap-2 h-full flex-1">
-          {filteredIndices.map(index => {
-            const url = urls[index]
-            const isCurrent = activeFrame === index
-            const isClipVideo = (mediaTypes[index] === 'video') || isDriveVideoUrl(url)
-            const clipVideoId = isDriveVideoUrl(url) ? extractDriveVideoId(url) : null
-            const name = fileNames[index] || (isClipVideo ? `Clip ${index + 1}` : `Frame ${index + 1}`)
-            const commentCount = commentsPerFrame[index] || 0
-            const isPicked = !!pickedFrames[index]
-
-            const thumbUrl = clipVideoId
-              ? getDriveVideoThumbnailUrl(clipVideoId, 400)
-              : normalizeDriveUrl(url, 400, lastModified)
-
-            return (
-              <div
-                key={index}
-                onClick={() => handleSelectFrame(index)}
-                className={[
-                  'shrink-0 lg:shrink rounded-lg border text-left transition-all group/item relative cursor-pointer',
-                  isCurrent
-                    ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/30'
-                    : 'border-border bg-background hover:border-primary/40 hover:bg-muted/50',
-                  'w-24 lg:w-full',
-                  'flex flex-col lg:flex-row',
-                  'items-start lg:items-center',
-                  'gap-1 lg:gap-3',
-                  'p-1 lg:p-2',
-                ].join(' ')}
-              >
-                {/* Thumbnail */}
-                <div className="relative w-full lg:w-20 aspect-video rounded-md overflow-hidden bg-black shrink-0 border border-border/40 group/thumb">
-                  <img
-                    src={thumbUrl}
-                    alt={name}
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                    onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                  />
-                  {/* Heart Pick Button — Mobile Only */}
-                  <button
-                    type="button"
-                    onClick={(e) => handleTogglePick(index, e)}
-                    className={`lg:hidden absolute top-1 left-1 p-1 rounded-full backdrop-blur-md transition-all z-20 ${
-                      isPicked
-                        ? 'bg-rose-500 text-white scale-110 shadow-lg'
-                        : 'bg-black/60 text-white/80'
-                    }`}
-                    title={isPicked ? "Bỏ chọn clip" : "Pick clip này"}
-                  >
-                    <Heart className={`w-3 h-3 ${isPicked ? 'fill-current' : ''}`} />
-                  </button>
-
-                  {/* Play indicator */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
-                    {isCurrent ? (
-                      <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow-lg animate-pulse">
-                        <Play className="w-2.5 h-2.5 fill-current text-primary-foreground ml-0.5" />
-                      </div>
-                    ) : (
-                      <div className="w-4 h-4 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center">
-                        <Play className="w-2 h-2 fill-current text-white ml-0.5" />
-                      </div>
-                    )}
-                  </div>
-                  {/* Index badge */}
-                  <span className="absolute bottom-0.5 left-0.5 text-[9px] font-mono font-bold px-1 bg-black/80 text-white rounded pointer-events-none">
-                    #{index + 1}
-                  </span>
-                  {/* Comment badge */}
-                  {commentCount > 0 && (
-                    <span className="absolute top-0.5 right-0.5 flex items-center gap-0.5 text-[9px] font-bold px-1 bg-primary text-primary-foreground rounded pointer-events-none">
-                      <MessageSquare className="w-2 h-2" />{commentCount}
-                    </span>
-                  )}
-                </div>
-
-                {/* Text info & Heart Pick Button — desktop view */}
-                <div className="hidden lg:flex items-center justify-between flex-1 min-w-0 py-0.5 w-full">
-                  <div className="flex flex-col min-w-0 flex-1 mr-2">
-                    <span className={`text-xs font-medium truncate ${isCurrent ? 'text-primary font-bold' : 'text-foreground'}`}>
-                      {name}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">
-                      {isClipVideo ? 'Video' : 'Image'}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => handleTogglePick(index, e)}
-                    className={`p-1.5 rounded-md transition-all border shrink-0 ${
-                      isPicked
-                        ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
-                        : 'bg-muted/40 hover:bg-rose-500/20 text-muted-foreground hover:text-rose-500 border-border/40'
-                    }`}
-                    title={isPicked ? "Bỏ chọn clip (Unpick)" : "Pick clip này"}
-                  >
-                    <Heart className={`w-3.5 h-3.5 ${isPicked ? 'fill-current' : ''}`} />
-                  </button>
-                </div>
-              </div>
-            )
-          })}
+        <div className="flex flex-col overflow-y-auto p-2 gap-2 h-full flex-1">
+          {filteredIndices.map(index => renderPlaylistItem(index, false))}
         </div>
       </div>
     </div>

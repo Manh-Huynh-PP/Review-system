@@ -10,12 +10,15 @@ import {
     ChevronDown,
     Layers,
     MessageSquare,
-    ExternalLink
+    ExternalLink,
+    Send
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { formatFileSize } from '@/lib/utils'
 import type { File as FileType, Comment } from '@/types'
 import { CommentsList } from '@/components/comments/CommentsList'
+import { Textarea } from '@/components/ui/textarea'
+import toast from 'react-hot-toast'
 
 import { CommentBottomSheet } from '@/components/comments/CommentBottomSheet'
 import {
@@ -112,6 +115,8 @@ function MobileFileViewLayoutComponent({
 }: MobileFileViewLayoutProps) {
     const { t } = useTranslation(['fileView', 'common'])
     const [activeView, setActiveView] = useState<'file' | 'comments'>('file')
+    const [mobileCommentText, setMobileCommentText] = useState('')
+    const [submittingMobileComment, setSubmittingMobileComment] = useState(false)
 
     const uploadDate = current?.uploadedAt?.toDate ? current.uploadedAt.toDate() : new Date()
 
@@ -246,14 +251,14 @@ function MobileFileViewLayoutComponent({
 
 
             {/* Content area */}
-            <div className="flex-1 relative">
+            <div className="flex-1 relative min-h-0">
                 {/* File View */}
                 <div
-                    className={`w-full h-full ${activeView === 'file' ? 'block' : 'hidden'}`}
+                    className={`w-full h-full overflow-y-auto ${activeView === 'file' ? 'block' : 'hidden'}`}
                 >
                     <div 
                         id="preview-container" 
-                        className={`w-full h-full relative ${isDropPinMode ? 'cursor-crosshair' : ''}`}
+                        className={`w-full relative ${isDropPinMode ? 'cursor-crosshair' : ''}`}
                     >
                         {renderFilePreview()}
 
@@ -358,7 +363,59 @@ function MobileFileViewLayoutComponent({
                         )}
                     </div>
 
-
+                    {/* Mobile Comment Input Form */}
+                    {onAddComment && !isLocked && (
+                        <form
+                            onSubmit={async (e) => {
+                                e.preventDefault()
+                                const content = mobileCommentText.trim()
+                                if (!content || submittingMobileComment) return
+                                if (content.length < 5) {
+                                    toast.error('Bình luận phải có ít nhất 5 ký tự')
+                                    return
+                                }
+                                setSubmittingMobileComment(true)
+                                try {
+                                    const ts = file.type === 'video' ? (currentTimeRef?.current ?? currentTimestamp) : (file.type === 'sequence' ? currentTimestamp : undefined)
+                                    await onAddComment((currentUserName && currentUserName.trim()) || 'Khách', content, ts)
+                                    setMobileCommentText('')
+                                    toast.success('Đã gửi bình luận!')
+                                } catch {
+                                    toast.error('Gửi bình luận thất bại')
+                                } finally {
+                                    setSubmittingMobileComment(false)
+                                }
+                            }}
+                            className="p-2 border-t border-border bg-card shrink-0"
+                        >
+                            <div className="relative flex flex-col gap-1.5 rounded-xl border-2 border-primary/30 bg-background p-2 focus-within:border-primary transition-all">
+                                <Textarea
+                                    value={mobileCommentText}
+                                    onChange={(e) => setMobileCommentText(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault()
+                                            e.currentTarget.form?.requestSubmit()
+                                        }
+                                    }}
+                                    placeholder={currentTimestamp !== undefined ? `Bình luận tại Clip #${currentTimestamp + 1}...` : 'Nhập bình luận...'}
+                                    className="min-h-[50px] h-14 text-xs bg-transparent border-0 focus-visible:ring-0 resize-none p-0 shadow-none"
+                                    disabled={submittingMobileComment}
+                                />
+                                <div className="flex justify-end pt-0.5">
+                                    <Button
+                                        type="submit"
+                                        size="sm"
+                                        disabled={!mobileCommentText.trim() || submittingMobileComment}
+                                        className="h-7 px-3 text-xs font-semibold gap-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
+                                    >
+                                        <span>Gửi</span>
+                                        <Send className="w-3 h-3" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </form>
+                    )}
                 </div>
             </div>
 
